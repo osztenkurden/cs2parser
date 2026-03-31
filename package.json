@@ -1,5 +1,5 @@
 {
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"name": "cs2parser",
 	"type": "module",
 	"dependencies": {
@@ -9,6 +9,7 @@
 		"protobufjs": "^7.2.4",
 		"snappy": "^7.3.3"
 	},
+	"license": "GPL-3.0",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js",
