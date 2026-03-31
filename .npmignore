@@ -26,3 +26,4 @@ eslint.config.js
 # Misc
 .claude/
 node_modules/
+replay-generator
