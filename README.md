@@ -265,7 +265,3 @@ Tested on a 583 MB demo file (231K ticks):
 | `parseDemo(stream)` | 10.2s | 281MB | 20MB | no |
 
 File paths stream by default (non-blocking, low memory). Pass `stream: false` to load into memory for ~20% faster sync parsing at the cost of ~14x more memory.
-
-## License
-
-MIT
