@@ -94,7 +94,7 @@ const cpuModel = os.cpus()[0]?.model?.trim() ?? 'Unknown CPU';
 const lines = [
 	'# Benchmark Results',
 	'',
-	`CPU: ${cpuModel}`,
+	`CPU: ${cpuModel}\n`,
 	`Demo: \`${path.basename(demoPath)}\` (${sizeMB} MB, ${modeResults[0]!.tick.toLocaleString()} ticks)`,
 	'',
 	'## Entity Mode Comparison',
