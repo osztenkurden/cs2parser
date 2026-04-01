@@ -273,4 +273,4 @@ Creating this library wouldn't be possible without awesome work of:
  - [Saul](https://github.com/saul), creator of [demofile-net](https://github.com/saul/demofile-net)
  - [markus-wa](https://github.com/markus-wa), creator of [demoinfocs-golang](https://github.com/markus-wa/demoinfocs-golang)
 
-Huge thanks to all of them, as they all have helped me in some way or the other at some points.
+Huge thanks to all of them, as they all have helped me in some way or the other during the past few years.
