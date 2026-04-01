@@ -783,7 +783,13 @@ export const constructorFieldHelper = {
 					const value = field.value as SerializerField;
 					const result = `${serializerName}.${value.serializer.name}`;
 
-					constructorFieldHelper.traverseFields(value.serializer.fields, result, map, currentEntityId, decoderMap);
+					constructorFieldHelper.traverseFields(
+						value.serializer.fields,
+						result,
+						map,
+						currentEntityId,
+						decoderMap
+					);
 					break;
 				}
 
@@ -791,7 +797,13 @@ export const constructorFieldHelper = {
 					const value = field.value as PointerField;
 					const result = `${serializerName}.${value.serializer.name}`;
 
-					constructorFieldHelper.traverseFields(value.serializer.fields, result, map, currentEntityId, decoderMap);
+					constructorFieldHelper.traverseFields(
+						value.serializer.fields,
+						result,
+						map,
+						currentEntityId,
+						decoderMap
+					);
 					break;
 				}
 				case FieldTypeEnum.Array: {
