@@ -265,3 +265,12 @@ Tested on a 583 MB demo file (231K ticks):
 | `parseDemo(stream)` | 10.2s | 281MB | 20MB | no |
 
 File paths stream by default (non-blocking, low memory). Pass `stream: false` to load into memory for ~20% faster sync parsing at the cost of ~14x more memory.
+
+## Acknowledgements
+
+Creating this library wouldn't be possible without awesome work of:
+ - [LaihoE](https://github.com/LaihoE), creator of [demoparser](https://github.com/LaihoE/demoparser)
+ - [Saul](https://github.com/saul), creator of [demofile-net](https://github.com/saul/demofile-net)
+ - [markus-wa](https://github.com/markus-wa), creator of [demoinfocs-golang](https://github.com/markus-wa/demoinfocs-golang)
+
+Huge thanks to all of them, as they all have helped me in some way or the other at some points.
