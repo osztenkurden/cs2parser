@@ -52,6 +52,22 @@ if (header) {
 
 Returns `null` if the file header cannot be read. Only reads the first 4 KB of the file.
 
+## parseServerInfo
+
+Static method that reads server info from the first few packets without parsing the full demo. Fast and low-memory.
+
+```ts
+const info = DemoReader.parseServerInfo('path/to/demo.dem');
+if (info) {
+  console.log(info.map_name);      // e.g. "de_dust2"
+  console.log(info.server_name);   // server name
+  console.log(info.max_clients);   // max player slots
+  console.log(info.game_dir);      // e.g. "csgo"
+}
+```
+
+Returns `null` if server info cannot be found. Only reads the first 16 KB of the file.
+
 ## parseDemo
 
 A single method with overloads for all input types. File paths stream by default.

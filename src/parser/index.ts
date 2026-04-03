@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { EDemoCommands } from '../ts-proto/demo.js';
+import { CDemoPacket, EDemoCommands } from '../ts-proto/demo.js';
 import { decoders } from './descriptors/decoders.js';
 import { BitBuffer } from './ubitreader.js';
 import { GameEvents } from './descriptors/gameEventEmitter.js';
@@ -9,12 +9,15 @@ import { EntityMode, type EmitQueue, type OutputEvents } from './entities/types.
 import type { Decoder } from './entities/constructorFields.js';
 import { ParseSession, type ParseSettings } from './entities/parseSession.js';
 import { Player } from '../helpers/player.js';
+import snappy from 'snappy';
 import { Team } from '../helpers/team.js';
 import { GameRules } from '../helpers/gameRules.js';
 import type { TypedEntity, EntityProperties, KnownClassName } from '../generated/entityTypes.js';
 import { isEntityClass } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
+import { SVC_Messages, sVC_MessagesToJSON } from '../ts-proto/netmessages.js';
+import { messages } from './descriptors/index.js';
 
 export class DemoReader extends EventEmitter<{
 	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
@@ -167,32 +170,68 @@ export class DemoReader extends EventEmitter<{
 		});
 	}
 
-	// static parseServerInfo = (filePath: string) => {
-	// 	const bufferSize = 4096;
+	static parseServerInfo = (filePath: string) => {
+		const bufferSize = 4096 * 4;
 
-	// 	const fd = fs.openSync(filePath, 'r');
-	// 	try {
-	// 		const buffer = Buffer.alloc(bufferSize);
+		const fd = fs.openSync(filePath, 'r');
+		try {
+			const buffer = Buffer.alloc(bufferSize);
 
-	// 		fs.readSync(fd, buffer, 0, bufferSize, 16);
+			fs.readSync(fd, buffer, 0, bufferSize, 16);
 
-	// 		const byteBuffer = new BitBuffer(buffer);
+			const byteBuffer = new BitBuffer(buffer);
 
-	// 		const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
-	// 		const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
+			const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
+			const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
 
-	// 		if (type !== EDemoCommands.DEM_FileHeader) return null;
+			if (type !== EDemoCommands.DEM_FileHeader) return null;
 
-	// 		byteBuffer.ReadUVarInt32(); // TICK
-	// 		const size = byteBuffer.ReadUVarInt32();
-	// 		const headerBuffer = Buffer.alloc(size);
-	// 		byteBuffer.readBytes(headerBuffer);
-	// 		const data = decoders[EDemoCommands.DEM_FileHeader].decode(headerBuffer);
-	// 		return data;
-	// 	} finally {
-	// 		fs.closeSync(fd);
-	// 	}
-	// }
+			let tick = byteBuffer.ReadUVarInt32(); // TICK
+
+			const size = byteBuffer.ReadUVarInt32();
+
+			byteBuffer.skipBytesBetter(size);
+			const _frameBuffer = Buffer.alloc(20 * 1024);
+			while (tick === 0xffffffff && byteBuffer.RemainingBytes > 0) {
+				const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
+				const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
+				tick = byteBuffer.ReadUVarInt32(); // TICK
+				const size = byteBuffer.ReadUVarInt32();
+
+				const decoder = decoders[type as keyof typeof decoders];
+				if (
+					!decoder ||
+					!(decoder.type === EDemoCommands.DEM_Packet || decoder.type === EDemoCommands.DEM_SignonPacket)
+				) {
+					byteBuffer.skipBytesBetter(size);
+					continue;
+				}
+
+				const frameBuffer = byteBuffer.readBytesToSlice(_frameBuffer, size);
+
+				const isCompressed = (EDemoCommandTypeBase & EDemoCommands.DEM_IsCompressed) !== 0;
+				const bytes = isCompressed ? (snappy.uncompressSync(frameBuffer) as Buffer) : frameBuffer;
+
+				const data = decoder.decode(bytes);
+				if (!data.data) continue;
+				const reader = new BitBuffer(data.data!);
+				while (reader.RemainingBits > 8) {
+					const cmd = reader.readUbitVar();
+					const size = reader.ReadUVarInt32();
+					if (cmd !== SVC_Messages.svc_ServerInfo) {
+						reader.skipBytesBetter(size);
+						continue;
+					}
+					const serverInfo = Buffer.alloc(size);
+					const slice = reader.readBytesToSlice(serverInfo, size);
+					return messages[SVC_Messages.svc_ServerInfo].class.decode(slice);
+				}
+			}
+			return null;
+		} finally {
+			fs.closeSync(fd);
+		}
+	};
 
 	static parseHeader = (filePath: string) => {
 		const bufferSize = 4096;
