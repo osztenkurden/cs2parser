@@ -6,8 +6,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
-  id-token: write
 
 jobs:
   release-please:
@@ -28,7 +28,7 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
 
