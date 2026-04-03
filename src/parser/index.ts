@@ -6,7 +6,6 @@ import { GameEvents } from './descriptors/gameEventEmitter.js';
 import { type StringTableCreated } from './descriptors/index.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { type Readable } from 'stream';
-import { TypedEventEmitter } from './descriptors/typedEmitter.js';
 import { EntityMode, type EmitQueue, type OutputEvents } from './entities/types.js';
 import type { Decoder } from './entities/constructorFields.js';
 import { ParseSession } from './entities/parseSession.js';
@@ -15,8 +14,11 @@ import { Team } from '../helpers/team.js';
 import { GameRules } from '../helpers/gameRules.js';
 import type { TypedEntity, EntityProperties, KnownClassName } from '../generated/entityTypes.js';
 import { isEntityClass } from '../generated/entityTypes.js';
+import EventEmitter from 'events';
 
-export class DemoReader extends TypedEventEmitter<OutputEvents> {
+export class DemoReader extends EventEmitter<{
+	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
+}> {
 	_parseStartTime = 0n;
 	private _stringTables = [] as (StringTableCreated | null)[];
 	private _hasEnded = false;
@@ -223,7 +225,7 @@ export class DemoReader extends TypedEventEmitter<OutputEvents> {
 		this._directWriteMode = true;
 		this.gameEvents.entityMode = entityMode;
 
-		const { promise, resolve, reject } = Promise.withResolvers<void>();
+		const { promise, resolve } = Promise.withResolvers<void>();
 
 		let session: ParseSession | null = null;
 		let finished = false;

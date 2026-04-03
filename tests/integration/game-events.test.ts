@@ -12,9 +12,9 @@ describe.skipIf(!demoAvailable)('game events', () => {
 		gameEventNames = [];
 		const reader = new DemoReader();
 
-		reader.on('gameEvent', event => {
-			if (!gameEventNames.includes(event.name)) {
-				gameEventNames.push(event.name);
+		reader.gameEvents.on('gameEvent', event_name => {
+			if (!gameEventNames.includes(event_name)) {
+				gameEventNames.push(event_name);
 			}
 		});
 

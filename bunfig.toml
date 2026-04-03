@@ -1,5 +1,4 @@
 [test]
-timeout = 60000
 coverage = false
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"

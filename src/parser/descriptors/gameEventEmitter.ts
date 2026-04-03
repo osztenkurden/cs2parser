@@ -2,20 +2,20 @@ import type {
 	CMsgSource1LegacyGameEvent_key_t,
 	CMsgSource1LegacyGameEventList_descriptor_t
 } from '../../ts-proto/gameevents.js';
-import { TypedEventEmitter } from './typedEmitter.js';
-import type { GameEventsArguments } from './eventTypes.js';
+import type { _GameEventsArguments, EventWithName, GameEventsArguments } from './eventTypes.js';
 import type { DemoReader } from './../index.js';
 import { annotateGameEvent } from '../../helpers/eventAnnotation.js';
 import { EntityMode } from '../entities/types.js';
 import type { WinRoundReason } from '../../helpers/gameRules.js';
+import EventEmitter from 'events';
 
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
-export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
-	private _eventDescriptors!: Record<number, CMsgSource1LegacyGameEventList_descriptor_t>;
+export class GameEvents extends EventEmitter<GameEventsArguments> {
+	_eventDescriptors!: Record<number, CMsgSource1LegacyGameEventList_descriptor_t>;
 	private _demoReader!: DemoReader;
 
-	private eventQueue: (GameEventsArguments[keyof GameEventsArguments] & { event_name: string })[] = [];
+	private eventQueue: EventWithName[keyof _GameEventsArguments][] = [];
 
 	private _entityMode: EntityMode = EntityMode.NONE;
 	private _lastRoundStartCount: number | undefined = undefined;
@@ -46,7 +46,10 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 			// Suppress raw round_start/round_end when entity parsing is active (synthetic versions will be emitted)
 			if (this._entityMode !== EntityMode.NONE && SYNTHETIC_EVENTS.has(descriptor.name)) return;
 
-			if (!this.eventNames().includes(descriptor.name) && !this.eventNames().includes('gameEvent')) {
+			if (
+				!this.eventNames().includes(descriptor.name as keyof _GameEventsArguments) &&
+				!this.eventNames().includes('gameEvent')
+			) {
 				return;
 			}
 			const gameEventData = {} as any;
@@ -66,8 +69,8 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 		demoReader.on('tickend', () => {
 			for (const event of this.eventQueue) {
 				annotateGameEvent(this._demoReader, event.event_name, event);
-				this.emit(event.event_name, event);
-				this.emit('gameEvent', event.event_name, event);
+				this.emit(event.event_name as keyof GameEventsArguments, event);
+				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event);
 			}
 			this.eventQueue = [];
 
@@ -102,7 +105,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 					legacy: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundEndLegacy'] ?? 0) as number,
 					player_count: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundEndPlayerCount'] ?? 0) as number,
 					nomusic: (props['CCSGameRulesProxy.CCSGameRules.m_bRoundEndNoMusic'] ? 1 : 0) as number
-				};
+				} as const;
 				this.emit('round_end', event);
 				this.emit('gameEvent', 'round_end', event);
 			}
@@ -119,7 +122,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 					timelimit: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundTime'] ?? 0) as number,
 					fraglimit: 0,
 					objective: ''
-				};
+				} as const;
 				this.emit('round_start', event);
 				this.emit('gameEvent', 'round_start', event);
 			}

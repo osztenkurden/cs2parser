@@ -1,5 +1,15 @@
 import { DemoReader } from './src/index.js';
+const demoPath = process.argv[2];
 
-const header = DemoReader.parseHeader('C:\\repos\\demofile-net\\demos\\14140.dem');
+if (!demoPath) {
+	console.error(`Usage: bun header.ts <path-to-demo>`);
+	process.exit(1);
+}
 
-console.log(header?.server_start_tick);
+const start = process.hrtime.bigint();
+const header = DemoReader.parseHeader(demoPath);
+const end = process.hrtime.bigint();
+const time = Number((end-start))
+console.log(header);
+console.log(`Parsed header in ${(time/1000000)}ms`)
+				

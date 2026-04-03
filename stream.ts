@@ -52,7 +52,7 @@ parser.gameEvents.on('player_death', event => {
 });
 
 // Round end shows team scores via helpers
-parser.gameEvents.on('round_end', data => {
+parser.gameEvents.on('round_end', () => {
 	const rules = parser.gameRules;
 	let text = `[${parser.currentTick}] `;
 	if (rules) {

@@ -17,7 +17,7 @@ describe.skipIf(!demoAvailable)('parseHeader', () => {
 		if (!header) return;
 
 		// Demo file header should have basic info
-		expect(typeof header.demoFileStamp).toBe('string');
-		expect(header.demoFileStamp.length).toBeGreaterThan(0);
+		expect(typeof header.demo_file_stamp).toBe('string');
+		expect(header.demo_file_stamp?.length).toBeGreaterThan(0);
 	});
 });

@@ -20,17 +20,17 @@ export interface IEventServerCvar {
 
 export interface IEventPlayerActivate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventPlayerConnectFull {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventPlayerFullUpdate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	count: number;
 }
 
@@ -44,7 +44,7 @@ export interface IEventPlayerConnect {
 
 export interface IEventPlayerDisconnect {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	reason: number;
 	name: string;
 	networkid: string;
@@ -55,20 +55,20 @@ export interface IEventPlayerDisconnect {
 export interface IEventPlayerInfo {
 	name: string;
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	steamid: number;
 	bot: boolean;
 }
 
 export interface IEventPlayerSpawn {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventPlayerTeam {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	team: number;
 	oldteam: number;
@@ -83,17 +83,17 @@ export interface IEventLocalPlayerControllerTeam {}
 
 export interface IEventPlayerChangename {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	oldname: string;
 	newname: string;
 }
 
 export interface IEventPlayerHurt {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	attacker: number;
-	attackerPlayer?: Player | null;
+	attackerPlayer: Player;
 	attacker_pawn: number;
 	health: number;
 	armor: number;
@@ -106,7 +106,7 @@ export interface IEventPlayerHurt {
 export interface IEventPlayerChat {
 	teamonly: boolean;
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	text: string;
 }
 
@@ -143,7 +143,7 @@ export interface IEventTeamScore {
 
 export interface IEventHltvCameraman {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventHltvChase {
@@ -164,7 +164,7 @@ export interface IEventHltvRankCamera {
 
 export interface IEventHltvRankEntity {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	rank: number;
 	target: number;
 }
@@ -265,13 +265,13 @@ export interface IEventTeamplayRoundStart {
 
 export interface IEventPlayerDeath {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	attacker: number;
-	attackerPlayer?: Player | null;
+	attackerPlayer: Player;
 	attacker_pawn: number;
 	assister: number;
-	assisterPlayer?: Player | null;
+	assisterPlayer: Player;
 	assister_pawn: number;
 	assistedflash: boolean;
 	weapon: string;
@@ -296,7 +296,7 @@ export interface IEventPlayerDeath {
 
 export interface IEventPlayerFootstep {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
@@ -391,19 +391,19 @@ export interface IEventBonusUpdated {
 
 export interface IEventSpecTargetUpdated {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	target: number;
 }
 
 export interface IEventSpecModeUpdated {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventEntityVisible {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	subject: number;
 	classname: string;
 	entityname: string;
@@ -439,7 +439,7 @@ export interface IEventGcConnected {}
 
 export interface IEventInstructorStartLesson {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	hint_name: string;
 	hint_target: number;
 	vr_movement_type: number;
@@ -449,13 +449,13 @@ export interface IEventInstructorStartLesson {
 
 export interface IEventInstructorCloseLesson {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	hint_name: string;
 }
 
 export interface IEventInstructorServerHintCreate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	hint_name: string;
 	hint_replace_key: string;
 	hint_target: number;
@@ -494,7 +494,7 @@ export interface IEventDynamicShadowLightChanged {}
 
 export interface IEventBotTakeover {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	botid: number;
 	p: number;
@@ -506,7 +506,7 @@ export interface IEventGameuiHidden {}
 
 export interface IEventPlayerScore {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	kills: number;
 	deaths: number;
 	score: number;
@@ -514,7 +514,7 @@ export interface IEventPlayerScore {
 
 export interface IEventPlayerShoot {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	weapon: number;
 	mode: number;
@@ -602,7 +602,7 @@ export interface IEventResetGameTitledata {
 
 export interface IEventWeaponhudSelection {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	mode: number;
 	entindex: number;
@@ -614,7 +614,7 @@ export interface IEventVoteCast {
 	vote_option: number;
 	team: number;
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventVoteOptions {
@@ -646,7 +646,7 @@ export interface IEventClientLoadoutChanged {}
 
 export interface IEventAddPlayerSonarIcon {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	pos_x: number;
 	pos_y: number;
 	pos_z: number;
@@ -669,7 +669,7 @@ export interface IEventDoorBreak {
 
 export interface IEventAddBulletHitMarker {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	bone: number;
 	pos_x: number;
 	pos_y: number;
@@ -687,7 +687,7 @@ export interface IEventOtherDeath {
 	otherid: number;
 	othertype: string;
 	attacker: number;
-	attackerPlayer?: Player | null;
+	attackerPlayer: Player;
 	weapon: string;
 	weapon_itemid: string;
 	weapon_fauxitemid: string;
@@ -703,7 +703,7 @@ export interface IEventBulletDamage {
 	victim: number;
 	victim_pawn: number;
 	attacker: number;
-	attackerPlayer?: Player | null;
+	attackerPlayer: Player;
 	attacker_pawn: number;
 	distance: number;
 	damage_dir_x: number;
@@ -731,7 +731,7 @@ export interface IEventBulletDamage {
 
 export interface IEventItemPurchase {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	team: number;
 	loadout: number;
 	weapon: string;
@@ -739,42 +739,42 @@ export interface IEventItemPurchase {
 
 export interface IEventBombBeginplant {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	site: number;
 }
 
 export interface IEventBombAbortplant {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	site: number;
 }
 
 export interface IEventBombPlanted {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	site: number;
 }
 
 export interface IEventBombDefused {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	site: number;
 }
 
 export interface IEventBombExploded {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	site: number;
 }
 
 export interface IEventBombDropped {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entindex: number;
 }
@@ -790,7 +790,7 @@ export interface IEventDefuserDropped {
 export interface IEventDefuserPickup {
 	entityid: number;
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
@@ -800,41 +800,41 @@ export interface IEventCsIntermission {}
 
 export interface IEventBombBegindefuse {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	haskit: boolean;
 }
 
 export interface IEventBombAbortdefuse {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventHostageFollows {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	hostage: number;
 }
 
 export interface IEventHostageHurt {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	hostage: number;
 }
 
 export interface IEventHostageKilled {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	hostage: number;
 }
 
 export interface IEventHostageRescued {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	hostage: number;
 	site: number;
@@ -842,7 +842,7 @@ export interface IEventHostageRescued {
 
 export interface IEventHostageStopsFollowing {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	hostage: number;
 }
@@ -855,19 +855,19 @@ export interface IEventHostageCallForHelp {
 
 export interface IEventVipEscaped {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventVipKilled {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	attacker: number;
-	attackerPlayer?: Player | null;
+	attackerPlayer: Player;
 }
 
 export interface IEventPlayerRadio {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	slot: number;
 }
@@ -878,7 +878,7 @@ export interface IEventBombBeep {
 
 export interface IEventWeaponFire {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	weapon: string;
 	silenced: boolean;
@@ -886,58 +886,58 @@ export interface IEventWeaponFire {
 
 export interface IEventWeaponFireOnEmpty {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	weapon: string;
 }
 
 export interface IEventGrenadeThrown {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	weapon: string;
 }
 
 export interface IEventWeaponReload {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventWeaponZoom {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventSilencerDetach {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventInspectWeapon {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventWeaponZoomRifle {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventPlayerSpawned {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	inrestart: boolean;
 }
 
 export interface IEventItemPickup {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	item: string;
 	silent: boolean;
 	defindex: number;
@@ -945,14 +945,14 @@ export interface IEventItemPickup {
 
 export interface IEventItemPickupSlerp {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	index: number;
 	behavior: number;
 }
 
 export interface IEventItemPickupFailed {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	item: string;
 	reason: number;
 	limit: number;
@@ -960,21 +960,21 @@ export interface IEventItemPickupFailed {
 
 export interface IEventItemRemove {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	item: string;
 	defindex: number;
 }
 
 export interface IEventAmmoPickup {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	item: string;
 	index: number;
 }
 
 export interface IEventItemEquip {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	item: string;
 	defindex: number;
 	canzoom: boolean;
@@ -987,13 +987,13 @@ export interface IEventItemEquip {
 
 export interface IEventEnterBuyzone {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	canbuy: boolean;
 }
 
 export interface IEventExitBuyzone {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	canbuy: boolean;
 }
 
@@ -1001,43 +1001,43 @@ export interface IEventBuytimeEnded {}
 
 export interface IEventEnterBombzone {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	hasbomb: boolean;
 	isplanted: boolean;
 }
 
 export interface IEventExitBombzone {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	hasbomb: boolean;
 	isplanted: boolean;
 }
 
 export interface IEventEnterRescueZone {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventExitRescueZone {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventSilencerOff {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventSilencerOn {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventBuymenuOpen {}
 
 export interface IEventBuymenuClose {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventRoundPrestart {}
@@ -1046,13 +1046,13 @@ export interface IEventRoundPoststart {}
 
 export interface IEventGrenadeBounce {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
 export interface IEventHegrenadeDetonate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1062,7 +1062,7 @@ export interface IEventHegrenadeDetonate {
 
 export interface IEventFlashbangDetonate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1072,7 +1072,7 @@ export interface IEventFlashbangDetonate {
 
 export interface IEventSmokegrenadeDetonate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1082,7 +1082,7 @@ export interface IEventSmokegrenadeDetonate {
 
 export interface IEventSmokegrenadeExpired {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1092,7 +1092,7 @@ export interface IEventSmokegrenadeExpired {
 
 export interface IEventMolotovDetonate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	x: number;
 	y: number;
@@ -1101,7 +1101,7 @@ export interface IEventMolotovDetonate {
 
 export interface IEventDecoyDetonate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1119,7 +1119,7 @@ export interface IEventDecoyStarted {
 
 export interface IEventTagrenadeDetonate {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	entityid: number;
 	x: number;
 	y: number;
@@ -1149,7 +1149,7 @@ export interface IEventInfernoExtinguish {
 
 export interface IEventDecoyFiring {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1159,7 +1159,7 @@ export interface IEventDecoyFiring {
 
 export interface IEventBulletImpact {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	x: number;
 	y: number;
@@ -1168,28 +1168,28 @@ export interface IEventBulletImpact {
 
 export interface IEventPlayerJump {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventPlayerBlind {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	attacker: number;
-	attackerPlayer?: Player | null;
+	attackerPlayer: Player;
 	entityid: number;
 	blind_duration: number;
 }
 
 export interface IEventPlayerFalldamage {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	damage: number;
 }
 
 export interface IEventDoorMoving {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entindex: number;
 }
@@ -1273,7 +1273,7 @@ export interface IEventMatchEndConditions {
 
 export interface IEventRoundMvp {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	reason: number;
 	value: number;
 	musickitmvps: number;
@@ -1285,7 +1285,7 @@ export interface IEventShowSurvivalRespawnStatus {
 	loc_token: string;
 	duration: number;
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 }
 
@@ -1311,14 +1311,14 @@ export interface IEventWriteProfileData {}
 
 export interface IEventTrialTimeExpired {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventUpdateMatchmakingStats {}
 
 export interface IEventPlayerResetVote {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	vote: boolean;
 }
 
@@ -1334,25 +1334,25 @@ export interface IEventSfuievent {
 
 export interface IEventStartVote {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	type: number;
 	vote_parameter: number;
 }
 
 export interface IEventPlayerGivenC4 {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventJointeamFailed {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	reason: number;
 }
 
 export interface IEventTeamchangePending {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	toteam: number;
 }
 
@@ -1370,7 +1370,7 @@ export interface IEventNextlevelChanged {
 
 export interface IEventSeasoncoinLevelup {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	category: number;
 	rank: number;
 }
@@ -1385,55 +1385,55 @@ export interface IEventStartHalftime {}
 
 export interface IEventAmmoRefill {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	success: boolean;
 }
 
 export interface IEventParachutePickup {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventParachuteDeploy {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventDronegunAttack {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventDroneDispatched {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	priority: number;
 	drone_dispatched: number;
 }
 
 export interface IEventLootCrateVisible {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	subject: number;
 	type: string;
 }
 
 export interface IEventLootCrateOpened {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	type: string;
 }
 
 export interface IEventOpenCrateInstr {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	subject: number;
 	type: string;
 }
 
 export interface IEventSmokeBeaconParadrop {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	paradrop: number;
 }
 
@@ -1447,14 +1447,14 @@ export interface IEventSurvivalParadropBreak {
 
 export interface IEventDroneCargoDetached {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	cargo: number;
 	delivered: boolean;
 }
 
 export interface IEventDroneAboveRoof {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	cargo: number;
 }
 
@@ -1468,29 +1468,29 @@ export interface IEventFirstbombsIncomingWarning {
 
 export interface IEventDzItemInteraction {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	subject: number;
 	type: string;
 }
 
 export interface IEventSurvivalTeammateRespawn {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventSurvivalNoRespawnsWarning {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventSurvivalNoRespawnsFinal {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 }
 
 export interface IEventPlayerPing {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	entityid: number;
 	x: number;
@@ -1505,7 +1505,7 @@ export interface IEventPlayerPingStop {
 
 export interface IEventPlayerSound {
 	userid: number;
-	player?: Player | null;
+	player: Player;
 	userid_pawn: number;
 	radius: number;
 	duration: number;
@@ -1526,283 +1526,4 @@ export interface IEventClientsideReloadCustomEcon {
 	steamid: string;
 }
 
-export interface _GameEventsArguments {
-	server_pre_shutdown: [IEventServerPreShutdown];
-	server_shutdown: [IEventServerShutdown];
-	server_message: [IEventServerMessage];
-	server_cvar: [IEventServerCvar];
-	player_activate: [IEventPlayerActivate];
-	player_connect_full: [IEventPlayerConnectFull];
-	player_full_update: [IEventPlayerFullUpdate];
-	player_connect: [IEventPlayerConnect];
-	player_disconnect: [IEventPlayerDisconnect];
-	player_info: [IEventPlayerInfo];
-	player_spawn: [IEventPlayerSpawn];
-	player_team: [IEventPlayerTeam];
-	local_player_team: [IEventLocalPlayerTeam];
-	local_player_controller_team: [IEventLocalPlayerControllerTeam];
-	player_changename: [IEventPlayerChangename];
-	player_hurt: [IEventPlayerHurt];
-	player_chat: [IEventPlayerChat];
-	local_player_pawn_changed: [IEventLocalPlayerPawnChanged];
-	teamplay_broadcast_audio: [IEventTeamplayBroadcastAudio];
-	finale_start: [IEventFinaleStart];
-	player_stats_updated: [IEventPlayerStatsUpdated];
-	user_data_downloaded: [IEventUserDataDownloaded];
-	ragdoll_dissolved: [IEventRagdollDissolved];
-	team_info: [IEventTeamInfo];
-	team_score: [IEventTeamScore];
-	hltv_cameraman: [IEventHltvCameraman];
-	hltv_chase: [IEventHltvChase];
-	hltv_rank_camera: [IEventHltvRankCamera];
-	hltv_rank_entity: [IEventHltvRankEntity];
-	hltv_fixed: [IEventHltvFixed];
-	hltv_message: [IEventHltvMessage];
-	hltv_status: [IEventHltvStatus];
-	hltv_title: [IEventHltvTitle];
-	hltv_chat: [IEventHltvChat];
-	hltv_versioninfo: [IEventHltvVersioninfo];
-	hltv_replay: [IEventHltvReplay];
-	hltv_replay_status: [IEventHltvReplayStatus];
-	demo_stop: [IEventDemoStop];
-	map_shutdown: [IEventMapShutdown];
-	map_transition: [IEventMapTransition];
-	hostname_changed: [IEventHostnameChanged];
-	difficulty_changed: [IEventDifficultyChanged];
-	game_message: [IEventGameMessage];
-	game_newmap: [IEventGameNewmap];
-	round_start: [IEventRoundStart];
-	round_end: [IEventRoundEnd];
-	round_start_pre_entity: [IEventRoundStartPreEntity];
-	round_start_post_nav: [IEventRoundStartPostNav];
-	round_freeze_end: [IEventRoundFreezeEnd];
-	teamplay_round_start: [IEventTeamplayRoundStart];
-	player_death: [IEventPlayerDeath];
-	player_footstep: [IEventPlayerFootstep];
-	player_hintmessage: [IEventPlayerHintmessage];
-	break_breakable: [IEventBreakBreakable];
-	broken_breakable: [IEventBrokenBreakable];
-	break_prop: [IEventBreakProp];
-	entity_killed: [IEventEntityKilled];
-	door_close: [IEventDoorClose];
-	vote_started: [IEventVoteStarted];
-	vote_failed: [IEventVoteFailed];
-	vote_passed: [IEventVotePassed];
-	vote_changed: [IEventVoteChanged];
-	vote_cast_yes: [IEventVoteCastYes];
-	vote_cast_no: [IEventVoteCastNo];
-	achievement_event: [IEventAchievementEvent];
-	achievement_earned: [IEventAchievementEarned];
-	achievement_write_failed: [IEventAchievementWriteFailed];
-	bonus_updated: [IEventBonusUpdated];
-	spec_target_updated: [IEventSpecTargetUpdated];
-	spec_mode_updated: [IEventSpecModeUpdated];
-	entity_visible: [IEventEntityVisible];
-	gameinstructor_draw: [IEventGameinstructorDraw];
-	gameinstructor_nodraw: [IEventGameinstructorNodraw];
-	flare_ignite_npc: [IEventFlareIgniteNpc];
-	helicopter_grenade_punt_miss: [IEventHelicopterGrenadePuntMiss];
-	physgun_pickup: [IEventPhysgunPickup];
-	inventory_updated: [IEventInventoryUpdated];
-	cart_updated: [IEventCartUpdated];
-	store_pricesheet_updated: [IEventStorePricesheetUpdated];
-	item_schema_initialized: [IEventItemSchemaInitialized];
-	drop_rate_modified: [IEventDropRateModified];
-	event_ticket_modified: [IEventEventTicketModified];
-	gc_connected: [IEventGcConnected];
-	instructor_start_lesson: [IEventInstructorStartLesson];
-	instructor_close_lesson: [IEventInstructorCloseLesson];
-	instructor_server_hint_create: [IEventInstructorServerHintCreate];
-	instructor_server_hint_stop: [IEventInstructorServerHintStop];
-	set_instructor_group_enabled: [IEventSetInstructorGroupEnabled];
-	clientside_lesson_closed: [IEventClientsideLessonClosed];
-	dynamic_shadow_light_changed: [IEventDynamicShadowLightChanged];
-	bot_takeover: [IEventBotTakeover];
-	gameui_hidden: [IEventGameuiHidden];
-	player_score: [IEventPlayerScore];
-	player_shoot: [IEventPlayerShoot];
-	game_init: [IEventGameInit];
-	game_start: [IEventGameStart];
-	game_end: [IEventGameEnd];
-	round_announce_match_point: [IEventRoundAnnounceMatchPoint];
-	round_announce_final: [IEventRoundAnnounceFinal];
-	round_announce_last_round_half: [IEventRoundAnnounceLastRoundHalf];
-	round_announce_match_start: [IEventRoundAnnounceMatchStart];
-	round_announce_warmup: [IEventRoundAnnounceWarmup];
-	warmup_end: [IEventWarmupEnd];
-	round_end_upload_stats: [IEventRoundEndUploadStats];
-	round_officially_ended: [IEventRoundOfficiallyEnded];
-	round_time_warning: [IEventRoundTimeWarning];
-	ugc_map_info_received: [IEventUgcMapInfoReceived];
-	ugc_map_unsubscribed: [IEventUgcMapUnsubscribed];
-	ugc_map_download_error: [IEventUgcMapDownloadError];
-	ugc_file_download_finished: [IEventUgcFileDownloadFinished];
-	ugc_file_download_start: [IEventUgcFileDownloadStart];
-	begin_new_match: [IEventBeginNewMatch];
-	dm_bonus_weapon_start: [IEventDmBonusWeaponStart];
-	survival_announce_phase: [IEventSurvivalAnnouncePhase];
-	player_decal: [IEventPlayerDecal];
-	read_game_titledata: [IEventReadGameTitledata];
-	write_game_titledata: [IEventWriteGameTitledata];
-	reset_game_titledata: [IEventResetGameTitledata];
-	weaponhud_selection: [IEventWeaponhudSelection];
-	vote_ended: [IEventVoteEnded];
-	vote_cast: [IEventVoteCast];
-	vote_options: [IEventVoteOptions];
-	endmatch_mapvote_selecting_map: [IEventEndmatchMapvoteSelectingMap];
-	endmatch_cmm_start_reveal_items: [IEventEndmatchCmmStartRevealItems];
-	client_loadout_changed: [IEventClientLoadoutChanged];
-	add_player_sonar_icon: [IEventAddPlayerSonarIcon];
-	door_open: [IEventDoorOpen];
-	door_closed: [IEventDoorClosed];
-	door_break: [IEventDoorBreak];
-	add_bullet_hit_marker: [IEventAddBulletHitMarker];
-	other_death: [IEventOtherDeath];
-	bullet_damage: [IEventBulletDamage];
-	item_purchase: [IEventItemPurchase];
-	bomb_beginplant: [IEventBombBeginplant];
-	bomb_abortplant: [IEventBombAbortplant];
-	bomb_planted: [IEventBombPlanted];
-	bomb_defused: [IEventBombDefused];
-	bomb_exploded: [IEventBombExploded];
-	bomb_dropped: [IEventBombDropped];
-	bomb_pickup: [IEventBombPickup];
-	defuser_dropped: [IEventDefuserDropped];
-	defuser_pickup: [IEventDefuserPickup];
-	announce_phase_end: [IEventAnnouncePhaseEnd];
-	cs_intermission: [IEventCsIntermission];
-	bomb_begindefuse: [IEventBombBegindefuse];
-	bomb_abortdefuse: [IEventBombAbortdefuse];
-	hostage_follows: [IEventHostageFollows];
-	hostage_hurt: [IEventHostageHurt];
-	hostage_killed: [IEventHostageKilled];
-	hostage_rescued: [IEventHostageRescued];
-	hostage_stops_following: [IEventHostageStopsFollowing];
-	hostage_rescued_all: [IEventHostageRescuedAll];
-	hostage_call_for_help: [IEventHostageCallForHelp];
-	vip_escaped: [IEventVipEscaped];
-	vip_killed: [IEventVipKilled];
-	player_radio: [IEventPlayerRadio];
-	bomb_beep: [IEventBombBeep];
-	weapon_fire: [IEventWeaponFire];
-	weapon_fire_on_empty: [IEventWeaponFireOnEmpty];
-	grenade_thrown: [IEventGrenadeThrown];
-	weapon_reload: [IEventWeaponReload];
-	weapon_zoom: [IEventWeaponZoom];
-	silencer_detach: [IEventSilencerDetach];
-	inspect_weapon: [IEventInspectWeapon];
-	weapon_zoom_rifle: [IEventWeaponZoomRifle];
-	player_spawned: [IEventPlayerSpawned];
-	item_pickup: [IEventItemPickup];
-	item_pickup_slerp: [IEventItemPickupSlerp];
-	item_pickup_failed: [IEventItemPickupFailed];
-	item_remove: [IEventItemRemove];
-	ammo_pickup: [IEventAmmoPickup];
-	item_equip: [IEventItemEquip];
-	enter_buyzone: [IEventEnterBuyzone];
-	exit_buyzone: [IEventExitBuyzone];
-	buytime_ended: [IEventBuytimeEnded];
-	enter_bombzone: [IEventEnterBombzone];
-	exit_bombzone: [IEventExitBombzone];
-	enter_rescue_zone: [IEventEnterRescueZone];
-	exit_rescue_zone: [IEventExitRescueZone];
-	silencer_off: [IEventSilencerOff];
-	silencer_on: [IEventSilencerOn];
-	buymenu_open: [IEventBuymenuOpen];
-	buymenu_close: [IEventBuymenuClose];
-	round_prestart: [IEventRoundPrestart];
-	round_poststart: [IEventRoundPoststart];
-	grenade_bounce: [IEventGrenadeBounce];
-	hegrenade_detonate: [IEventHegrenadeDetonate];
-	flashbang_detonate: [IEventFlashbangDetonate];
-	smokegrenade_detonate: [IEventSmokegrenadeDetonate];
-	smokegrenade_expired: [IEventSmokegrenadeExpired];
-	molotov_detonate: [IEventMolotovDetonate];
-	decoy_detonate: [IEventDecoyDetonate];
-	decoy_started: [IEventDecoyStarted];
-	tagrenade_detonate: [IEventTagrenadeDetonate];
-	inferno_startburn: [IEventInfernoStartburn];
-	inferno_expire: [IEventInfernoExpire];
-	inferno_extinguish: [IEventInfernoExtinguish];
-	decoy_firing: [IEventDecoyFiring];
-	bullet_impact: [IEventBulletImpact];
-	player_jump: [IEventPlayerJump];
-	player_blind: [IEventPlayerBlind];
-	player_falldamage: [IEventPlayerFalldamage];
-	door_moving: [IEventDoorMoving];
-	mb_input_lock_success: [IEventMbInputLockSuccess];
-	mb_input_lock_cancel: [IEventMbInputLockCancel];
-	nav_blocked: [IEventNavBlocked];
-	nav_generate: [IEventNavGenerate];
-	achievement_info_loaded: [IEventAchievementInfoLoaded];
-	hltv_changed_mode: [IEventHltvChangedMode];
-	cs_game_disconnected: [IEventCsGameDisconnected];
-	cs_round_final_beep: [IEventCsRoundFinalBeep];
-	cs_round_start_beep: [IEventCsRoundStartBeep];
-	cs_win_panel_round: [IEventCsWinPanelRound];
-	cs_win_panel_match: [IEventCsWinPanelMatch];
-	cs_match_end_restart: [IEventCsMatchEndRestart];
-	cs_pre_restart: [IEventCsPreRestart];
-	show_deathpanel: [IEventShowDeathpanel];
-	hide_deathpanel: [IEventHideDeathpanel];
-	player_avenged_teammate: [IEventPlayerAvengedTeammate];
-	achievement_earned_local: [IEventAchievementEarnedLocal];
-	repost_xbox_achievements: [IEventRepostXboxAchievements];
-	match_end_conditions: [IEventMatchEndConditions];
-	round_mvp: [IEventRoundMvp];
-	show_survival_respawn_status: [IEventShowSurvivalRespawnStatus];
-	client_disconnect: [IEventClientDisconnect];
-	gg_killed_enemy: [IEventGgKilledEnemy];
-	switch_team: [IEventSwitchTeam];
-	write_profile_data: [IEventWriteProfileData];
-	trial_time_expired: [IEventTrialTimeExpired];
-	update_matchmaking_stats: [IEventUpdateMatchmakingStats];
-	player_reset_vote: [IEventPlayerResetVote];
-	enable_restart_voting: [IEventEnableRestartVoting];
-	sfuievent: [IEventSfuievent];
-	start_vote: [IEventStartVote];
-	player_given_c4: [IEventPlayerGivenC4];
-	jointeam_failed: [IEventJointeamFailed];
-	teamchange_pending: [IEventTeamchangePending];
-	material_default_complete: [IEventMaterialDefaultComplete];
-	cs_prev_next_spectator: [IEventCsPrevNextSpectator];
-	nextlevel_changed: [IEventNextlevelChanged];
-	seasoncoin_levelup: [IEventSeasoncoinLevelup];
-	tournament_reward: [IEventTournamentReward];
-	start_halftime: [IEventStartHalftime];
-	ammo_refill: [IEventAmmoRefill];
-	parachute_pickup: [IEventParachutePickup];
-	parachute_deploy: [IEventParachuteDeploy];
-	dronegun_attack: [IEventDronegunAttack];
-	drone_dispatched: [IEventDroneDispatched];
-	loot_crate_visible: [IEventLootCrateVisible];
-	loot_crate_opened: [IEventLootCrateOpened];
-	open_crate_instr: [IEventOpenCrateInstr];
-	smoke_beacon_paradrop: [IEventSmokeBeaconParadrop];
-	survival_paradrop_spawn: [IEventSurvivalParadropSpawn];
-	survival_paradrop_break: [IEventSurvivalParadropBreak];
-	drone_cargo_detached: [IEventDroneCargoDetached];
-	drone_above_roof: [IEventDroneAboveRoof];
-	choppers_incoming_warning: [IEventChoppersIncomingWarning];
-	firstbombs_incoming_warning: [IEventFirstbombsIncomingWarning];
-	dz_item_interaction: [IEventDzItemInteraction];
-	survival_teammate_respawn: [IEventSurvivalTeammateRespawn];
-	survival_no_respawns_warning: [IEventSurvivalNoRespawnsWarning];
-	survival_no_respawns_final: [IEventSurvivalNoRespawnsFinal];
-	player_ping: [IEventPlayerPing];
-	player_ping_stop: [IEventPlayerPingStop];
-	player_sound: [IEventPlayerSound];
-	guardian_wave_restart: [IEventGuardianWaveRestart];
-	team_intro_start: [IEventTeamIntroStart];
-	team_intro_end: [IEventTeamIntroEnd];
-	game_phase_changed: [IEventGamePhaseChanged];
-	clientside_reload_custom_econ: [IEventClientsideReloadCustomEcon];
-}
-
-export type EventWithName = {
-	[K in keyof _GameEventsArguments]: _GameEventsArguments[K][0] & { event_name: K };
-};
-
-export interface GameEventsArguments extends _GameEventsArguments {
-	gameEvent: [keyof _GameEventsArguments, EventWithName[keyof _GameEventsArguments]];
-}
+export interface GameEventsArguments {}
