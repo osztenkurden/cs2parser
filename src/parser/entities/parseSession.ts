@@ -53,7 +53,7 @@ export class ParseSession {
 		this.eventQueue.push([eventName, data] as any);
 	};
 
-	private _stringTables: (StringTableObject["table"] | null)[] = [];
+	private _stringTables: (StringTableObject['table'] | null)[] = [];
 
 	constructor(buffer: Buffer, entityMode: EntityMode, emitMainQueue: EmitQueue, parser?: DemoReader) {
 		this.bytebuffer = ByteBuffer.wrap(buffer, true);
@@ -446,9 +446,9 @@ export class ParseSession {
 				case SVC_Messages.svc_UpdateStringTable: {
 					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
 					const updateMsg = command.class.decode(msgContent);
-					if("table_id" in updateMsg){
+					if ('table_id' in updateMsg) {
 						const tableCData = updateStringTable(updateMsg, this._stringTables, this.baselines);
-						if(tableCData){
+						if (tableCData) {
 							this._stringTables.push(tableCData.table);
 						}
 					}

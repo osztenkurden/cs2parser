@@ -125,12 +125,11 @@ export class DemoReader extends EventEmitter<{
 			this.currentTick = tick;
 		});
 		this.on('svc_CreateStringTable', table => {
-			if(!table) return;
+			if (!table) return;
 
 			for (const player of table.players) {
 				this._playerInfoMap[player.userid! & 255] = player;
 			}
-
 		});
 
 		this.on('entityCreated', ([entityId, classId, entityType, className]) => {
