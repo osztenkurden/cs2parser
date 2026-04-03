@@ -518,9 +518,11 @@ export const constructorFieldHelper = {
 		};
 	})(),
 	decode: (reader: BitBuffer, decoder: Decoder) => {
-		if (typeof decoder === 'object') {
-			return decodeQfloat(reader, decoder.decoder);
-		}
+		if (typeof decoder === 'object') return decodeQfloat(reader, decoder.decoder);
+		// Fast checks for the 3 most common decoder types
+		if (decoder === D_UNSIGNED) return reader.ReadUVarInt32();
+		if (decoder === D_BOOLEAN) return reader.readBoolean();
+		if (decoder === D_NOSCALE) return constructorFieldHelper.u32Tof32(reader.ReadUBits(32));
 		switch (decoder) {
 			case D_NOSCALE:
 				return constructorFieldHelper.u32Tof32(reader.ReadUBits(32));

@@ -43,7 +43,8 @@
 		"generate:events": "bun scripts/generate-event-types.ts",
 		"generate:protos": "bun scripts/generate-protos.ts",
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-entity-types.ts --snapshot",
-		"benchmark": "bun --expose-gc scripts/benchmark.ts"
+		"benchmark": "bun --expose-gc scripts/benchmark.ts",
+		"benchmark:readme": "bun scripts/benchmark-readme.ts"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^20.5.0",

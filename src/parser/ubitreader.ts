@@ -30,8 +30,10 @@ export class BitBuffer {
 	}
 
 	setTo(newPointer: Uint8Array) {
+		if (newPointer.buffer !== this._pointer.buffer) {
+			this._pointerView = new DataView(newPointer.buffer);
+		}
 		this._pointer = newPointer;
-		this._pointerView = new DataView(newPointer.buffer);
 		this._buf = 0;
 		this._bitsAvail = 0;
 		this._byteOffset = 0;
@@ -42,16 +44,12 @@ export class BitBuffer {
 	}
 
 	public readString() {
-		const s = [];
-
-		while (true) {
-			const c = this.ReadByte();
-			if (c === 0) break;
-
-			s.push(String.fromCharCode(c));
+		let s = '';
+		let c: number;
+		while ((c = this.ReadByte()) !== 0) {
+			s += String.fromCharCode(c);
 		}
-
-		return s.join('');
+		return s;
 	}
 
 	public get RemainingBytes() {
@@ -75,16 +73,41 @@ export class BitBuffer {
 			const remainingBits = numBits - this._bitsAvail;
 
 			// SIMULATING UPDATE BUFFER, WITHOUT REALLY MODIFYING THE READER
-			let selfBuf = 0;
-			const bytesToRead = Math.min(this._pointer.length - this._byteOffset, 4);
-
-			for (let i = 0; i < bytesToRead; i++) {
-				selfBuf |= this._pointer[this._byteOffset + i]! << (i * 8);
+			let selfBuf: number;
+			if (this._pointer.length - this._byteOffset >= 4) {
+				selfBuf = this._pointerView.getUint32(this._pointer.byteOffset + this._byteOffset, true);
+			} else {
+				selfBuf = 0;
+				const bytesToRead = Math.min(this._pointer.length - this._byteOffset, 4);
+				for (let i = 0; i < bytesToRead; i++) {
+					selfBuf |= this._pointer[this._byteOffset + i]! << (i * 8);
+				}
 			}
 
 			ret |= (selfBuf & MASK[remainingBits]!) << this._bitsAvail;
 
 			return ret >>> 0;
+		}
+	}
+
+	/** Lightweight consume after PeekUBitsWithLog — advances by numBits without returning a value. */
+	public consumePeeked(numBits: number): void {
+		this._sumReadBits += numBits;
+		if (this._bitsAvail >= numBits) {
+			this._bitsAvail -= numBits;
+			if (this._bitsAvail !== 0) {
+				this._buf >>>= numBits;
+			} else {
+				this.FetchNext();
+			}
+		} else {
+			// Slow path: consume spans current buffer + next chunk
+			const bitsFromNext = numBits - this._bitsAvail;
+			const remainingBytes = this._pointer.length - this._byteOffset;
+			const nextChunkBits = Math.min(remainingBytes, 4) * 8;
+			this.UpdateBuffer();
+			this._bitsAvail = nextChunkBits - bitsFromNext;
+			this._buf >>>= bitsFromNext;
 		}
 	}
 	public ReadUBits(numBits: number) {
@@ -253,19 +276,44 @@ export class BitBuffer {
 		return ret >>> 0;
 	};
 	public ReadUVarInt32() {
+		// Fast path: 1-byte varint (most common)
+		if (this._bitsAvail >= 8) {
+			const b0 = this._buf & 0xff;
+			if ((b0 & 0x80) === 0) {
+				this._sumReadBits += 8;
+				this._bitsAvail -= 8;
+				if (this._bitsAvail !== 0) {
+					this._buf >>>= 8;
+				} else {
+					this.FetchNext();
+				}
+				return b0;
+			}
+			// Fast path: 2-byte varint
+			if (this._bitsAvail >= 16) {
+				const b1 = (this._buf >>> 8) & 0xff;
+				if ((b1 & 0x80) === 0) {
+					this._sumReadBits += 16;
+					this._bitsAvail -= 16;
+					if (this._bitsAvail !== 0) {
+						this._buf >>>= 16;
+					} else {
+						this.FetchNext();
+					}
+					return ((b0 & 0x7f) | (b1 << 7)) >>> 0;
+				}
+			}
+		}
+		// Fall back to general loop for longer varints
 		let result = 0;
 		let count = 0;
 		let byteRead: number;
-
 		do {
-			if (count >= 5) {
-				return result >>> 0;
-			}
+			if (count >= 5) return result >>> 0;
 			byteRead = this.ReadByte();
 			result |= (byteRead & 0x7f) << (7 * count);
 			count++;
 		} while ((byteRead & 0x80) !== 0);
-
 		return result >>> 0;
 	}
 	readUbitVarFp() {
@@ -415,27 +463,23 @@ export class BitBuffer {
 	}
 
 	decodeQangleVariant() {
-		const hasX = this.readBoolean();
-		const hasY = this.readBoolean();
-		const hasZ = this.readBoolean();
+		const flags = this.ReadUBits(3);
 		const result = [0, 0, 0];
 
-		if (hasX) result[0] = this.readBitCoord();
-		if (hasY) result[1] = this.readBitCoord();
-		if (hasZ) result[2] = this.readBitCoord();
+		if (flags & 1) result[0] = this.readBitCoord();
+		if (flags & 2) result[1] = this.readBitCoord();
+		if (flags & 4) result[2] = this.readBitCoord();
 
 		return result;
 	}
 
 	decodeQangleVariantPres() {
-		const hasX = this.readBoolean();
-		const hasY = this.readBoolean();
-		const hasZ = this.readBoolean();
+		const flags = this.ReadUBits(3);
 		const result = [0, 0, 0];
 
-		if (hasX) result[0] = this.readBitCoordPres();
-		if (hasY) result[1] = this.readBitCoordPres();
-		if (hasZ) result[2] = this.readBitCoordPres();
+		if (flags & 1) result[0] = this.readBitCoordPres();
+		if (flags & 2) result[1] = this.readBitCoordPres();
+		if (flags & 4) result[2] = this.readBitCoordPres();
 
 		return result;
 	}

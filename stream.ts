@@ -87,9 +87,9 @@ parser.on('end', () => {
 		compare(compareTarget);
 	}
 });
-parser.on('header', console.log);
+// parser.on('header', console.log);
 // parser.on('svc_ServerInfo', console.log);
-parser.on('debug', console.log);
+// parser.on('debug', console.log);
 
 function compare(refPath: string) {
 	const reference = readFileSync(refPath, 'utf-8');

@@ -55,6 +55,12 @@ function createAllocator(bufferSize = BUFFER_SIZE) {
 		}
 	}
 
+	function reset() {
+		// Reset to single free block
+		blocks.length = 1;
+		blocks[0] = { offset: 0, size: bufferSize, free: true };
+	}
+
 	function stats() {
 		const used = blocks.filter(b => !b.free).reduce((s, b) => s + b.size, 0);
 		return {
@@ -65,7 +71,7 @@ function createAllocator(bufferSize = BUFFER_SIZE) {
 		};
 	}
 
-	return { alloc, free, stats };
+	return { alloc, free, reset, stats };
 }
 
 export { createAllocator };

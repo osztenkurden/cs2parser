@@ -44,16 +44,25 @@ const _fieldResult = { decoder: 0 as any, propId: 0, hasInfo: false };
 
 // Combined findField + getPropInfo + getDecoderFromField in one pass
 const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
-	let f = ser.fields[fp.path[0]];
+	const f = ser.fields[fp.path[0]];
 	if (!f) throw 'Noo field';
 
-	// Traverse to leaf field
-	for (let depth = 1; depth <= fp.last; depth++) {
-		f = getInnerExt(f!, fp.path[depth]!);
+	// Fast path: depth-0 Value field (most common case)
+	if (fp.last === 0 && f.type === FieldTypeEnum.Value) {
+		const v = f.value as any;
+		_fieldResult.decoder = v.decoder;
+		_fieldResult.propId = v.prop_id;
+		_fieldResult.hasInfo = true;
+		return _fieldResult;
 	}
 
-	const field = f!;
-	const type = field.type;
+	// Traverse to leaf field
+	let field = f;
+	for (let depth = 1; depth <= fp.last; depth++) {
+		field = getInnerExt(field!, fp.path[depth]!);
+	}
+
+	const type = field!.type;
 
 	if (type === FieldTypeEnum.Value) {
 		const v = field.value as any;
@@ -159,14 +168,18 @@ export class EntityParser {
 
 	writeFp(fp_src: FieldPath, idx: number) {
 		const target = this.paths[idx]!;
-		target.last = fp_src.last;
+		const last = fp_src.last;
+		target.last = last;
 		target.path[0] = fp_src.path[0];
-		target.path[1] = fp_src.path[1];
-		target.path[2] = fp_src.path[2];
-		target.path[3] = fp_src.path[3];
-		target.path[4] = fp_src.path[4];
-		target.path[5] = fp_src.path[5];
-		target.path[6] = fp_src.path[6];
+		if (last >= 1) {
+			target.path[1] = fp_src.path[1];
+			if (last >= 2) {
+				target.path[2] = fp_src.path[2];
+				if (last >= 3) {
+					for (let i = 3; i <= last; i++) target.path[i] = fp_src.path[i];
+				}
+			}
+		}
 	}
 
 	createEntity = (reader: BitBuffer, entityId: number, baselines: Uint8Array[]) => {

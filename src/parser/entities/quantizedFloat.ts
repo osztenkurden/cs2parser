@@ -2,7 +2,7 @@ import type { BitBuffer } from '../ubitreader.js';
 
 export const qfMapper = {
 	idx: 0,
-	map: {} as Record<number, QuantalizedFloat>
+	map: [] as QuantalizedFloat[]
 };
 
 export type QuantalizedFloat = {
@@ -174,19 +174,20 @@ const validateFlags = (qf: QuantalizedFloat) => {
 };
 
 export const decodeQfloat = (reader: BitBuffer, qfIndex: number) => {
-	const qf = qfMapper.map[qfIndex];
+	const qf = qfMapper.map[qfIndex]!;
 
-	if (!qf) throw 'QF NOT FOUND';
-	if ((qf.flags & QFF_ROUNDDOWN) !== 0 && reader.readBoolean()) {
-		return qf.low;
-	}
+	if (qf.flags !== 0) {
+		if ((qf.flags & QFF_ROUNDDOWN) !== 0 && reader.readBoolean()) {
+			return qf.low;
+		}
 
-	if ((qf.flags & QFF_ROUNDUP) !== 0 && reader.readBoolean()) {
-		return qf.high;
-	}
+		if ((qf.flags & QFF_ROUNDUP) !== 0 && reader.readBoolean()) {
+			return qf.high;
+		}
 
-	if ((qf.flags & QFF_ENCODE_ZERO) !== 0 && reader.readBoolean()) {
-		return 0;
+		if ((qf.flags & QFF_ENCODE_ZERO) !== 0 && reader.readBoolean()) {
+			return 0;
+		}
 	}
 	const bits = reader.ReadUBits(qf.bit_count);
 

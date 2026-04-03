@@ -74,13 +74,14 @@ export class DemoReader extends EventEmitter<{
 		return result;
 	}
 
+	private _gameRulesEntityId: number | null = null;
+
 	/** Game rules helper (or null if not yet created) */
 	get gameRules(): GameRules | null {
-		for (let i = 0; i < this.entities.length; i++) {
-			const e = this.entities[i];
-			if (e && e.className === 'CCSGameRulesProxy') {
-				return new GameRules(this, i);
-			}
+		if (this._gameRulesEntityId !== null) {
+			const e = this.entities[this._gameRulesEntityId];
+			if (e) return new GameRules(this, this._gameRulesEntityId);
+			this._gameRulesEntityId = null;
 		}
 		return null;
 	}
@@ -133,6 +134,7 @@ export class DemoReader extends EventEmitter<{
 		});
 
 		this.on('entityCreated', ([entityId, classId, entityType, className]) => {
+			if (className === 'CCSGameRulesProxy') this._gameRulesEntityId = entityId;
 			if (this._directWriteMode) return;
 			this.entities[entityId] = {
 				classId,
@@ -150,6 +152,7 @@ export class DemoReader extends EventEmitter<{
 		});
 
 		this.on('entityDeleted', entityId => {
+			if (entityId === this._gameRulesEntityId) this._gameRulesEntityId = null;
 			if (this._directWriteMode) return;
 			this.entities[entityId] = undefined as any;
 		});

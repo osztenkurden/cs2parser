@@ -1,5 +1,4 @@
 import fs from 'fs-extra';
-import ByteBuffer from 'bytebuffer';
 import snappy from 'snappy';
 import { BitBuffer } from '../ubitreader.js';
 import { decoders, type DecoderKeys, type Decoders } from '../descriptors/decoders.js';
@@ -21,8 +20,11 @@ export class ParseSession {
 	private static readonly entityAllocator = createAllocator();
 	private static readonly READ_BUFFER_SIZE = 4 * 1024 * 1024; // 4 MB
 
-	// Buffer state
-	private bytebuffer: ByteBuffer;
+	// Buffer state (replaces ByteBuffer for zero-overhead frame reading)
+	private _frameBuf: Uint8Array;
+	private _frameOffset = 0;
+	private _frameLimit = 0;
+	private _frameMarked = 0;
 	private chunks: Buffer[] = [];
 
 	// File-based reading state (set by fromFile)
@@ -55,10 +57,10 @@ export class ParseSession {
 
 	private _stringTables: (StringTableObject['table'] | null)[] = [];
 
-	constructor(buffer: Buffer, entityMode: EntityMode, emitMainQueue: EmitQueue, parser?: DemoReader) {
-		this.bytebuffer = ByteBuffer.wrap(buffer, true);
-		this.bytebuffer.noAssert = true;
-		this.bytebuffer.skip(16); // skip demo file header
+	constructor(buffer: Buffer | Uint8Array, entityMode: EntityMode, emitMainQueue: EmitQueue, parser?: DemoReader) {
+		this._frameBuf = buffer;
+		this._frameOffset = 16; // skip demo file header
+		this._frameLimit = buffer.length;
 		this.entityMode = entityMode;
 		this.parser = parser ?? null;
 		this.emitMainQueue = emitMainQueue;
@@ -83,6 +85,31 @@ export class ParseSession {
 		session.fileOffset = initialRead;
 		session.fileSize = fileSize;
 		return session;
+	}
+
+	// --- Inline frame buffer helpers (replaces ByteBuffer) ---
+
+	private _frameRemaining(): number {
+		return this._frameLimit - this._frameOffset;
+	}
+
+	private _frameReadVarint32(): number {
+		const buf = this._frameBuf;
+		let offset = this._frameOffset;
+		let result = 0;
+		let shift = 0;
+		let b: number;
+		do {
+			b = buf[offset++]!;
+			result |= (b & 0x7f) << shift;
+			shift += 7;
+		} while ((b & 0x80) !== 0 && shift < 35);
+		this._frameOffset = offset;
+		return result;
+	}
+
+	private _frameSkip(n: number): void {
+		this._frameOffset += n;
 	}
 
 	// === Public API ===
@@ -167,7 +194,7 @@ export class ParseSession {
 	}
 
 	private getProgress(): number {
-		return this.fd !== null ? this.fileOffset / this.fileSize : this.bytebuffer.offset / this.bytebuffer.limit;
+		return this.fd !== null ? this.fileOffset / this.fileSize : this._frameOffset / this._frameLimit;
 	}
 
 	private closeFd(): void {
@@ -187,14 +214,14 @@ export class ParseSession {
 	 * Returns false if DEM_Stop was reached (parsing complete), true if waiting for more data.
 	 */
 	processFrames(): boolean {
-		while (this.bytebuffer.remaining() > 0 || this.chunks.length > 0) {
-			this.bytebuffer.mark();
+		while (this._frameRemaining() > 0 || this.chunks.length > 0) {
+			this._frameMarked = this._frameOffset;
 			try {
 				if (!this.readFrame()) return false; // DEM_Stop
 			} catch (e) {
 				if (e instanceof RangeError) {
 					// Not enough data — reset to frame start and wait for more chunks
-					this.bytebuffer.offset = Math.max(0, this.bytebuffer.markedOffset);
+					this._frameOffset = Math.max(0, this._frameMarked);
 					return true;
 				}
 				throw e;
@@ -211,7 +238,7 @@ export class ParseSession {
 	// === Buffer management ===
 
 	private tryEnsureRemaining(bytes: number): boolean {
-		const remaining = this.bytebuffer.remaining();
+		const remaining = this._frameLimit - this._frameOffset;
 		if (remaining >= bytes) return true;
 
 		// File-based path: compact and refill from fd
@@ -226,18 +253,16 @@ export class ParseSession {
 		// We don't have enough bytes with what we have buffered up
 		if (left > 0) return false;
 
-		const mark = Math.max(0, this.bytebuffer.markedOffset);
-		const newOffset = this.bytebuffer.offset - mark;
+		const mark = Math.max(0, this._frameMarked);
+		const newOffset = this._frameOffset - mark;
 
 		// Coalesce: keep unread bytes from current position, append pending chunks
-		this.bytebuffer.offset = mark;
-		this.bytebuffer = ByteBuffer.wrap(
-			Buffer.concat([new Uint8Array(this.bytebuffer.toBuffer()), ...this.chunks]),
-			true
-		);
-		this.bytebuffer.noAssert = true;
+		const unread = this._frameBuf.subarray(mark, this._frameLimit);
+		const merged = Buffer.concat([unread, ...this.chunks]);
+		this._frameBuf = merged;
+		this._frameOffset = newOffset;
+		this._frameLimit = merged.length;
 		this.chunks = [];
-		this.bytebuffer.offset = newOffset;
 
 		return true;
 	}
@@ -245,12 +270,11 @@ export class ParseSession {
 	/** Compact unread bytes to the start of readBuffer and read more from the file. */
 	private refillFromFile(needed: number): boolean {
 		const buf = this.readBuffer!;
-		const unread = this.bytebuffer.remaining();
+		const unread = this._frameLimit - this._frameOffset;
 
 		// Copy unconsumed bytes to the start of the read buffer
 		if (unread > 0) {
-			const src = this.bytebuffer.buffer as Buffer;
-			src.copy(buf, 0, this.bytebuffer.offset, this.bytebuffer.offset + unread);
+			buf.copyWithin(0, this._frameOffset, this._frameOffset + unread);
 		}
 
 		// Fill the rest from file
@@ -262,8 +286,9 @@ export class ParseSession {
 		}
 
 		const totalAvailable = unread + toRead;
-		this.bytebuffer = ByteBuffer.wrap(buf.subarray(0, totalAvailable), true);
-		this.bytebuffer.noAssert = true;
+		this._frameBuf = buf.subarray(0, totalAvailable);
+		this._frameOffset = 0;
+		this._frameLimit = totalAvailable;
 
 		return totalAvailable >= needed;
 	}
@@ -275,8 +300,8 @@ export class ParseSession {
 	}
 
 	private decompressIfNeeded(size: number, isCompressed: boolean) {
-		const bytes = this.bytebuffer.buffer.subarray(this.bytebuffer.offset, this.bytebuffer.offset + size);
-		this.bytebuffer.offset += size;
+		const bytes = this._frameBuf.subarray(this._frameOffset, this._frameOffset + size);
+		this._frameOffset += size;
 
 		if (isCompressed) {
 			return snappy.uncompressSync(bytes) as Buffer;
@@ -302,8 +327,8 @@ export class ParseSession {
 
 	private readFrame(): boolean {
 		this.ensureRemaining(6);
-		const commandBase = this.bytebuffer.readVarint32();
-		let tick = this.bytebuffer.readVarint32();
+		const commandBase = this._frameReadVarint32();
+		let tick = this._frameReadVarint32();
 		if (tick === 0xffffffff) {
 			tick = -1;
 		}
@@ -314,7 +339,7 @@ export class ParseSession {
 			this.enqueueEvent('tickstart', this.currentTick);
 		}
 
-		const size = this.bytebuffer.readVarint32();
+		const size = this._frameReadVarint32();
 		this.ensureRemaining(size);
 
 		const commandType = commandBase & ~EDemoCommands.DEM_IsCompressed;
@@ -327,7 +352,7 @@ export class ParseSession {
 		const decoder = decoders[commandType as keyof typeof decoders];
 
 		if (!decoder) {
-			this.bytebuffer.skip(size);
+			this._frameSkip(size);
 			return true;
 		}
 
@@ -379,10 +404,10 @@ export class ParseSession {
 				});
 				break;
 			default:
-				this.bytebuffer.skip(size);
+				this._frameSkip(size);
 				break;
 		}
-		this.emitMainQueue(this.eventQueue, 0, false);
+		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
 	}
 
 	// === Packet-level parsing ===
@@ -478,8 +503,8 @@ export class ParseSession {
 	private dumpState() {
 		return {
 			currentTick: this.currentTick,
-			bytebufferOffset: this.bytebuffer.offset,
-			bytebufferRemaining: this.bytebuffer.remaining()
+			bytebufferOffset: this._frameOffset,
+			bytebufferRemaining: this._frameLimit - this._frameOffset
 		};
 	}
 }

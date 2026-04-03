@@ -102,7 +102,7 @@ export const parsePaths = (reader: BitBuffer, entityParser: EntityParser) => {
 		const peeked = reader.PeekUBitsWithLog(HUFFMAN_CODE_MAXLEN);
 		const symbol = huffmanSymbol[peeked]!;
 		const codeLen = huffmanLength[peeked]!;
-		reader.ReadUBits(codeLen);
+		reader.consumePeeked(codeLen);
 
 		if (symbol === STOP_READING_SYMBOL) break;
 
