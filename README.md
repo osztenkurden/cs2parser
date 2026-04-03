@@ -77,13 +77,13 @@ A single method with overloads for all input types. File paths stream by default
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
 
 // File path sync (loads chunks consecutively into memory)
-parser.parseDemo('demo.dem', { entities: EntityMode.ALL, stream: false });
+await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, stream: false });
 
 // Readable stream
 await parser.parseDemo(createReadStream('demo.dem'), { entities: EntityMode.ALL });
 
 // Pre-loaded buffer (big memory usage)
-parser.parseDemo(buffer, { entities: EntityMode.ALL });
+await parser.parseDemo(buffer, { entities: EntityMode.ALL });
 ```
 
 ### Entity Modes
@@ -121,7 +121,7 @@ await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, commands: true, m
 `parser.players` returns `CMsgPlayerInfo[]` from the userinfo string table. Available even with `EntityMode.NONE` — useful when you only need names and Steam IDs.
 
 ```ts
-parser.parseDemo('demo.dem'); // EntityMode.NONE by default
+await parser.parseDemo('demo.dem'); // EntityMode.NONE by default
 
 for (const player of parser.players) {
   console.log(player.name, player.steamid);
