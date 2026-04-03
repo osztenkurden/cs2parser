@@ -42,4 +42,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: npm run build
+
       - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ""
