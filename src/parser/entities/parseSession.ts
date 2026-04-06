@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs from 'fs';
 import snappy from 'snappy';
 import { BitBuffer } from '../ubitreader.js';
 import { decoders, type DecoderKeys, type Decoders } from '../descriptors/decoders.js';

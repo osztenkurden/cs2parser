@@ -1,4 +1,4 @@
-import fs from 'fs-extra';
+import fs from 'fs';
 import { EDemoCommands } from '../ts-proto/demo.js';
 import { decoders } from './descriptors/decoders.js';
 import { BitBuffer } from './ubitreader.js';
