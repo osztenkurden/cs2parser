@@ -28,7 +28,7 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 	listen = (demoReader: DemoReader) => {
 		this._demoReader = demoReader;
 
-		demoReader.on('GE_Source1LegacyGameEventList', data => {
+		demoReader.on('gameeventlist', data => {
 			const descriptors = data.descriptors.reduce(
 				(acc, descriptor) => {
 					if (descriptor.eventid) acc[descriptor.eventid] = descriptor;
@@ -39,7 +39,7 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 			this._eventDescriptors = descriptors;
 		});
 
-		demoReader.on('GE_Source1LegacyGameEvent', gameEvent => {
+		demoReader.on('gameevent', gameEvent => {
 			const descriptor = this._eventDescriptors[gameEvent.eventid ?? -1];
 			if (!descriptor?.name) return;
 

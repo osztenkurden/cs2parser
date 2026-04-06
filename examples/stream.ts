@@ -1,5 +1,5 @@
 import { createReadStream, readFileSync } from 'fs';
-import { DemoReader, EntityMode } from './src/index.js';
+import { DemoReader, EntityMode } from './../src/index.js';
 
 const MODES = ['path-stream', 'path-chunked', 'buffer', 'stream'] as const;
 type Mode = (typeof MODES)[number];

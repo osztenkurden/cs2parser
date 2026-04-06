@@ -151,7 +151,7 @@ export class EntityParser {
 						if (name !== undefined) ent.properties[name] = result;
 					}
 				} else if (this.classInfo.propIdToName[info.propId] !== undefined) {
-					this.enqueueEvent('entityUpdated', { entityId, propId: info.propId, value: result });
+					this.enqueueEvent('entityupdated', { entityId, propId: info.propId, value: result });
 				}
 			}
 
@@ -192,7 +192,7 @@ export class EntityParser {
 		const entityType = this.checkEntityType(classId);
 		const cls = this.classInfo.classes[classId]!;
 
-		this.enqueueEvent('entityCreated', [entityId, classId, entityType, cls.name]);
+		this.enqueueEvent('entitycreated', [entityId, classId, entityType, cls.name]);
 
 		if (entityId > 100000) {
 			throw 'Possible OOM';
@@ -243,7 +243,7 @@ export class EntityParser {
 					if (this.directEntities) {
 						this.directEntities[entityId] = undefined as any;
 					}
-					this.enqueueEvent('entityDeleted', entityId);
+					this.enqueueEvent('entitydeleted', entityId);
 					break;
 				}
 				case 0b10: {

@@ -274,14 +274,6 @@ type ValueField = {
 	name: string;
 	prop_id: number;
 };
-const FieldTypeName = {
-	[FieldTypeEnum.Array]: 'Array',
-	[FieldTypeEnum.None]: 'None',
-	[FieldTypeEnum.Value]: 'Value',
-	[FieldTypeEnum.Pointer]: 'Pointer',
-	[FieldTypeEnum.Vector]: 'Vector',
-	[FieldTypeEnum.Serializer]: 'Serializer'
-} satisfies Record<FieldTypeEnum, string>;
 export class Field<const T extends FieldTypeEnum = FieldTypeEnum> {
 	type: T;
 	value: FieldValue<T>;

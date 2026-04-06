@@ -7,19 +7,18 @@ import { EBaseGameEvents, type CMsgSource1LegacyGameEvent } from '../../ts-proto
 import { CSVCMsg_PacketEntities, SVC_Messages } from '../../ts-proto/netmessages.js';
 import { messages } from '../descriptors/index.js';
 import { createStringTable, updateStringTable, type StringTableObject } from '../stringtables.js';
-import { EntityMode, type EmitQueue, type EventQueue, type emit } from './types.js';
+import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
 import { parseClassInfo } from './classInfo.js';
 import { EntityParser } from './entityParser.js';
 import type { DemoReader } from '../index.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
 import { createAllocator } from './allocator.js';
-import { CSGOUserCmdPB } from '../../ts-proto/cs_usercmd.js';
+import { optionalSvcIds, type optionalSvcMessages } from '../descriptors/svc.js';
 
-export interface ParseSettings {
-	commands?: boolean;
-	messages?: boolean;
-	// voice?: boolean
-}
+// This will allow to optionally parse any message defined in optionalSvcMessages, and will add autocomplete to all options defined there.
+export type ParseSettings = {
+	[K in keyof OnDemandEvents]?: boolean;
+};
 
 export class ParseSession {
 	// Module-level singletons (shared across sessions)
@@ -427,6 +426,20 @@ export class ParseSession {
 		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
 	}
 
+	private handleOptionalCommands<const K extends keyof typeof optionalSvcMessages>(
+		commandId: K,
+		decoder: (typeof optionalSvcMessages)[K],
+		reader: BitBuffer,
+		size: number
+	) {
+		const name = optionalSvcIds[commandId] as (typeof optionalSvcIds)[keyof typeof optionalSvcIds];
+		if (!this.settings?.[name]) {
+			reader.skipBytesBetter(size);
+			return;
+		}
+		this.enqueueEvent(name, decoder.decode(reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size)));
+	}
+
 	// === Packet-level parsing ===
 
 	private parsePacket(packet: CDemoPacket): void {
@@ -462,14 +475,14 @@ export class ParseSession {
 				case SVC_Messages.svc_ServerInfo: {
 					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
 					const serverInfo = command.class.decode(msgContent);
-					this.enqueueEvent('svc_ServerInfo', serverInfo);
+					this.enqueueEvent('serverinfo', serverInfo);
 					break;
 				}
 				case EBaseGameEvents.GE_Source1LegacyGameEventList: {
 					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
 					this.binaryR2.setTo(msgContent);
 					const eventlist = command.class.decode(this.binaryR2);
-					this.enqueueEvent('GE_Source1LegacyGameEventList', eventlist);
+					this.enqueueEvent('gameeventlist', eventlist);
 					break;
 				}
 				case EBaseGameEvents.GE_Source1LegacyGameEvent: {
@@ -482,7 +495,7 @@ export class ParseSession {
 					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
 					const tableCreatedData = createStringTable(command.class.decode(msgContent), this.baselines);
 					this._stringTables.push(tableCreatedData?.table ?? null);
-					this.enqueueEvent('svc_CreateStringTable', tableCreatedData || null);
+					this.enqueueEvent('createstringtable', tableCreatedData || null);
 					break;
 				}
 				case SVC_Messages.svc_UpdateStringTable: {
@@ -498,37 +511,13 @@ export class ParseSession {
 				}
 				case SVC_Messages.svc_ClearAllStringTables:
 					reader.skipBytesBetter(size);
-					this.enqueueEvent('svc_ClearAllStringTables', null);
+					this.enqueueEvent('clearallstringtables');
 					break;
-				case SVC_Messages.svc_UserMessage: {
-					if (!this.settings?.messages) {
-						reader.skipBytesBetter(size);
-						break;
-					}
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
-					const msg = command.class.decode(msgContent);
-					this.enqueueEvent('svc_UserMessage', msg);
-					break;
-				}
-				case SVC_Messages.svc_UserCmds: {
-					if (!this.settings?.commands) {
-						reader.skipBytesBetter(size);
-						break;
-					}
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
-					const msg = command.class.decode(msgContent);
-					for (const command of msg.commands) {
-						if (!command.data) continue;
-						const msg = CSGOUserCmdPB.decode(command.data);
-
-						this.enqueueEvent('usercommand', {
-							...command,
-							data: msg
-						});
-					}
-					break;
-				}
 				default:
+					if (command.id in optionalSvcIds) {
+						this.handleOptionalCommands(command.id, command.class, reader, size);
+						break;
+					}
 					reader.skipBytesBetter(size);
 					break;
 			}
@@ -541,7 +530,7 @@ export class ParseSession {
 			ParseSession.entityAllocator.free(allocatedElement);
 		}
 		for (const event of gameEventQueue) {
-			this.enqueueEvent('GE_Source1LegacyGameEvent', event);
+			this.enqueueEvent('gameevent', event);
 		}
 	}
 

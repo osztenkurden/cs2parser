@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { CDemoPacket, EDemoCommands } from '../ts-proto/demo.js';
+import { EDemoCommands } from '../ts-proto/demo.js';
 import { decoders } from './descriptors/decoders.js';
 import { BitBuffer } from './ubitreader.js';
 import { GameEvents } from './descriptors/gameEventEmitter.js';
@@ -16,7 +16,7 @@ import type { TypedEntity, EntityProperties, KnownClassName } from '../generated
 import { isEntityClass } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
-import { SVC_Messages, sVC_MessagesToJSON } from '../ts-proto/netmessages.js';
+import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
 
 export class DemoReader extends EventEmitter<{
@@ -137,7 +137,7 @@ export class DemoReader extends EventEmitter<{
 		this.on('tickstart', tick => {
 			this.currentTick = tick;
 		});
-		this.on('svc_CreateStringTable', table => {
+		this.on('createstringtable', table => {
 			if (!table) return;
 
 			for (const player of table.players) {
@@ -145,7 +145,7 @@ export class DemoReader extends EventEmitter<{
 			}
 		});
 
-		this.on('entityCreated', ([entityId, classId, entityType, className]) => {
+		this.on('entitycreated', ([entityId, classId, entityType, className]) => {
 			if (className === 'CCSGameRulesProxy') this._gameRulesEntityId = entityId;
 			if (this._directWriteMode) return;
 			this.entities[entityId] = {
@@ -156,14 +156,14 @@ export class DemoReader extends EventEmitter<{
 			};
 		});
 
-		this.on('entityUpdated', info => {
+		this.on('entityupdated', info => {
 			if (this._directWriteMode) return;
 			if (!this.entities[info.entityId]) return;
 			//@ts-expect-error We know what we doin son
 			this.entities[info.entityId]!.properties[this.propIdToName[info.propId]!] = info.value;
 		});
 
-		this.on('entityDeleted', entityId => {
+		this.on('entitydeleted', entityId => {
 			if (entityId === this._gameRulesEntityId) this._gameRulesEntityId = null;
 			if (this._directWriteMode) return;
 			this.entities[entityId] = undefined as any;
@@ -267,7 +267,7 @@ export class DemoReader extends EventEmitter<{
 		if (this._hasEnded) return;
 		for (const element of queue) {
 			if (this._hasEnded) return;
-			this.emit(element[0], element[1]);
+			this.emit(element[0], element[1] as any);
 		}
 		queue.length = 0;
 	};

@@ -1,4 +1,4 @@
-import { DemoReader } from './src/index.js';
+import { DemoReader } from './../src/index.js';
 const demoPath = process.argv[2];
 
 if (!demoPath) {
