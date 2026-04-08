@@ -34,6 +34,11 @@ export class DemoReader extends EventEmitter<{
 
 	private _playerInfoMap: Record<number, CMsgPlayerInfo> = {};
 
+	private _playerCache: Map<number, Player> = new Map();
+	private _teamCache: Map<number, Team> = new Map();
+	private _pawnCache: Map<number, PlayerPawn> = new Map();
+	private _gameRulesCache: GameRules | null = null;
+
 	gameEvents = new GameEvents();
 
 	get currentTime(): number {
@@ -49,11 +54,20 @@ export class DemoReader extends EventEmitter<{
 		return this._playerInfoMap;
 	}
 
+	private _getOrCreate<T>(cache: Map<number, T>, id: number, factory: (id: number) => T): T {
+		let cached = cache.get(id);
+		if (!cached) {
+			cached = factory(id);
+			cache.set(id, cached);
+		}
+		return cached;
+	}
+
 	/** Get a Player helper by controller entity ID. Requires EntityMode.ALL. */
 	getPlayer(entityId: number): Player | null {
 		const e = this.entities[entityId];
 		if (e && e.className === 'CCSPlayerController') {
-			return new Player(this, entityId);
+			return this._getOrCreate(this._playerCache, entityId, id => new Player(this, id));
 		}
 		return null;
 	}
@@ -61,7 +75,7 @@ export class DemoReader extends EventEmitter<{
 	getPawn(entityId: number): PlayerPawn | null {
 		const e = this.entities[entityId];
 		if (e && e.className === 'CCSPlayerPawn') {
-			return new PlayerPawn(this, entityId);
+			return this._getOrCreate(this._pawnCache, entityId, id => new PlayerPawn(this, id));
 		}
 		return null;
 	}
@@ -72,7 +86,7 @@ export class DemoReader extends EventEmitter<{
 		for (let i = 0; i < this.entities.length; i++) {
 			const e = this.entities[i];
 			if (e && e.className === 'CCSPlayerController') {
-				result.push(new Player(this, i));
+				result.push(this._getOrCreate(this._playerCache, i, id => new Player(this, id)));
 			}
 		}
 		return result;
@@ -97,7 +111,7 @@ export class DemoReader extends EventEmitter<{
 			if (!e || e.className !== 'CCSPlayerController') continue;
 			const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
 			if (raw !== undefined && String(raw) === target) {
-				return new Player(this, i);
+				return this._getOrCreate(this._playerCache, i, id => new Player(this, id));
 			}
 		}
 		return null;
@@ -109,7 +123,7 @@ export class DemoReader extends EventEmitter<{
 		for (let i = 0; i < this.entities.length; i++) {
 			const e = this.entities[i];
 			if (e && e.className === 'CCSTeam') {
-				result.push(new Team(this, i));
+				result.push(this._getOrCreate(this._teamCache, i, id => new Team(this, id)));
 			}
 		}
 		return result;
@@ -119,12 +133,17 @@ export class DemoReader extends EventEmitter<{
 
 	/** Game rules helper (or null if not yet created) */
 	get gameRules(): GameRules | null {
-		if (this._gameRulesEntityId !== null) {
-			const e = this.entities[this._gameRulesEntityId];
-			if (e) return new GameRules(this, this._gameRulesEntityId);
+		if (this._gameRulesEntityId === null) return null;
+		const e = this.entities[this._gameRulesEntityId];
+		if (!e) {
 			this._gameRulesEntityId = null;
+			this._gameRulesCache = null;
+			return null;
 		}
-		return null;
+		if (!this._gameRulesCache) {
+			this._gameRulesCache = new GameRules(this, this._gameRulesEntityId);
+		}
+		return this._gameRulesCache;
 	}
 
 	/** Get a typed entity by index and class name. Returns typed properties or undefined. */
@@ -182,7 +201,13 @@ export class DemoReader extends EventEmitter<{
 		});
 
 		this.on('entitycreated', ([entityId, classId, entityType, className]) => {
-			if (className === 'CCSGameRulesProxy') this._gameRulesEntityId = entityId;
+			this._playerCache.delete(entityId);
+			this._teamCache.delete(entityId);
+			this._pawnCache.delete(entityId);
+			if (className === 'CCSGameRulesProxy') {
+				this._gameRulesEntityId = entityId;
+				this._gameRulesCache = null;
+			}
 			if (this._directWriteMode) return;
 			this.entities[entityId] = {
 				classId,
@@ -200,7 +225,13 @@ export class DemoReader extends EventEmitter<{
 		});
 
 		this.on('entitydeleted', entityId => {
-			if (entityId === this._gameRulesEntityId) this._gameRulesEntityId = null;
+			if (entityId === this._gameRulesEntityId) {
+				this._gameRulesEntityId = null;
+				this._gameRulesCache = null;
+			}
+			this._playerCache.delete(entityId);
+			this._teamCache.delete(entityId);
+			this._pawnCache.delete(entityId);
 			if (this._directWriteMode) return;
 			this.entities[entityId] = undefined as any;
 		});

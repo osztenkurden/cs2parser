@@ -1,3 +1,4 @@
+import type { ECstrike15UserMessages } from '../../ts-proto/cstrike15_usermessages.js';
 import type { CDemoFileHeader } from '../../ts-proto/demo.js';
 import type { CMsgSource1LegacyGameEventList, CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
 import type { CSVCMsg_ServerInfo, MessageFns, SVC_Messages } from '../../ts-proto/netmessages.js';
@@ -28,11 +29,12 @@ type OptionalMessagesMap<
 		[Z in keyof D]: D[Z] extends never ? never : Z;
 	}[keyof D]]: D[K];
 };
-export type IdToName<T extends Record<string, number>> = {
+export type RevertKeysAndValues<T extends Record<string, number>> = {
 	[K in keyof T as T[K]]: K;
 };
 
-type OptionalSVCMessages = OptionalMessagesMap<typeof SVC_Messages, typeof optionalSvcMessages>;
+export type OptionalMessagesId = typeof SVC_Messages & typeof ECstrike15UserMessages;
+type OptionalSVCMessages = OptionalMessagesMap<OptionalMessagesId, typeof optionalSvcMessages>;
 export interface OnDemandEvents extends OptionalSVCMessages {}
 export interface OutputEvents extends OnDemandEvents {
 	progress: number;

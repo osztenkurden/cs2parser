@@ -1,7 +1,7 @@
 import type { DemoReader } from '../parser/index.js';
 import type { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import type { ICCSPlayerController } from '../generated/entityTypes.js';
-import { PlayerPawn, type Vector } from './playerPawn.js';
+import type { PlayerPawn, Vector } from './playerPawn.js';
 import type { Team } from './team.js';
 
 const PLAYER_ENTITY_HANDLE_MISSING = 2047;
@@ -68,9 +68,7 @@ export class Player {
 	get pawn(): PlayerPawn | null {
 		const id = this.pawnEntityId;
 		if (id === null) return null;
-		const ent = this._parser.entities[id];
-		if (!ent) return null;
-		return new PlayerPawn(this._parser, id);
+		return this._parser.getPawn(id);
 	}
 
 	// --- Alive State ---
