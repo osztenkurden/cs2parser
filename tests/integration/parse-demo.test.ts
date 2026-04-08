@@ -55,4 +55,8 @@ describe.skipIf(!demoAvailable)('parse demo (full integration)', () => {
 	test('end event was emitted exactly once', () => {
 		expect(eventCounts['end']).toBe(1);
 	});
+
+	test('header property is filled', () => {
+		expect(reader.header).not.toBeNull();
+	});
 });

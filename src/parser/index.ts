@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { EDemoCommands } from '../ts-proto/demo.js';
+import { type CDemoFileHeader, EDemoCommands } from '../ts-proto/demo.js';
 import { decoders } from './descriptors/decoders.js';
 import { BitBuffer } from './ubitreader.js';
 import { GameEvents } from './descriptors/gameEventEmitter.js';
@@ -23,6 +23,7 @@ export class DemoReader extends EventEmitter<{
 	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
 }> {
 	_parseStartTime = 0n;
+	header: CDemoFileHeader | null = null;
 	private _hasEnded = false;
 	private _stream: Readable | null = null;
 
@@ -167,6 +168,9 @@ export class DemoReader extends EventEmitter<{
 			if (entityId === this._gameRulesEntityId) this._gameRulesEntityId = null;
 			if (this._directWriteMode) return;
 			this.entities[entityId] = undefined as any;
+		});
+		this.once('header', header => {
+			this.header = header;
 		});
 	}
 
