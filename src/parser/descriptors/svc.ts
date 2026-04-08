@@ -11,7 +11,6 @@ import {
 	CSVCMsg_ServerInfo,
 	CSVCMsg_UpdateStringTable,
 	CSVCMsg_UserCommands,
-	CSVCMsg_UserMessage,
 	CSVCMsg_VoiceData,
 	SVC_Messages
 } from '../../ts-proto/netmessages.js';
