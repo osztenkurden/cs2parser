@@ -19,6 +19,12 @@ import { PlayerPawn } from '../helpers/playerPawn.js';
 import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
 
+/** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
+const steamIdToAccountId = (steamId: bigint | number): number => {
+	const big = typeof steamId === 'bigint' ? steamId : BigInt(steamId);
+	return Number(big & 0xffffffffn);
+};
+
 export class DemoReader extends EventEmitter<{
 	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
 }> {
@@ -38,6 +44,7 @@ export class DemoReader extends EventEmitter<{
 	private _teamCache: Map<number, Team> = new Map();
 	private _pawnCache: Map<number, PlayerPawn> = new Map();
 	private _gameRulesCache: GameRules | null = null;
+	private _accountIdToEntityId: Map<number, number> = new Map();
 
 	gameEvents = new GameEvents();
 
@@ -111,6 +118,43 @@ export class DemoReader extends EventEmitter<{
 			if (!e || e.className !== 'CCSPlayerController') continue;
 			const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
 			if (raw !== undefined && String(raw) === target) {
+				return this._getOrCreate(this._playerCache, i, id => new Player(this, id));
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get a Player helper by Steam account ID — the lower 32 bits of the SteamID64,
+	 * i.e. the trailing number in SteamID3 form (e.g. `918429678` from `[U:1:918429678]`).
+	 * Requires EntityMode.ALL. O(1) on cached entries, with a linear-scan fallback for
+	 * controllers whose `m_steamID` was set after entity creation.
+	 */
+	getByAccountId(accountId: number): Player | null {
+		// Fast path: cached entityId. Validate against the live entity in case the slot
+		// was deleted, reused, or the controller's steamID changed.
+		const cached = this._accountIdToEntityId.get(accountId);
+		if (cached !== undefined) {
+			const e = this.entities[cached];
+			if (e && e.className === 'CCSPlayerController') {
+				const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
+				if (raw !== undefined && steamIdToAccountId(raw) === accountId) {
+					return this._getOrCreate(this._playerCache, cached, id => new Player(this, id));
+				}
+			}
+			this._accountIdToEntityId.delete(accountId);
+		}
+
+		// Fallback: linear scan. Re-populates the map for any controller that was
+		// missing m_steamID at entitycreated time.
+		for (let i = 0; i < this.entities.length; i++) {
+			const e = this.entities[i];
+			if (!e || e.className !== 'CCSPlayerController') continue;
+			const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
+			if (raw === undefined) continue;
+			const id = steamIdToAccountId(raw);
+			this._accountIdToEntityId.set(id, i);
+			if (id === accountId) {
 				return this._getOrCreate(this._playerCache, i, id => new Player(this, id));
 			}
 		}
@@ -207,6 +251,19 @@ export class DemoReader extends EventEmitter<{
 			if (className === 'CCSGameRulesProxy') {
 				this._gameRulesEntityId = entityId;
 				this._gameRulesCache = null;
+			}
+			if (className === 'CCSPlayerController') {
+				// In direct-write mode, baseline + initial-update properties are written
+				// before this listener fires (queue is flushed after the packet), so
+				// m_steamID is already populated for most controllers.
+				const e = this.entities[entityId];
+				const raw = (e?.properties as Partial<ICCSPlayerController> | undefined)?.[
+					'CCSPlayerController.m_steamID'
+				];
+				if (raw !== undefined) {
+					const accountId = steamIdToAccountId(raw);
+					if (accountId !== 0) this._accountIdToEntityId.set(accountId, entityId);
+				}
 			}
 			if (this._directWriteMode) return;
 			this.entities[entityId] = {
