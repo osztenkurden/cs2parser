@@ -23,12 +23,12 @@ describe.skipIf(!demoAvailable)('getPlayerByInfo', () => {
 	});
 
 	test('every non-bot player resolves to a Player with matching steamId', () => {
-		const nonBots = reader.players.filter(p => p.steamid !== undefined && p.steamid !== '0' && !p.fakeplayer);
+		const nonBots = reader.players.filter(p => p?.steamid !== undefined && p?.steamid !== '0' && !p?.fakeplayer);
 		expect(nonBots.length).toBeGreaterThan(0);
 		for (const info of nonBots) {
 			const player = reader.getPlayerByInfo(info);
 			expect(player).not.toBeNull();
-			expect(player!.steamId).toBe(String(info.steamid));
+			expect(player!.steamId).toBe(String(info?.steamid));
 		}
 	});
 
@@ -46,7 +46,7 @@ describe.skipIf(!demoAvailable)('getPlayerByInfo', () => {
 	});
 
 	test('returns null for bot info (steamid === "0")', () => {
-		const botInfo = reader.players.find(p => p.steamid === '0' || p.fakeplayer);
+		const botInfo = reader.players.find(p => p?.steamid === '0' || p?.fakeplayer);
 		if (botInfo) {
 			expect(reader.getPlayerByInfo(botInfo)).toBeNull();
 		}

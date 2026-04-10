@@ -38,7 +38,7 @@ export class DemoReader extends EventEmitter<{
 	private tickInterval = NaN;
 	currentTick = -1;
 
-	private _playerInfoMap: CMsgPlayerInfo[] = [];
+	private _playerInfoMap: (CMsgPlayerInfo | undefined)[] = [];
 
 	private _playerCache: Map<number, Player> = new Map();
 	private _teamCache: Map<number, Team> = new Map();
