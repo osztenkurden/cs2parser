@@ -22,7 +22,7 @@ if (!mode || !MODES.includes(mode) || !demoPath) {
 	process.exit(1);
 }
 
-const cancelAfter = false;//args[2] ? parseInt(args[2]) : false;
+const cancelAfter = false; //args[2] ? parseInt(args[2]) : false;
 
 const output: string[] = [];
 const log = (line: string) => {
@@ -80,6 +80,7 @@ parser.on('end', () => {
 	// parser.players works even with EntityMode.NONE
 	log('\n=== Player Info (always available) ===');
 	for (const p of parser.players) {
+		if (!p) continue;
 		log(`  ${p.name?.padEnd(12)} steamid:${p.steamid}`);
 	}
 
@@ -118,10 +119,10 @@ function compare(refPath: string) {
 		process.exitCode = 1;
 	}
 }
-if(cancelAfter !== false){
+if (cancelAfter !== false) {
 	setTimeout(() => {
 		parser.cancel();
-	}, cancelAfter)
+	}, cancelAfter);
 }
 switch (mode) {
 	case 'path-stream':
