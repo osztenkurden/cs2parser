@@ -19,19 +19,22 @@
 	"engines": {
 		"node": ">=22.0.0"
 	},
-	"types": "./dist/index.d.ts",
+	"files": [
+		"./dist",
+		"ACKNOWLEDGEMENTS"
+	],
+	"types": "./dist/index.d.mts",
 	"exports": {
-		".": "./dist/index.js",
+		".": "./dist/index.mjs",
 		"./package.json": "./package.json"
 	},
 	"scripts": {
 		"typecheck": "tsc",
-		"clean": "del-cli dist",
 		"lint": "eslint src/",
 		"lint:fix": "eslint src/ --fix",
 		"format": "prettier --write src/",
 		"format:check": "prettier --check src/",
-		"build": "npm run clean && npm run typecheck && tsup src/index.ts --format esm --dts -d dist",
+		"build": "npm run typecheck && tsdown src/index.ts -d dist",
 		"test": "bun test --timeout 300000",
 		"test:watch": "bun test --watch --timeout 300000",
 		"test:coverage": "bun test --coverage --timeout 300000",
@@ -57,7 +60,7 @@
 		"husky": "^9.1.7",
 		"prettier": "^3.0.3",
 		"ts-proto": "2.11.6",
-		"tsup": "^8.2.1",
+		"tsdown": "^0.21.7",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.45.0"
 	}
