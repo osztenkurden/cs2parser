@@ -1,9 +1,11 @@
 node_modules
 lib
 dist
-replay-generator/output
+replay-generator
 *.tgz
 tests/fixtures/*.dem
 coverage/
 comparison
 *.dem
+.vscode
+.claude
