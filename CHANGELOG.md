@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.4](https://github.com/osztenkurden/cs2parser/compare/v1.4.3...v1.4.4) (2026-04-19)
+
+
+### Bug Fixes
+
+* removed protobufjs ([c3a42b8](https://github.com/osztenkurden/cs2parser/commit/c3a42b8ca882ac1e1fb557c659ea5dc0556d650b))
+* updated workflow playouts ([e971306](https://github.com/osztenkurden/cs2parser/commit/e971306e1588b99ff1647b86dc3b1a54ebf35e93))
+* use tsgo for typechecking ([1e8a6e2](https://github.com/osztenkurden/cs2parser/commit/1e8a6e2b0b33d3a3602925f1a25d403e7aaadeba))
+
 ## [1.4.3](https://github.com/osztenkurden/cs2parser/compare/v1.4.2...v1.4.3) (2026-04-11)
 
 
