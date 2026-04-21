@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.0](https://github.com/osztenkurden/cs2parser/compare/v1.4.4...v1.5.0) (2026-04-21)
+
+
+### Features
+
+* fixed 14152 protocol compatibility ([b620a02](https://github.com/osztenkurden/cs2parser/commit/b620a02ba486968e8c52882113a3b80d363002fc))
+* updated entity types ([9d06e2d](https://github.com/osztenkurden/cs2parser/commit/9d06e2d59a389f145beb997664bf478cdd0fa4d4))
+* updated protos ([5d00787](https://github.com/osztenkurden/cs2parser/commit/5d007870ed00c1b58075fbc036e6b881f9dd22df))
+
 ## [1.4.4](https://github.com/osztenkurden/cs2parser/compare/v1.4.3...v1.4.4) (2026-04-19)
 
 
