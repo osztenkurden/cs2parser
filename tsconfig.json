@@ -1,6 +1,8 @@
 {
   "include": [
-    "./src/**/*"
+    "./src/**/*",
+    "./examples/**/*",
+    "./scripts/**/*"
   ],
   
   "compilerOptions": {
@@ -13,7 +15,7 @@
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
-    "rootDir": "./src",
+    "rootDir": "./",
     "verbatimModuleSyntax": true,
     /* Strictness */
     "strict": true,

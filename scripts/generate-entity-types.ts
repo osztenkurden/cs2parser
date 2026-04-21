@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 
 // Import parsing internals
 import { DemoReader } from '../src/parser/index.js';
-import { Decoder } from '../src/parser/entities/constructorFields.js';
+import type { Decoder } from '../src/parser/entities/constructorFields.js';
 import { EntityMode } from '../src/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,28 +22,28 @@ const OUTPUT_PATH = path.join(OUTPUT_DIR, 'entityTypes.ts');
 
 // Decoder numeric ID → TypeScript type (matches constructorFields.ts D_* constants)
 const DECODER_ID_TO_TS: Record<number, string> = {
-	0: 'number',                    // D_QUANTALIZED_FLOAT
-	1: '[number, number, number]',  // D_VECTOR_NORMAL
-	2: '[number, number, number]',  // D_VECTOR_NOSCALE
-	3: '[number, number, number]',  // D_VECTOR_FLOAT_COORD
-	4: 'bigint',                    // D_UNSIGNED64
-	5: 'number',                    // D_CENTITY_HANDLE
-	6: 'number',                    // D_NOSCALE
-	7: 'boolean',                   // D_BOOLEAN
-	8: 'string',                    // D_STRING
-	9: 'number',                    // D_SIGNED
-	10: 'number',                   // D_UNSIGNED
-	11: 'boolean',                  // D_COMPONENT
-	12: 'number',                   // D_FLOAT_COORD
-	13: 'number',                   // D_FLOAT_SIMULATION_TIME
-	14: 'bigint',                   // D_FIXED64
+	0: 'number', // D_QUANTALIZED_FLOAT
+	1: '[number, number, number]', // D_VECTOR_NORMAL
+	2: '[number, number, number]', // D_VECTOR_NOSCALE
+	3: '[number, number, number]', // D_VECTOR_FLOAT_COORD
+	4: 'bigint', // D_UNSIGNED64
+	5: 'number', // D_CENTITY_HANDLE
+	6: 'number', // D_NOSCALE
+	7: 'boolean', // D_BOOLEAN
+	8: 'string', // D_STRING
+	9: 'number', // D_SIGNED
+	10: 'number', // D_UNSIGNED
+	11: 'boolean', // D_COMPONENT
+	12: 'number', // D_FLOAT_COORD
+	13: 'number', // D_FLOAT_SIMULATION_TIME
+	14: 'bigint', // D_FIXED64
 	15: '[number, number, number]', // D_QANGLE_PITCH_YAW
 	16: '[number, number, number]', // D_QANGLE3
 	17: '[number, number, number]', // D_QANGLE_VAR
-	18: 'number',                   // D_BASE
-	19: 'number',                   // D_AMMO
+	18: 'number', // D_BASE
+	19: 'number', // D_AMMO
 	20: '[number, number, number]', // D_QANGLE_PRES
-	21: 'number',                   // D_GAME_MODE_RULES
+	21: 'number' // D_GAME_MODE_RULES
 };
 
 function decoderToTsType(decoder: Decoder): string {
@@ -126,7 +126,9 @@ function collectFromDemo(demoPath: string): SnapshotData {
 function saveSnapshot(data: SnapshotData) {
 	fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 	fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(data, null, 2));
-	console.log(`Saved snapshot: ${SNAPSHOT_PATH} (${Object.keys(data.entities).length} entities, ${Object.keys(data.serializers).length} serializers)`);
+	console.log(
+		`Saved snapshot: ${SNAPSHOT_PATH} (${Object.keys(data.entities).length} entities, ${Object.keys(data.serializers).length} serializers)`
+	);
 }
 
 function loadSnapshot(): SnapshotData {
@@ -251,7 +253,9 @@ function generateTypeScript(data: SnapshotData, demoName: string): string {
 	lines.push('');
 
 	// TypedEntity
-	lines.push('type _TypedEntity<K extends keyof EntityTypeMap> = { className: K; classId: number; entityType: number; properties: Partial<EntityTypeMap[K]> };');
+	lines.push(
+		'type _TypedEntity<K extends keyof EntityTypeMap> = { className: K; classId: number; entityType: number; properties: Partial<EntityTypeMap[K]> };'
+	);
 	lines.push('');
 	lines.push('/** Discriminated union of all known entity types */');
 	lines.push('export type TypedEntity = _TypedEntity<keyof EntityTypeMap> | BaseEntity;');
@@ -292,7 +296,9 @@ if (demoIdx !== -1 && args[demoIdx + 1]) {
 	const output = generateTypeScript(data, path.basename(demoPath));
 	fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 	fs.writeFileSync(OUTPUT_PATH, output);
-	console.log(`Generated: ${OUTPUT_PATH} (${Object.keys(data.entities).length} entities, ${Object.keys(data.serializers).length} shared serializers)`);
+	console.log(
+		`Generated: ${OUTPUT_PATH} (${Object.keys(data.entities).length} entities, ${Object.keys(data.serializers).length} shared serializers)`
+	);
 } else if (useSnapshot) {
 	if (!fs.existsSync(SNAPSHOT_PATH)) {
 		console.error('No snapshot found. Run with --demo <path> first.');
@@ -303,7 +309,9 @@ if (demoIdx !== -1 && args[demoIdx + 1]) {
 	const output = generateTypeScript(data, 'snapshot');
 	fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 	fs.writeFileSync(OUTPUT_PATH, output);
-	console.log(`Generated: ${OUTPUT_PATH} (${Object.keys(data.entities).length} entities, ${Object.keys(data.serializers).length} shared serializers)`);
+	console.log(
+		`Generated: ${OUTPUT_PATH} (${Object.keys(data.entities).length} entities, ${Object.keys(data.serializers).length} shared serializers)`
+	);
 } else {
 	console.error('Usage:');
 	console.error('  bun scripts/generate-entity-types.ts --demo <path-to-demo>');

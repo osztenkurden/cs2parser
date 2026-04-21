@@ -355,6 +355,7 @@ export interface CMsgTEExplosion {
   affect_ragdolls?: boolean | undefined;
   sound_name?: string | undefined;
   explosion_type?: number | undefined;
+  explosion_type_name?: number | undefined;
   create_debris?: boolean | undefined;
   debris_origin?: CMsgVector | undefined;
   debris_surfaceprop?: number | undefined;
@@ -2810,6 +2811,7 @@ function createBaseCMsgTEExplosion(): CMsgTEExplosion {
     affect_ragdolls: undefined,
     sound_name: undefined,
     explosion_type: undefined,
+    explosion_type_name: undefined,
     create_debris: undefined,
     debris_origin: undefined,
     debris_surfaceprop: undefined,
@@ -2841,6 +2843,9 @@ export const CMsgTEExplosion: MessageFns<CMsgTEExplosion> = {
     }
     if (message.explosion_type !== undefined) {
       writer.uint32(88).uint32(message.explosion_type);
+    }
+    if (message.explosion_type_name !== undefined) {
+      writer.uint32(120).uint32(message.explosion_type_name);
     }
     if (message.create_debris !== undefined) {
       writer.uint32(96).bool(message.create_debris);
@@ -2925,6 +2930,14 @@ export const CMsgTEExplosion: MessageFns<CMsgTEExplosion> = {
           message.explosion_type = reader.uint32();
           continue;
         }
+        case 15: {
+          if (tag !== 120) {
+            break;
+          }
+
+          message.explosion_type_name = reader.uint32();
+          continue;
+        }
         case 12: {
           if (tag !== 96) {
             break;
@@ -2980,6 +2993,11 @@ export const CMsgTEExplosion: MessageFns<CMsgTEExplosion> = {
         : isSet(object.explosion_type)
         ? globalThis.Number(object.explosion_type)
         : undefined,
+      explosion_type_name: isSet(object.explosionTypeName)
+        ? globalThis.Number(object.explosionTypeName)
+        : isSet(object.explosion_type_name)
+        ? globalThis.Number(object.explosion_type_name)
+        : undefined,
       create_debris: isSet(object.createDebris)
         ? globalThis.Boolean(object.createDebris)
         : isSet(object.create_debris)
@@ -3024,6 +3042,9 @@ export const CMsgTEExplosion: MessageFns<CMsgTEExplosion> = {
     if (message.explosion_type !== undefined) {
       obj.explosionType = Math.round(message.explosion_type);
     }
+    if (message.explosion_type_name !== undefined) {
+      obj.explosionTypeName = Math.round(message.explosion_type_name);
+    }
     if (message.create_debris !== undefined) {
       obj.createDebris = message.create_debris;
     }
@@ -3053,6 +3074,7 @@ export const CMsgTEExplosion: MessageFns<CMsgTEExplosion> = {
     message.affect_ragdolls = object.affect_ragdolls ?? undefined;
     message.sound_name = object.sound_name ?? undefined;
     message.explosion_type = object.explosion_type ?? undefined;
+    message.explosion_type_name = object.explosion_type_name ?? undefined;
     message.create_debris = object.create_debris ?? undefined;
     message.debris_origin = (object.debris_origin !== undefined && object.debris_origin !== null)
       ? CMsgVector.fromPartial(object.debris_origin)

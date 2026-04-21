@@ -699,7 +699,7 @@ export function sVC_Messages_LowFrequencyToJSON(object: SVC_Messages_LowFrequenc
 export const Bidirectional_Messages = {
   bi_RebroadcastGameEvent: 16,
   bi_RebroadcastSource: 17,
-  bi_GameEvent: 18,
+  bi_GameEvent_DEPRECATED: 18,
   bi_PredictionEvent: 19,
   UNRECOGNIZED: -1,
 } as const;
@@ -709,7 +709,7 @@ export type Bidirectional_Messages = typeof Bidirectional_Messages[keyof typeof 
 export namespace Bidirectional_Messages {
   export type bi_RebroadcastGameEvent = typeof Bidirectional_Messages.bi_RebroadcastGameEvent;
   export type bi_RebroadcastSource = typeof Bidirectional_Messages.bi_RebroadcastSource;
-  export type bi_GameEvent = typeof Bidirectional_Messages.bi_GameEvent;
+  export type bi_GameEvent_DEPRECATED = typeof Bidirectional_Messages.bi_GameEvent_DEPRECATED;
   export type bi_PredictionEvent = typeof Bidirectional_Messages.bi_PredictionEvent;
   export type UNRECOGNIZED = typeof Bidirectional_Messages.UNRECOGNIZED;
 }
@@ -723,8 +723,8 @@ export function bidirectional_MessagesFromJSON(object: any): Bidirectional_Messa
     case "bi_RebroadcastSource":
       return Bidirectional_Messages.bi_RebroadcastSource;
     case 18:
-    case "bi_GameEvent":
-      return Bidirectional_Messages.bi_GameEvent;
+    case "bi_GameEvent_DEPRECATED":
+      return Bidirectional_Messages.bi_GameEvent_DEPRECATED;
     case 19:
     case "bi_PredictionEvent":
       return Bidirectional_Messages.bi_PredictionEvent;
@@ -741,53 +741,11 @@ export function bidirectional_MessagesToJSON(object: Bidirectional_Messages): st
       return "bi_RebroadcastGameEvent";
     case Bidirectional_Messages.bi_RebroadcastSource:
       return "bi_RebroadcastSource";
-    case Bidirectional_Messages.bi_GameEvent:
-      return "bi_GameEvent";
+    case Bidirectional_Messages.bi_GameEvent_DEPRECATED:
+      return "bi_GameEvent_DEPRECATED";
     case Bidirectional_Messages.bi_PredictionEvent:
       return "bi_PredictionEvent";
     case Bidirectional_Messages.UNRECOGNIZED:
-    default:
-      return "UNRECOGNIZED";
-  }
-}
-
-export const Bidirectional_Messages_LowFrequency = {
-  bi_RelayInfo: 700,
-  bi_RelayPacket: 701,
-  UNRECOGNIZED: -1,
-} as const;
-
-export type Bidirectional_Messages_LowFrequency =
-  typeof Bidirectional_Messages_LowFrequency[keyof typeof Bidirectional_Messages_LowFrequency];
-
-export namespace Bidirectional_Messages_LowFrequency {
-  export type bi_RelayInfo = typeof Bidirectional_Messages_LowFrequency.bi_RelayInfo;
-  export type bi_RelayPacket = typeof Bidirectional_Messages_LowFrequency.bi_RelayPacket;
-  export type UNRECOGNIZED = typeof Bidirectional_Messages_LowFrequency.UNRECOGNIZED;
-}
-
-export function bidirectional_Messages_LowFrequencyFromJSON(object: any): Bidirectional_Messages_LowFrequency {
-  switch (object) {
-    case 700:
-    case "bi_RelayInfo":
-      return Bidirectional_Messages_LowFrequency.bi_RelayInfo;
-    case 701:
-    case "bi_RelayPacket":
-      return Bidirectional_Messages_LowFrequency.bi_RelayPacket;
-    case -1:
-    case "UNRECOGNIZED":
-    default:
-      return Bidirectional_Messages_LowFrequency.UNRECOGNIZED;
-  }
-}
-
-export function bidirectional_Messages_LowFrequencyToJSON(object: Bidirectional_Messages_LowFrequency): string {
-  switch (object) {
-    case Bidirectional_Messages_LowFrequency.bi_RelayInfo:
-      return "bi_RelayInfo";
-    case Bidirectional_Messages_LowFrequency.bi_RelayPacket:
-      return "bi_RelayPacket";
-    case Bidirectional_Messages_LowFrequency.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }

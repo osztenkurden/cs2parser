@@ -298,7 +298,8 @@ export class DemoReader extends EventEmitter<{
 	}
 
 	static parseServerInfo = (filePath: string) => {
-		const bufferSize = 4096 * 4;
+		const max = fs.statSync(filePath).size;
+		const bufferSize = Math.min(4096 * 8, max - 16);
 
 		const fd = fs.openSync(filePath, 'r');
 		try {
@@ -318,7 +319,7 @@ export class DemoReader extends EventEmitter<{
 			const size = byteBuffer.ReadUVarInt32();
 
 			byteBuffer.skipBytesBetter(size);
-			const _frameBuffer = Buffer.alloc(20 * 1024);
+			const _frameBuffer = Buffer.alloc(32 * 1024);
 			while (tick === 0xffffffff && byteBuffer.RemainingBytes > 0) {
 				const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
 				const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;

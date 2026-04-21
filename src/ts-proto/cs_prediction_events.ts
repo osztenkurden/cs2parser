@@ -55,8 +55,6 @@ export interface CCSPredictionEvent_DamageTag {
 
 export interface CCSPredictionEvent_AddAimPunch {
   punch_angle?: CMsgQAngle | undefined;
-  when_tick?: number | undefined;
-  when_tick_frac?: number | undefined;
 }
 
 function createBaseCCSPredictionEvent_DamageTag(): CCSPredictionEvent_DamageTag {
@@ -164,19 +162,13 @@ export const CCSPredictionEvent_DamageTag: MessageFns<CCSPredictionEvent_DamageT
 };
 
 function createBaseCCSPredictionEvent_AddAimPunch(): CCSPredictionEvent_AddAimPunch {
-  return { punch_angle: undefined, when_tick: undefined, when_tick_frac: undefined };
+  return { punch_angle: undefined };
 }
 
 export const CCSPredictionEvent_AddAimPunch: MessageFns<CCSPredictionEvent_AddAimPunch> = {
   encode(message: CCSPredictionEvent_AddAimPunch, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.punch_angle !== undefined) {
       CMsgQAngle.encode(message.punch_angle, writer.uint32(10).fork()).join();
-    }
-    if (message.when_tick !== undefined) {
-      writer.uint32(16).uint32(message.when_tick);
-    }
-    if (message.when_tick_frac !== undefined) {
-      writer.uint32(29).float(message.when_tick_frac);
     }
     return writer;
   },
@@ -196,22 +188,6 @@ export const CCSPredictionEvent_AddAimPunch: MessageFns<CCSPredictionEvent_AddAi
           message.punch_angle = CMsgQAngle.decode(reader, reader.uint32());
           continue;
         }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.when_tick = reader.uint32();
-          continue;
-        }
-        case 3: {
-          if (tag !== 29) {
-            break;
-          }
-
-          message.when_tick_frac = reader.float();
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -228,16 +204,6 @@ export const CCSPredictionEvent_AddAimPunch: MessageFns<CCSPredictionEvent_AddAi
         : isSet(object.punch_angle)
         ? CMsgQAngle.fromJSON(object.punch_angle)
         : undefined,
-      when_tick: isSet(object.whenTick)
-        ? globalThis.Number(object.whenTick)
-        : isSet(object.when_tick)
-        ? globalThis.Number(object.when_tick)
-        : undefined,
-      when_tick_frac: isSet(object.whenTickFrac)
-        ? globalThis.Number(object.whenTickFrac)
-        : isSet(object.when_tick_frac)
-        ? globalThis.Number(object.when_tick_frac)
-        : undefined,
     };
   },
 
@@ -245,12 +211,6 @@ export const CCSPredictionEvent_AddAimPunch: MessageFns<CCSPredictionEvent_AddAi
     const obj: any = {};
     if (message.punch_angle !== undefined) {
       obj.punchAngle = CMsgQAngle.toJSON(message.punch_angle);
-    }
-    if (message.when_tick !== undefined) {
-      obj.whenTick = Math.round(message.when_tick);
-    }
-    if (message.when_tick_frac !== undefined) {
-      obj.whenTickFrac = message.when_tick_frac;
     }
     return obj;
   },
@@ -265,8 +225,6 @@ export const CCSPredictionEvent_AddAimPunch: MessageFns<CCSPredictionEvent_AddAi
     message.punch_angle = (object.punch_angle !== undefined && object.punch_angle !== null)
       ? CMsgQAngle.fromPartial(object.punch_angle)
       : undefined;
-    message.when_tick = object.when_tick ?? undefined;
-    message.when_tick_frac = object.when_tick_frac ?? undefined;
     return message;
   },
 };

@@ -147,6 +147,7 @@ export interface CMsgPlaceDecalEvent {
   entityhandle?: number | undefined;
   material_id?: string | undefined;
   sequence_name?: number | undefined;
+  position_objectspace?: CMsgVector | undefined;
 }
 
 export interface CMsgClearWorldDecalsEvent {
@@ -320,6 +321,7 @@ function createBaseCMsgPlaceDecalEvent(): CMsgPlaceDecalEvent {
     entityhandle: undefined,
     material_id: undefined,
     sequence_name: undefined,
+    position_objectspace: undefined,
   };
 }
 
@@ -363,6 +365,9 @@ export const CMsgPlaceDecalEvent: MessageFns<CMsgPlaceDecalEvent> = {
     }
     if (message.sequence_name !== undefined) {
       writer.uint32(96).uint32(message.sequence_name);
+    }
+    if (message.position_objectspace !== undefined) {
+      CMsgVector.encode(message.position_objectspace, writer.uint32(114).fork()).join();
     }
     return writer;
   },
@@ -478,6 +483,14 @@ export const CMsgPlaceDecalEvent: MessageFns<CMsgPlaceDecalEvent> = {
           message.sequence_name = reader.uint32();
           continue;
         }
+        case 14: {
+          if (tag !== 114) {
+            break;
+          }
+
+          message.position_objectspace = CMsgVector.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -521,6 +534,11 @@ export const CMsgPlaceDecalEvent: MessageFns<CMsgPlaceDecalEvent> = {
         ? globalThis.Number(object.sequenceName)
         : isSet(object.sequence_name)
         ? globalThis.Number(object.sequence_name)
+        : undefined,
+      position_objectspace: isSet(object.positionObjectspace)
+        ? CMsgVector.fromJSON(object.positionObjectspace)
+        : isSet(object.position_objectspace)
+        ? CMsgVector.fromJSON(object.position_objectspace)
         : undefined,
     };
   },
@@ -566,6 +584,9 @@ export const CMsgPlaceDecalEvent: MessageFns<CMsgPlaceDecalEvent> = {
     if (message.sequence_name !== undefined) {
       obj.sequenceName = Math.round(message.sequence_name);
     }
+    if (message.position_objectspace !== undefined) {
+      obj.positionObjectspace = CMsgVector.toJSON(message.position_objectspace);
+    }
     return obj;
   },
 
@@ -593,6 +614,9 @@ export const CMsgPlaceDecalEvent: MessageFns<CMsgPlaceDecalEvent> = {
     message.entityhandle = object.entityhandle ?? undefined;
     message.material_id = object.material_id ?? undefined;
     message.sequence_name = object.sequence_name ?? undefined;
+    message.position_objectspace = (object.position_objectspace !== undefined && object.position_objectspace !== null)
+      ? CMsgVector.fromPartial(object.position_objectspace)
+      : undefined;
     return message;
   },
 };

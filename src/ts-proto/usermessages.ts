@@ -561,6 +561,8 @@ export const PARTICLE_MESSAGE = {
   GAME_PARTICLE_MANAGER_EVENT_UPDATE_FAN: 37,
   GAME_PARTICLE_MANAGER_EVENT_SET_CLUSTER_GROWTH: 38,
   GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN: 39,
+  GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID: 40,
+  GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE: 41,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -633,6 +635,10 @@ export namespace PARTICLE_MESSAGE {
   export type GAME_PARTICLE_MANAGER_EVENT_SET_CLUSTER_GROWTH =
     typeof PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_SET_CLUSTER_GROWTH;
   export type GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN = typeof PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN;
+  export type GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID =
+    typeof PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID;
+  export type GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE =
+    typeof PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE;
   export type UNRECOGNIZED = typeof PARTICLE_MESSAGE.UNRECOGNIZED;
 }
 
@@ -758,6 +764,12 @@ export function pARTICLE_MESSAGEFromJSON(object: any): PARTICLE_MESSAGE {
     case 39:
     case "GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN":
       return PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN;
+    case 40:
+    case "GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID":
+      return PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID;
+    case 41:
+    case "GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE":
+      return PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -847,6 +859,10 @@ export function pARTICLE_MESSAGEToJSON(object: PARTICLE_MESSAGE): string {
       return "GAME_PARTICLE_MANAGER_EVENT_SET_CLUSTER_GROWTH";
     case PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN:
       return "GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN";
+    case PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID:
+      return "GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID";
+    case PARTICLE_MESSAGE.GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE:
+      return "GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE";
     case PARTICLE_MESSAGE.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -1164,6 +1180,8 @@ export interface CUserMsg_ParticleManager {
   update_fan?: CUserMsg_ParticleManager_UpdateFan | undefined;
   set_particle_cluster_growth?: CUserMsg_ParticleManager_SetParticleClusterGrowth | undefined;
   remove_fan?: CUserMsg_ParticleManager_RemoveFan | undefined;
+  create_smoke_grid?: CUserMsg_ParticleManager_CreateSmokeGrid | undefined;
+  set_override_texture?: CUserMsg_ParticleManager_SetOverrideTexture | undefined;
 }
 
 export interface CUserMsg_ParticleManager_ReleaseParticleIndex {
@@ -1287,10 +1305,15 @@ export interface CUserMsg_ParticleManager_SetControlPointSnapshot {
 
 export interface CUserMsg_ParticleManager_SetParticleText {
   text?: string | undefined;
+  localize?: boolean | undefined;
 }
 
 export interface CUserMsg_ParticleManager_SetTextureAttribute {
   attribute_name?: string | undefined;
+  texture_name?: string | undefined;
+}
+
+export interface CUserMsg_ParticleManager_SetOverrideTexture {
   texture_name?: string | undefined;
 }
 
@@ -1366,6 +1389,10 @@ export interface CUserMsg_ParticleManager_CreatePhysicsSim {
 }
 
 export interface CUserMsg_ParticleManager_DestroyPhysicsSim {
+}
+
+export interface CUserMsg_ParticleManager_CreateSmokeGrid {
+  vdata_name?: string | undefined;
 }
 
 export interface CUserMsg_ParticleManager_SetVData {
@@ -5277,6 +5304,8 @@ function createBaseCUserMsg_ParticleManager(): CUserMsg_ParticleManager {
     update_fan: undefined,
     set_particle_cluster_growth: undefined,
     remove_fan: undefined,
+    create_smoke_grid: undefined,
+    set_override_texture: undefined,
   };
 }
 
@@ -5465,6 +5494,13 @@ export const CUserMsg_ParticleManager: MessageFns<CUserMsg_ParticleManager> = {
     }
     if (message.remove_fan !== undefined) {
       CUserMsg_ParticleManager_RemoveFan.encode(message.remove_fan, writer.uint32(338).fork()).join();
+    }
+    if (message.create_smoke_grid !== undefined) {
+      CUserMsg_ParticleManager_CreateSmokeGrid.encode(message.create_smoke_grid, writer.uint32(346).fork()).join();
+    }
+    if (message.set_override_texture !== undefined) {
+      CUserMsg_ParticleManager_SetOverrideTexture.encode(message.set_override_texture, writer.uint32(354).fork())
+        .join();
     }
     return writer;
   },
@@ -5874,6 +5910,22 @@ export const CUserMsg_ParticleManager: MessageFns<CUserMsg_ParticleManager> = {
           message.remove_fan = CUserMsg_ParticleManager_RemoveFan.decode(reader, reader.uint32());
           continue;
         }
+        case 43: {
+          if (tag !== 346) {
+            break;
+          }
+
+          message.create_smoke_grid = CUserMsg_ParticleManager_CreateSmokeGrid.decode(reader, reader.uint32());
+          continue;
+        }
+        case 44: {
+          if (tag !== 354) {
+            break;
+          }
+
+          message.set_override_texture = CUserMsg_ParticleManager_SetOverrideTexture.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -6082,6 +6134,16 @@ export const CUserMsg_ParticleManager: MessageFns<CUserMsg_ParticleManager> = {
         : isSet(object.remove_fan)
         ? CUserMsg_ParticleManager_RemoveFan.fromJSON(object.remove_fan)
         : undefined,
+      create_smoke_grid: isSet(object.createSmokeGrid)
+        ? CUserMsg_ParticleManager_CreateSmokeGrid.fromJSON(object.createSmokeGrid)
+        : isSet(object.create_smoke_grid)
+        ? CUserMsg_ParticleManager_CreateSmokeGrid.fromJSON(object.create_smoke_grid)
+        : undefined,
+      set_override_texture: isSet(object.setOverrideTexture)
+        ? CUserMsg_ParticleManager_SetOverrideTexture.fromJSON(object.setOverrideTexture)
+        : isSet(object.set_override_texture)
+        ? CUserMsg_ParticleManager_SetOverrideTexture.fromJSON(object.set_override_texture)
+        : undefined,
     };
   },
 
@@ -6246,6 +6308,12 @@ export const CUserMsg_ParticleManager: MessageFns<CUserMsg_ParticleManager> = {
     if (message.remove_fan !== undefined) {
       obj.removeFan = CUserMsg_ParticleManager_RemoveFan.toJSON(message.remove_fan);
     }
+    if (message.create_smoke_grid !== undefined) {
+      obj.createSmokeGrid = CUserMsg_ParticleManager_CreateSmokeGrid.toJSON(message.create_smoke_grid);
+    }
+    if (message.set_override_texture !== undefined) {
+      obj.setOverrideTexture = CUserMsg_ParticleManager_SetOverrideTexture.toJSON(message.set_override_texture);
+    }
     return obj;
   },
 
@@ -6400,6 +6468,12 @@ export const CUserMsg_ParticleManager: MessageFns<CUserMsg_ParticleManager> = {
         : undefined;
     message.remove_fan = (object.remove_fan !== undefined && object.remove_fan !== null)
       ? CUserMsg_ParticleManager_RemoveFan.fromPartial(object.remove_fan)
+      : undefined;
+    message.create_smoke_grid = (object.create_smoke_grid !== undefined && object.create_smoke_grid !== null)
+      ? CUserMsg_ParticleManager_CreateSmokeGrid.fromPartial(object.create_smoke_grid)
+      : undefined;
+    message.set_override_texture = (object.set_override_texture !== undefined && object.set_override_texture !== null)
+      ? CUserMsg_ParticleManager_SetOverrideTexture.fromPartial(object.set_override_texture)
       : undefined;
     return message;
   },
@@ -8633,13 +8707,16 @@ export const CUserMsg_ParticleManager_SetControlPointSnapshot: MessageFns<
 };
 
 function createBaseCUserMsg_ParticleManager_SetParticleText(): CUserMsg_ParticleManager_SetParticleText {
-  return { text: undefined };
+  return { text: undefined, localize: undefined };
 }
 
 export const CUserMsg_ParticleManager_SetParticleText: MessageFns<CUserMsg_ParticleManager_SetParticleText> = {
   encode(message: CUserMsg_ParticleManager_SetParticleText, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.text !== undefined) {
       writer.uint32(10).string(message.text);
+    }
+    if (message.localize !== undefined) {
+      writer.uint32(16).bool(message.localize);
     }
     return writer;
   },
@@ -8659,6 +8736,14 @@ export const CUserMsg_ParticleManager_SetParticleText: MessageFns<CUserMsg_Parti
           message.text = reader.string();
           continue;
         }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.localize = reader.bool();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -8669,13 +8754,19 @@ export const CUserMsg_ParticleManager_SetParticleText: MessageFns<CUserMsg_Parti
   },
 
   fromJSON(object: any): CUserMsg_ParticleManager_SetParticleText {
-    return { text: isSet(object.text) ? globalThis.String(object.text) : undefined };
+    return {
+      text: isSet(object.text) ? globalThis.String(object.text) : undefined,
+      localize: isSet(object.localize) ? globalThis.Boolean(object.localize) : undefined,
+    };
   },
 
   toJSON(message: CUserMsg_ParticleManager_SetParticleText): unknown {
     const obj: any = {};
     if (message.text !== undefined) {
       obj.text = message.text;
+    }
+    if (message.localize !== undefined) {
+      obj.localize = message.localize;
     }
     return obj;
   },
@@ -8690,6 +8781,7 @@ export const CUserMsg_ParticleManager_SetParticleText: MessageFns<CUserMsg_Parti
   ): CUserMsg_ParticleManager_SetParticleText {
     const message = createBaseCUserMsg_ParticleManager_SetParticleText();
     message.text = object.text ?? undefined;
+    message.localize = object.localize ?? undefined;
     return message;
   },
 };
@@ -8780,6 +8872,77 @@ export const CUserMsg_ParticleManager_SetTextureAttribute: MessageFns<CUserMsg_P
   ): CUserMsg_ParticleManager_SetTextureAttribute {
     const message = createBaseCUserMsg_ParticleManager_SetTextureAttribute();
     message.attribute_name = object.attribute_name ?? undefined;
+    message.texture_name = object.texture_name ?? undefined;
+    return message;
+  },
+};
+
+function createBaseCUserMsg_ParticleManager_SetOverrideTexture(): CUserMsg_ParticleManager_SetOverrideTexture {
+  return { texture_name: undefined };
+}
+
+export const CUserMsg_ParticleManager_SetOverrideTexture: MessageFns<CUserMsg_ParticleManager_SetOverrideTexture> = {
+  encode(
+    message: CUserMsg_ParticleManager_SetOverrideTexture,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.texture_name !== undefined) {
+      writer.uint32(10).string(message.texture_name);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CUserMsg_ParticleManager_SetOverrideTexture {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCUserMsg_ParticleManager_SetOverrideTexture();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.texture_name = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CUserMsg_ParticleManager_SetOverrideTexture {
+    return {
+      texture_name: isSet(object.textureName)
+        ? globalThis.String(object.textureName)
+        : isSet(object.texture_name)
+        ? globalThis.String(object.texture_name)
+        : undefined,
+    };
+  },
+
+  toJSON(message: CUserMsg_ParticleManager_SetOverrideTexture): unknown {
+    const obj: any = {};
+    if (message.texture_name !== undefined) {
+      obj.textureName = message.texture_name;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CUserMsg_ParticleManager_SetOverrideTexture>, I>>(
+    base?: I,
+  ): CUserMsg_ParticleManager_SetOverrideTexture {
+    return CUserMsg_ParticleManager_SetOverrideTexture.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CUserMsg_ParticleManager_SetOverrideTexture>, I>>(
+    object: I,
+  ): CUserMsg_ParticleManager_SetOverrideTexture {
+    const message = createBaseCUserMsg_ParticleManager_SetOverrideTexture();
     message.texture_name = object.texture_name ?? undefined;
     return message;
   },
@@ -10169,6 +10332,74 @@ export const CUserMsg_ParticleManager_DestroyPhysicsSim: MessageFns<CUserMsg_Par
     _: I,
   ): CUserMsg_ParticleManager_DestroyPhysicsSim {
     const message = createBaseCUserMsg_ParticleManager_DestroyPhysicsSim();
+    return message;
+  },
+};
+
+function createBaseCUserMsg_ParticleManager_CreateSmokeGrid(): CUserMsg_ParticleManager_CreateSmokeGrid {
+  return { vdata_name: undefined };
+}
+
+export const CUserMsg_ParticleManager_CreateSmokeGrid: MessageFns<CUserMsg_ParticleManager_CreateSmokeGrid> = {
+  encode(message: CUserMsg_ParticleManager_CreateSmokeGrid, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.vdata_name !== undefined) {
+      writer.uint32(10).string(message.vdata_name);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CUserMsg_ParticleManager_CreateSmokeGrid {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCUserMsg_ParticleManager_CreateSmokeGrid();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.vdata_name = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CUserMsg_ParticleManager_CreateSmokeGrid {
+    return {
+      vdata_name: isSet(object.vdataName)
+        ? globalThis.String(object.vdataName)
+        : isSet(object.vdata_name)
+        ? globalThis.String(object.vdata_name)
+        : undefined,
+    };
+  },
+
+  toJSON(message: CUserMsg_ParticleManager_CreateSmokeGrid): unknown {
+    const obj: any = {};
+    if (message.vdata_name !== undefined) {
+      obj.vdataName = message.vdata_name;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CUserMsg_ParticleManager_CreateSmokeGrid>, I>>(
+    base?: I,
+  ): CUserMsg_ParticleManager_CreateSmokeGrid {
+    return CUserMsg_ParticleManager_CreateSmokeGrid.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CUserMsg_ParticleManager_CreateSmokeGrid>, I>>(
+    object: I,
+  ): CUserMsg_ParticleManager_CreateSmokeGrid {
+    const message = createBaseCUserMsg_ParticleManager_CreateSmokeGrid();
+    message.vdata_name = object.vdata_name ?? undefined;
     return message;
   },
 };

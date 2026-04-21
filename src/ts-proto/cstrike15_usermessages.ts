@@ -96,6 +96,7 @@ export const ECstrike15UserMessages = {
   CS_UM_DamagePrediction: 386,
   CS_UM_RecurringMissionSchema: 387,
   CS_UM_SendPlayerLoadout: 388,
+  CS_UM_WeaponMagDrop: 389,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -179,6 +180,7 @@ export namespace ECstrike15UserMessages {
   export type CS_UM_DamagePrediction = typeof ECstrike15UserMessages.CS_UM_DamagePrediction;
   export type CS_UM_RecurringMissionSchema = typeof ECstrike15UserMessages.CS_UM_RecurringMissionSchema;
   export type CS_UM_SendPlayerLoadout = typeof ECstrike15UserMessages.CS_UM_SendPlayerLoadout;
+  export type CS_UM_WeaponMagDrop = typeof ECstrike15UserMessages.CS_UM_WeaponMagDrop;
   export type UNRECOGNIZED = typeof ECstrike15UserMessages.UNRECOGNIZED;
 }
 
@@ -415,6 +417,9 @@ export function eCstrike15UserMessagesFromJSON(object: any): ECstrike15UserMessa
     case 388:
     case "CS_UM_SendPlayerLoadout":
       return ECstrike15UserMessages.CS_UM_SendPlayerLoadout;
+    case 389:
+    case "CS_UM_WeaponMagDrop":
+      return ECstrike15UserMessages.CS_UM_WeaponMagDrop;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -578,6 +583,8 @@ export function eCstrike15UserMessagesToJSON(object: ECstrike15UserMessages): st
       return "CS_UM_RecurringMissionSchema";
     case ECstrike15UserMessages.CS_UM_SendPlayerLoadout:
       return "CS_UM_SendPlayerLoadout";
+    case ECstrike15UserMessages.CS_UM_WeaponMagDrop:
+      return "CS_UM_WeaponMagDrop";
     case ECstrike15UserMessages.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -781,6 +788,12 @@ export interface CCSUsrMsg_WeaponSound {
   sound?: string | undefined;
   game_timestamp?: number | undefined;
   source_soundscapeid?: number | undefined;
+}
+
+export interface CCSUsrMsg_WeaponMagDrop {
+  entidx?: number | undefined;
+  secondary_data?: number | undefined;
+  server_event?: boolean | undefined;
 }
 
 export interface CCSUsrMsg_UpdateScreenHealthBar {
@@ -3737,6 +3750,106 @@ export const CCSUsrMsg_WeaponSound: MessageFns<CCSUsrMsg_WeaponSound> = {
     message.sound = object.sound ?? undefined;
     message.game_timestamp = object.game_timestamp ?? undefined;
     message.source_soundscapeid = object.source_soundscapeid ?? undefined;
+    return message;
+  },
+};
+
+function createBaseCCSUsrMsg_WeaponMagDrop(): CCSUsrMsg_WeaponMagDrop {
+  return { entidx: undefined, secondary_data: undefined, server_event: undefined };
+}
+
+export const CCSUsrMsg_WeaponMagDrop: MessageFns<CCSUsrMsg_WeaponMagDrop> = {
+  encode(message: CCSUsrMsg_WeaponMagDrop, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.entidx !== undefined) {
+      writer.uint32(8).int32(message.entidx);
+    }
+    if (message.secondary_data !== undefined) {
+      writer.uint32(16).int32(message.secondary_data);
+    }
+    if (message.server_event !== undefined) {
+      writer.uint32(24).bool(message.server_event);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CCSUsrMsg_WeaponMagDrop {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCCSUsrMsg_WeaponMagDrop();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.entidx = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.secondary_data = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.server_event = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CCSUsrMsg_WeaponMagDrop {
+    return {
+      entidx: isSet(object.entidx) ? globalThis.Number(object.entidx) : undefined,
+      secondary_data: isSet(object.secondaryData)
+        ? globalThis.Number(object.secondaryData)
+        : isSet(object.secondary_data)
+        ? globalThis.Number(object.secondary_data)
+        : undefined,
+      server_event: isSet(object.serverEvent)
+        ? globalThis.Boolean(object.serverEvent)
+        : isSet(object.server_event)
+        ? globalThis.Boolean(object.server_event)
+        : undefined,
+    };
+  },
+
+  toJSON(message: CCSUsrMsg_WeaponMagDrop): unknown {
+    const obj: any = {};
+    if (message.entidx !== undefined) {
+      obj.entidx = Math.round(message.entidx);
+    }
+    if (message.secondary_data !== undefined) {
+      obj.secondaryData = Math.round(message.secondary_data);
+    }
+    if (message.server_event !== undefined) {
+      obj.serverEvent = message.server_event;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CCSUsrMsg_WeaponMagDrop>, I>>(base?: I): CCSUsrMsg_WeaponMagDrop {
+    return CCSUsrMsg_WeaponMagDrop.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CCSUsrMsg_WeaponMagDrop>, I>>(object: I): CCSUsrMsg_WeaponMagDrop {
+    const message = createBaseCCSUsrMsg_WeaponMagDrop();
+    message.entidx = object.entidx ?? undefined;
+    message.secondary_data = object.secondary_data ?? undefined;
+    message.server_event = object.server_event ?? undefined;
     return message;
   },
 };
