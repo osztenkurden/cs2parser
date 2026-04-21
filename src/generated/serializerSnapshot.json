@@ -1,15 +1,17 @@
 {
   "serializers": {
     "CBodyComponentBaseAnimGraph": {
+      "AnimGraph2SerializedPoseRecipeSlot_t.m_topology": "unknown",
       "m_angRotation": "[number, number, number]",
       "m_bClientClothCreationSuppressed": "boolean",
-      "m_bIsAnimationEnabled": "boolean",
       "m_bUseParentRenderBounds": "boolean",
       "m_cellX": "number",
       "m_cellY": "number",
       "m_cellZ": "number",
-      "m_flLastTeleportTime": "number",
       "m_flPlaybackRate": "number",
+      "m_flRootBoneOffset_x": "number",
+      "m_flRootBoneOffset_y": "number",
+      "m_flRootBoneOffset_z": "number",
       "m_flScale": "number",
       "m_flSeqFixedCycle": "number",
       "m_flSeqStartTime": "number",
@@ -23,49 +25,30 @@
       "m_name": "number",
       "m_nAnimationAlgorithm": "number",
       "m_nAnimLoopMode": "number",
+      "m_nAnimStateNoInterpSerialNumber": "number",
       "m_nBodyGroupChoices": "number",
-      "m_nBoolVariablesCount": "number",
       "m_nHitboxSet": "number",
       "m_nIdealMotionType": "number",
       "m_nOutsideWorld": "number",
-      "m_nOwnerOnlyBoolVariablesCount": "number",
-      "m_nRandomSeedOffset": "number",
+      "m_nRootBoneOffsetResetSerialNumber": "number",
       "m_nSecondarySkeletonMasterCount": "number",
-      "m_nSerializePoseRecipeSizeAG2": "number",
+      "m_nSerializePoseRecipeAG2ActiveSlot": "number",
       "m_nSerializePoseRecipeVersionAG2": "number",
       "m_nServerGraphInstanceIteration": "number",
       "m_nServerSerializationContextIteration": "number",
-      "m_OwnerOnlyPredNetBoolVariables": "number",
-      "m_OwnerOnlyPredNetByteVariables": "number",
-      "m_OwnerOnlyPredNetFloatVariables": "number",
-      "m_OwnerOnlyPredNetGlobalSymbolVariables": "number",
-      "m_OwnerOnlyPredNetIntVariables": "number",
-      "m_OwnerOnlyPredNetQuaternionVariables": "number",
-      "m_OwnerOnlyPredNetUInt16Variables": "number",
-      "m_OwnerOnlyPredNetUInt32Variables": "number",
-      "m_OwnerOnlyPredNetUInt64Variables": "number",
-      "m_OwnerOnlyPredNetVectorVariables": "[number, number, number]",
-      "m_PredBoolVariables": "number",
-      "m_PredByteVariables": "number",
-      "m_PredFloatVariables": "number",
-      "m_PredGlobalSymbolVariables": "number",
-      "m_PredIntVariables": "number",
-      "m_PredQuaternionVariables": "number",
-      "m_PredUInt16Variables": "number",
-      "m_PredUInt32Variables": "number",
-      "m_PredUInt64Variables": "number",
-      "m_PredVectorVariables": "[number, number, number]",
       "m_primaryGraphId": "number",
-      "m_serializedPoseRecipeAG2": "number",
+      "m_SerializePoseRecipeAG2Dynamic": "number",
+      "m_topology": "unknown",
       "m_vecExternalClipIds": "number",
       "m_vecExternalGraphIds": "number",
       "m_vecSecondarySkeletons": "number",
+      "m_vecSecondarySkeletonSlotIDs": "string",
       "m_vecX": "number",
       "m_vecY": "number",
       "m_vecZ": "number"
     },
     "CEntityIdentity": {
-      "m_nameStringableIndex": "number"
+      "m_nameStringTableIndex": "number"
     },
     "CDestructiblePartsComponent": {
       "m_hOwner": "number"
@@ -355,8 +338,6 @@
     },
     "CCSPlayer_WeaponServices": {
       "m_bBlockInspectUntilNextGraphUpdate": "boolean",
-      "m_bIsHoldingLookAtWeapon": "boolean",
-      "m_bIsLookingAtWeapon": "boolean",
       "m_flNextAttack": "number",
       "m_hActiveWeapon": "number",
       "m_hLastWeapon": "number",
@@ -394,13 +375,18 @@
       "m_bDucked": "boolean",
       "m_bDucking": "boolean",
       "m_bDuckOverride": "boolean",
+      "m_bHasEverProcessedCommand": "boolean",
       "m_bJumpApexPending": "boolean",
       "m_bOldJumpPressed": "boolean",
+      "m_bUseFrictionStashedSpeed": "boolean",
       "m_bWasSurfing": "boolean",
+      "m_flBombPlantViewOffset": "number",
       "m_flDuckAmount": "number",
-      "m_flDuckOffset": "number",
+      "m_flDuckRootOffset": "number",
       "m_flDuckSpeed": "number",
+      "m_flDuckViewOffset": "number",
       "m_flFallVelocity": "number",
+      "m_flFrictionStashedSpeed": "number",
       "m_flLastActualJumpPressFrac": "number",
       "m_flLastDuckTime": "number",
       "m_flLastJumpFrac": "number",
@@ -411,15 +397,13 @@
       "m_flLastLandedVelocityZ": "number",
       "m_flLastUsableJumpPressFrac": "number",
       "m_flMaxspeed": "number",
-      "m_flOffsetTickCompleteTime": "number",
-      "m_flOffsetTickStashedSpeed": "number",
       "m_flStamina": "number",
+      "m_flUseFrictionStashedSpeedUntilFrac": "number",
       "m_fStashGrenadeParameterWhen": "number",
+      "m_gtLastTimeInAir": "number",
+      "m_gtLastTimeOnStaticWorldGround": "number",
       "m_nButtonDownMaskPrev": "bigint",
-      "m_nDuckJumpTimeMsecs": "number",
-      "m_nDuckTimeMsecs": "number",
       "m_nGameCodeHasMovedPlayerAfterCommand": "number",
-      "m_nJumpTimeMsecs": "number",
       "m_nLadderSurfacePropIndex": "number",
       "m_nLastActualJumpPressTick": "number",
       "m_nLastJumpTick": "number",
@@ -456,20 +440,16 @@
       "WeaponPurchaseCount_t.m_nCount": "number",
       "WeaponPurchaseCount_t.m_nItemDefIndex": "number"
     },
-    "PredictedDamageTag_t": {
-      "flFlinchModLarge": "number",
-      "flFlinchModSmall": "number",
-      "flFriendlyFireDamageReductionRatio": "number",
-      "nTagTick": "number"
-    },
     "CBodyComponentBaseModelEntity": {
       "m_angRotation": "[number, number, number]",
       "m_bClientClothCreationSuppressed": "boolean",
-      "m_bIsAnimationEnabled": "boolean",
       "m_bUseParentRenderBounds": "boolean",
       "m_cellX": "number",
       "m_cellY": "number",
       "m_cellZ": "number",
+      "m_flRootBoneOffset_x": "number",
+      "m_flRootBoneOffset_y": "number",
+      "m_flRootBoneOffset_z": "number",
       "m_flScale": "number",
       "m_hierarchyAttachName": "number",
       "m_hModel": "bigint",
@@ -477,10 +457,12 @@
       "m_materialGroup": "number",
       "m_MeshGroupMask": "bigint",
       "m_name": "number",
+      "m_nAnimStateNoInterpSerialNumber": "number",
       "m_nBodyGroupChoices": "number",
       "m_nHitboxSet": "number",
       "m_nIdealMotionType": "number",
       "m_nOutsideWorld": "number",
+      "m_nRootBoneOffsetResetSerialNumber": "number",
       "m_vecX": "number",
       "m_vecY": "number",
       "m_vecZ": "number"
@@ -584,6 +566,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -632,7 +615,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -733,8 +715,7 @@
         "m_vecY": "number",
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CBaseGrenade": {
@@ -827,8 +808,7 @@
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
         "m_vecX": "number",
         "m_vecY": "number",
-        "m_vecZ": "number",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vecZ": "number"
       }
     },
     "CBasePlayerController": {
@@ -926,7 +906,6 @@
         "m_flCreateTime": "number",
         "m_flDeathTime": "number",
         "m_flElasticity": "number",
-        "m_flexWeight": "number",
         "m_flFadeScale": "number",
         "m_flFriction": "number",
         "m_flGlowBackfaceMult": "number",
@@ -998,7 +977,6 @@
         "m_vecX": "number",
         "m_vecY": "number",
         "m_vecZ": "number",
-        "m_vLookTargetPosition": "[number, number, number]",
         "maxdensity": "number",
         "maxdensityLerpTo": "number",
         "nIndex": "number",
@@ -1126,8 +1104,7 @@
         "m_vecMaxs": "[number, number, number]",
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
-        "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vecSpecifiedSurroundingMins": "[number, number, number]"
       }
     },
     "CC4": {
@@ -1231,6 +1208,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -1278,14 +1256,13 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
     "CCSGameModeRules_ArmsRace": {
       "serializers": [],
       "ownFields": {
-        "m_WeaponSequence": "number"
+        "m_WeaponSequence": "string"
       }
     },
     "CCSGameModeRules_Deathmatch": {
@@ -1765,8 +1742,6 @@
       "serializers": [],
       "ownFields": {
         "m_bBlockInspectUntilNextGraphUpdate": "boolean",
-        "m_bIsHoldingLookAtWeapon": "boolean",
-        "m_bIsLookingAtWeapon": "boolean",
         "m_flNextAttack": "number",
         "m_hActiveWeapon": "number",
         "m_hLastWeapon": "number",
@@ -1813,13 +1788,18 @@
         "m_bDucked": "boolean",
         "m_bDucking": "boolean",
         "m_bDuckOverride": "boolean",
+        "m_bHasEverProcessedCommand": "boolean",
         "m_bJumpApexPending": "boolean",
         "m_bOldJumpPressed": "boolean",
+        "m_bUseFrictionStashedSpeed": "boolean",
         "m_bWasSurfing": "boolean",
+        "m_flBombPlantViewOffset": "number",
         "m_flDuckAmount": "number",
-        "m_flDuckOffset": "number",
+        "m_flDuckRootOffset": "number",
         "m_flDuckSpeed": "number",
+        "m_flDuckViewOffset": "number",
         "m_flFallVelocity": "number",
+        "m_flFrictionStashedSpeed": "number",
         "m_flLastActualJumpPressFrac": "number",
         "m_flLastDuckTime": "number",
         "m_flLastJumpFrac": "number",
@@ -1830,15 +1810,13 @@
         "m_flLastLandedVelocityZ": "number",
         "m_flLastUsableJumpPressFrac": "number",
         "m_flMaxspeed": "number",
-        "m_flOffsetTickCompleteTime": "number",
-        "m_flOffsetTickStashedSpeed": "number",
         "m_flStamina": "number",
+        "m_flUseFrictionStashedSpeedUntilFrac": "number",
         "m_fStashGrenadeParameterWhen": "number",
+        "m_gtLastTimeInAir": "number",
+        "m_gtLastTimeOnStaticWorldGround": "number",
         "m_nButtonDownMaskPrev": "bigint",
-        "m_nDuckJumpTimeMsecs": "number",
-        "m_nDuckTimeMsecs": "number",
         "m_nGameCodeHasMovedPlayerAfterCommand": "number",
-        "m_nJumpTimeMsecs": "number",
         "m_nLadderSurfacePropIndex": "number",
         "m_nLastActualJumpPressTick": "number",
         "m_nLastJumpTick": "number",
@@ -1905,7 +1883,6 @@
         "CEconItemAttribute",
         "CEntityIdentity",
         "EntityRenderAttribute_t",
-        "PredictedDamageTag_t",
         "ViewAngleServerChange_t"
       ],
       "ownFields": {
@@ -1924,9 +1901,6 @@
         "exponent": "number",
         "farz": "number",
         "flClip3DSkyBoxNearToWorldFarOffset": "number",
-        "flFlinchModLarge": "number",
-        "flFlinchModSmall": "number",
-        "flFriendlyFireDamageReductionRatio": "number",
         "HDRColorScale": "number",
         "lerptime": "number",
         "locallightscale": "number",
@@ -1994,15 +1968,12 @@
         "m_flGlowTime": "number",
         "m_flGravityScale": "number",
         "m_flHealthShotBoostExpirationTime": "number",
-        "m_flHitHeading": "number",
         "m_flInitialValue": "number",
         "m_flNavIgnoreUntilTime": "number",
         "m_flNextSprayDecalTime": "number",
         "m_flProgressBarStartTime": "number",
         "m_flShadowStrength": "number",
         "m_flSimulationTime": "number",
-        "m_flSlopeDropHeight": "number",
-        "m_flSlopeDropOffset": "number",
         "m_flTimeOfLastInjury": "number",
         "m_flTimeScale": "number",
         "m_flVelocityModifier": "number",
@@ -2062,7 +2033,6 @@
         "m_nGlowRangeMin": "number",
         "m_nGroundBodyIndex": "number",
         "m_nHierarchyId": "number",
-        "m_nHitBodyPart": "number",
         "m_nInteractsAs": "bigint",
         "m_nInteractsExclude": "bigint",
         "m_nInteractsWith": "bigint",
@@ -2086,7 +2056,6 @@
         "m_szCustomName": "string",
         "m_szLastPlaceName": "string",
         "m_szRagdollDamageWeaponName": "string",
-        "m_thirdPersonHeading": "[number, number, number]",
         "m_Transforms": "number",
         "m_triggerBloat": "number",
         "m_ubInterpolationFrame": "number",
@@ -2107,15 +2076,12 @@
         "m_vecX": "number",
         "m_vecY": "number",
         "m_vecZ": "number",
-        "m_vHeadConstraintOffset": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_vRagdollDamageForce": "[number, number, number]",
         "m_vRagdollDamagePosition": "[number, number, number]",
         "m_vRagdollServerOrigin": "[number, number, number]",
         "maxdensity": "number",
         "maxdensityLerpTo": "number",
         "nIndex": "number",
-        "nTagTick": "number",
         "nType": "number",
         "origin": "[number, number, number]",
         "qAngle": "[number, number, number]",
@@ -2257,7 +2223,6 @@
         "m_vecX": "number",
         "m_vecY": "number",
         "m_vecZ": "number",
-        "m_vLookTargetPosition": "[number, number, number]",
         "maxdensity": "number",
         "maxdensityLerpTo": "number",
         "nIndex": "number",
@@ -2403,6 +2368,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -2451,7 +2417,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -2551,6 +2516,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -2598,7 +2564,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -2699,6 +2664,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -2747,7 +2713,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -2859,6 +2824,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -2907,7 +2873,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3008,8 +2973,7 @@
         "m_vecY": "number",
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CEnvDetailController": {
@@ -3236,6 +3200,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -3284,7 +3249,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3384,8 +3348,7 @@
         "m_vecY": "number",
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CFogController": {
@@ -3523,6 +3486,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -3571,7 +3535,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3671,8 +3634,7 @@
         "m_vecY": "number",
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CIncendiaryGrenade": {
@@ -3782,6 +3744,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -3830,7 +3793,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -4014,6 +3976,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -4061,7 +4024,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -4213,6 +4175,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -4261,7 +4224,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -4362,8 +4324,7 @@
         "m_vecY": "number",
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CPlantedC4": {
@@ -4742,6 +4703,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -4790,7 +4752,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -4896,7 +4857,6 @@
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
         "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_VoxelFrameData": "number",
         "m_vSmokeColor": "[number, number, number]",
         "m_vSmokeDetonationPos": "[number, number, number]"
@@ -5071,6 +5031,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -5119,7 +5080,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5221,6 +5181,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -5269,7 +5230,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5371,6 +5331,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -5419,7 +5380,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5522,6 +5482,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -5570,7 +5531,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5672,6 +5632,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -5720,7 +5681,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5822,6 +5782,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -5870,7 +5831,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5972,6 +5932,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6020,7 +5981,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6122,6 +6082,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6170,7 +6131,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6272,6 +6232,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6320,7 +6281,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6422,6 +6382,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6470,7 +6431,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6572,6 +6532,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6620,7 +6581,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6722,6 +6682,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6770,7 +6731,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6872,6 +6832,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -6920,7 +6881,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7022,6 +6982,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7070,7 +7031,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7172,6 +7132,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7220,7 +7181,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7322,6 +7282,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7370,7 +7331,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7472,6 +7432,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7520,7 +7481,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7622,6 +7582,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7670,7 +7631,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7772,6 +7732,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7820,7 +7781,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7922,6 +7882,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -7970,7 +7931,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8070,6 +8030,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -8117,7 +8078,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -8218,6 +8178,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -8266,7 +8227,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8368,6 +8328,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -8416,7 +8377,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8518,6 +8478,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -8566,7 +8527,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8666,6 +8626,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -8713,7 +8674,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -8814,6 +8774,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -8862,7 +8823,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8964,6 +8924,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9012,7 +8973,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9114,6 +9074,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9162,7 +9123,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9265,6 +9225,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9313,7 +9274,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9415,6 +9375,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9463,7 +9424,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9565,6 +9525,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9613,7 +9574,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9715,6 +9675,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9763,7 +9724,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9863,6 +9823,7 @@
         "m_nBloodType": "number",
         "m_nCollisionFunctionMask": "number",
         "m_nCollisionGroup": "number",
+        "m_nDeployTick": "number",
         "m_nDetailLayerMask": "number",
         "m_nDetailLayerMaskType": "number",
         "m_nDropTick": "number",
@@ -9910,7 +9871,6 @@
         "m_vecMins": "[number, number, number]",
         "m_vecSpecifiedSurroundingMaxs": "[number, number, number]",
         "m_vecSpecifiedSurroundingMins": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     }

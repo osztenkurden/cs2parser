@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: demo.dem on 2026-04-01
+// Generated from demo: ag2_demo.dem on 2026-04-21
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -7,15 +7,17 @@ type Prefixed<P extends string, T> = {
 };
 
 interface _CBodyComponentBaseAnimGraph {
+	readonly "AnimGraph2SerializedPoseRecipeSlot_t.m_topology"?: unknown;
 	readonly "m_angRotation"?: [number, number, number];
 	readonly "m_bClientClothCreationSuppressed"?: boolean;
-	readonly "m_bIsAnimationEnabled"?: boolean;
 	readonly "m_bUseParentRenderBounds"?: boolean;
 	readonly "m_cellX"?: number;
 	readonly "m_cellY"?: number;
 	readonly "m_cellZ"?: number;
-	readonly "m_flLastTeleportTime"?: number;
 	readonly "m_flPlaybackRate"?: number;
+	readonly "m_flRootBoneOffset_x"?: number;
+	readonly "m_flRootBoneOffset_y"?: number;
+	readonly "m_flRootBoneOffset_z"?: number;
 	readonly "m_flScale"?: number;
 	readonly "m_flSeqFixedCycle"?: number;
 	readonly "m_flSeqStartTime"?: number;
@@ -29,43 +31,24 @@ interface _CBodyComponentBaseAnimGraph {
 	readonly "m_name"?: number;
 	readonly "m_nAnimationAlgorithm"?: number;
 	readonly "m_nAnimLoopMode"?: number;
+	readonly "m_nAnimStateNoInterpSerialNumber"?: number;
 	readonly "m_nBodyGroupChoices"?: number;
-	readonly "m_nBoolVariablesCount"?: number;
 	readonly "m_nHitboxSet"?: number;
 	readonly "m_nIdealMotionType"?: number;
 	readonly "m_nOutsideWorld"?: number;
-	readonly "m_nOwnerOnlyBoolVariablesCount"?: number;
-	readonly "m_nRandomSeedOffset"?: number;
+	readonly "m_nRootBoneOffsetResetSerialNumber"?: number;
 	readonly "m_nSecondarySkeletonMasterCount"?: number;
-	readonly "m_nSerializePoseRecipeSizeAG2"?: number;
+	readonly "m_nSerializePoseRecipeAG2ActiveSlot"?: number;
 	readonly "m_nSerializePoseRecipeVersionAG2"?: number;
 	readonly "m_nServerGraphInstanceIteration"?: number;
 	readonly "m_nServerSerializationContextIteration"?: number;
-	readonly "m_OwnerOnlyPredNetBoolVariables"?: number;
-	readonly "m_OwnerOnlyPredNetByteVariables"?: number;
-	readonly "m_OwnerOnlyPredNetFloatVariables"?: number;
-	readonly "m_OwnerOnlyPredNetGlobalSymbolVariables"?: number;
-	readonly "m_OwnerOnlyPredNetIntVariables"?: number;
-	readonly "m_OwnerOnlyPredNetQuaternionVariables"?: number;
-	readonly "m_OwnerOnlyPredNetUInt16Variables"?: number;
-	readonly "m_OwnerOnlyPredNetUInt32Variables"?: number;
-	readonly "m_OwnerOnlyPredNetUInt64Variables"?: number;
-	readonly "m_OwnerOnlyPredNetVectorVariables"?: [number, number, number];
-	readonly "m_PredBoolVariables"?: number;
-	readonly "m_PredByteVariables"?: number;
-	readonly "m_PredFloatVariables"?: number;
-	readonly "m_PredGlobalSymbolVariables"?: number;
-	readonly "m_PredIntVariables"?: number;
-	readonly "m_PredQuaternionVariables"?: number;
-	readonly "m_PredUInt16Variables"?: number;
-	readonly "m_PredUInt32Variables"?: number;
-	readonly "m_PredUInt64Variables"?: number;
-	readonly "m_PredVectorVariables"?: [number, number, number];
 	readonly "m_primaryGraphId"?: number;
-	readonly "m_serializedPoseRecipeAG2"?: number;
+	readonly "m_SerializePoseRecipeAG2Dynamic"?: number;
+	readonly "m_topology"?: unknown;
 	readonly "m_vecExternalClipIds"?: number;
 	readonly "m_vecExternalGraphIds"?: number;
 	readonly "m_vecSecondarySkeletons"?: number;
+	readonly "m_vecSecondarySkeletonSlotIDs"?: string;
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
@@ -74,11 +57,13 @@ interface _CBodyComponentBaseAnimGraph {
 interface _CBodyComponentBaseModelEntity {
 	readonly "m_angRotation"?: [number, number, number];
 	readonly "m_bClientClothCreationSuppressed"?: boolean;
-	readonly "m_bIsAnimationEnabled"?: boolean;
 	readonly "m_bUseParentRenderBounds"?: boolean;
 	readonly "m_cellX"?: number;
 	readonly "m_cellY"?: number;
 	readonly "m_cellZ"?: number;
+	readonly "m_flRootBoneOffset_x"?: number;
+	readonly "m_flRootBoneOffset_y"?: number;
+	readonly "m_flRootBoneOffset_z"?: number;
 	readonly "m_flScale"?: number;
 	readonly "m_hierarchyAttachName"?: number;
 	readonly "m_hModel"?: bigint;
@@ -86,10 +71,12 @@ interface _CBodyComponentBaseModelEntity {
 	readonly "m_materialGroup"?: number;
 	readonly "m_MeshGroupMask"?: bigint;
 	readonly "m_name"?: number;
+	readonly "m_nAnimStateNoInterpSerialNumber"?: number;
 	readonly "m_nBodyGroupChoices"?: number;
 	readonly "m_nHitboxSet"?: number;
 	readonly "m_nIdealMotionType"?: number;
 	readonly "m_nOutsideWorld"?: number;
+	readonly "m_nRootBoneOffsetResetSerialNumber"?: number;
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
@@ -276,13 +263,18 @@ interface _CCSPlayer_MovementServices {
 	readonly "m_bDucked"?: boolean;
 	readonly "m_bDucking"?: boolean;
 	readonly "m_bDuckOverride"?: boolean;
+	readonly "m_bHasEverProcessedCommand"?: boolean;
 	readonly "m_bJumpApexPending"?: boolean;
 	readonly "m_bOldJumpPressed"?: boolean;
+	readonly "m_bUseFrictionStashedSpeed"?: boolean;
 	readonly "m_bWasSurfing"?: boolean;
+	readonly "m_flBombPlantViewOffset"?: number;
 	readonly "m_flDuckAmount"?: number;
-	readonly "m_flDuckOffset"?: number;
+	readonly "m_flDuckRootOffset"?: number;
 	readonly "m_flDuckSpeed"?: number;
+	readonly "m_flDuckViewOffset"?: number;
 	readonly "m_flFallVelocity"?: number;
+	readonly "m_flFrictionStashedSpeed"?: number;
 	readonly "m_flLastActualJumpPressFrac"?: number;
 	readonly "m_flLastDuckTime"?: number;
 	readonly "m_flLastJumpFrac"?: number;
@@ -293,15 +285,13 @@ interface _CCSPlayer_MovementServices {
 	readonly "m_flLastLandedVelocityZ"?: number;
 	readonly "m_flLastUsableJumpPressFrac"?: number;
 	readonly "m_flMaxspeed"?: number;
-	readonly "m_flOffsetTickCompleteTime"?: number;
-	readonly "m_flOffsetTickStashedSpeed"?: number;
 	readonly "m_flStamina"?: number;
+	readonly "m_flUseFrictionStashedSpeedUntilFrac"?: number;
 	readonly "m_fStashGrenadeParameterWhen"?: number;
+	readonly "m_gtLastTimeInAir"?: number;
+	readonly "m_gtLastTimeOnStaticWorldGround"?: number;
 	readonly "m_nButtonDownMaskPrev"?: bigint;
-	readonly "m_nDuckJumpTimeMsecs"?: number;
-	readonly "m_nDuckTimeMsecs"?: number;
 	readonly "m_nGameCodeHasMovedPlayerAfterCommand"?: number;
-	readonly "m_nJumpTimeMsecs"?: number;
 	readonly "m_nLadderSurfacePropIndex"?: number;
 	readonly "m_nLastActualJumpPressTick"?: number;
 	readonly "m_nLastJumpTick"?: number;
@@ -316,8 +306,6 @@ interface _CCSPlayer_PingServices {
 
 interface _CCSPlayer_WeaponServices {
 	readonly "m_bBlockInspectUntilNextGraphUpdate"?: boolean;
-	readonly "m_bIsHoldingLookAtWeapon"?: boolean;
-	readonly "m_bIsLookingAtWeapon"?: boolean;
 	readonly "m_flNextAttack"?: number;
 	readonly "m_hActiveWeapon"?: number;
 	readonly "m_hLastWeapon"?: number;
@@ -448,7 +436,7 @@ interface _CEconItemAttribute {
 }
 
 interface _CEntityIdentity {
-	readonly "m_nameStringableIndex"?: number;
+	readonly "m_nameStringTableIndex"?: number;
 }
 
 interface _CPlayer_CameraServices {
@@ -486,13 +474,6 @@ interface _CSPerRoundStats_t {
 interface _EntityRenderAttribute_t {
 	readonly "m_ID"?: number;
 	readonly "m_Values"?: [number, number, number];
-}
-
-interface _PredictedDamageTag_t {
-	readonly "flFlinchModLarge"?: number;
-	readonly "flFlinchModSmall"?: number;
-	readonly "flFriendlyFireDamageReductionRatio"?: number;
-	readonly "nTagTick"?: number;
 }
 
 interface _SellbackPurchaseEntry_t {
@@ -609,6 +590,7 @@ interface _CAK47Own {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -657,7 +639,6 @@ interface _CAK47Own {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 	readonly "m_zoomLevel"?: number;
 }
@@ -752,7 +733,6 @@ interface _CBaseCSGrenadeProjectileOwn {
 	readonly "m_vecZ"?: number;
 	readonly "m_vInitialPosition"?: [number, number, number];
 	readonly "m_vInitialVelocity"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 }
 
 interface _CBaseGrenadeOwn {
@@ -839,7 +819,6 @@ interface _CBaseGrenadeOwn {
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 }
 
 interface _CBasePlayerControllerOwn {
@@ -906,7 +885,6 @@ interface _CBasePlayerPawnOwn {
 	readonly "m_flCreateTime"?: number;
 	readonly "m_flDeathTime"?: number;
 	readonly "m_flElasticity"?: number;
-	readonly "m_flexWeight"?: number;
 	readonly "m_flFadeScale"?: number;
 	readonly "m_flFriction"?: number;
 	readonly "m_flGlowBackfaceMult"?: number;
@@ -978,7 +956,6 @@ interface _CBasePlayerPawnOwn {
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "maxdensity"?: number;
 	readonly "maxdensityLerpTo"?: number;
 	readonly "nIndex"?: number;
@@ -1099,7 +1076,6 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 }
 
 interface _CC4Own {
@@ -1195,6 +1171,7 @@ interface _CC4Own {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -1242,12 +1219,11 @@ interface _CC4Own {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 }
 
 interface _CCSGameModeRules_ArmsRaceOwn {
-	readonly "m_WeaponSequence"?: number;
+	readonly "m_WeaponSequence"?: string;
 }
 
 interface _CCSGameModeRules_DeathmatchOwn {
@@ -1455,13 +1431,18 @@ interface _CCSPlayer_MovementServicesOwn {
 	readonly "m_bDucked"?: boolean;
 	readonly "m_bDucking"?: boolean;
 	readonly "m_bDuckOverride"?: boolean;
+	readonly "m_bHasEverProcessedCommand"?: boolean;
 	readonly "m_bJumpApexPending"?: boolean;
 	readonly "m_bOldJumpPressed"?: boolean;
+	readonly "m_bUseFrictionStashedSpeed"?: boolean;
 	readonly "m_bWasSurfing"?: boolean;
+	readonly "m_flBombPlantViewOffset"?: number;
 	readonly "m_flDuckAmount"?: number;
-	readonly "m_flDuckOffset"?: number;
+	readonly "m_flDuckRootOffset"?: number;
 	readonly "m_flDuckSpeed"?: number;
+	readonly "m_flDuckViewOffset"?: number;
 	readonly "m_flFallVelocity"?: number;
+	readonly "m_flFrictionStashedSpeed"?: number;
 	readonly "m_flLastActualJumpPressFrac"?: number;
 	readonly "m_flLastDuckTime"?: number;
 	readonly "m_flLastJumpFrac"?: number;
@@ -1472,15 +1453,13 @@ interface _CCSPlayer_MovementServicesOwn {
 	readonly "m_flLastLandedVelocityZ"?: number;
 	readonly "m_flLastUsableJumpPressFrac"?: number;
 	readonly "m_flMaxspeed"?: number;
-	readonly "m_flOffsetTickCompleteTime"?: number;
-	readonly "m_flOffsetTickStashedSpeed"?: number;
 	readonly "m_flStamina"?: number;
+	readonly "m_flUseFrictionStashedSpeedUntilFrac"?: number;
 	readonly "m_fStashGrenadeParameterWhen"?: number;
+	readonly "m_gtLastTimeInAir"?: number;
+	readonly "m_gtLastTimeOnStaticWorldGround"?: number;
 	readonly "m_nButtonDownMaskPrev"?: bigint;
-	readonly "m_nDuckJumpTimeMsecs"?: number;
-	readonly "m_nDuckTimeMsecs"?: number;
 	readonly "m_nGameCodeHasMovedPlayerAfterCommand"?: number;
-	readonly "m_nJumpTimeMsecs"?: number;
 	readonly "m_nLadderSurfacePropIndex"?: number;
 	readonly "m_nLastActualJumpPressTick"?: number;
 	readonly "m_nLastJumpTick"?: number;
@@ -1495,8 +1474,6 @@ interface _CCSPlayer_PingServicesOwn {
 
 interface _CCSPlayer_WeaponServicesOwn {
 	readonly "m_bBlockInspectUntilNextGraphUpdate"?: boolean;
-	readonly "m_bIsHoldingLookAtWeapon"?: boolean;
-	readonly "m_bIsLookingAtWeapon"?: boolean;
 	readonly "m_flNextAttack"?: number;
 	readonly "m_hActiveWeapon"?: number;
 	readonly "m_hLastWeapon"?: number;
@@ -1654,9 +1631,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "exponent"?: number;
 	readonly "farz"?: number;
 	readonly "flClip3DSkyBoxNearToWorldFarOffset"?: number;
-	readonly "flFlinchModLarge"?: number;
-	readonly "flFlinchModSmall"?: number;
-	readonly "flFriendlyFireDamageReductionRatio"?: number;
 	readonly "HDRColorScale"?: number;
 	readonly "lerptime"?: number;
 	readonly "locallightscale"?: number;
@@ -1724,15 +1698,12 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
 	readonly "m_flHealthShotBoostExpirationTime"?: number;
-	readonly "m_flHitHeading"?: number;
 	readonly "m_flInitialValue"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
 	readonly "m_flNextSprayDecalTime"?: number;
 	readonly "m_flProgressBarStartTime"?: number;
 	readonly "m_flShadowStrength"?: number;
 	readonly "m_flSimulationTime"?: number;
-	readonly "m_flSlopeDropHeight"?: number;
-	readonly "m_flSlopeDropOffset"?: number;
 	readonly "m_flTimeOfLastInjury"?: number;
 	readonly "m_flTimeScale"?: number;
 	readonly "m_flVelocityModifier"?: number;
@@ -1792,7 +1763,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_nGlowRangeMin"?: number;
 	readonly "m_nGroundBodyIndex"?: number;
 	readonly "m_nHierarchyId"?: number;
-	readonly "m_nHitBodyPart"?: number;
 	readonly "m_nInteractsAs"?: bigint;
 	readonly "m_nInteractsExclude"?: bigint;
 	readonly "m_nInteractsWith"?: bigint;
@@ -1816,7 +1786,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_szCustomName"?: string;
 	readonly "m_szLastPlaceName"?: string;
 	readonly "m_szRagdollDamageWeaponName"?: string;
-	readonly "m_thirdPersonHeading"?: [number, number, number];
 	readonly "m_Transforms"?: number;
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
@@ -1837,15 +1806,12 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
-	readonly "m_vHeadConstraintOffset"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_vRagdollDamageForce"?: [number, number, number];
 	readonly "m_vRagdollDamagePosition"?: [number, number, number];
 	readonly "m_vRagdollServerOrigin"?: [number, number, number];
 	readonly "maxdensity"?: number;
 	readonly "maxdensityLerpTo"?: number;
 	readonly "nIndex"?: number;
-	readonly "nTagTick"?: number;
 	readonly "nType"?: number;
 	readonly "origin"?: [number, number, number];
 	readonly "qAngle"?: [number, number, number];
@@ -1977,7 +1943,6 @@ interface _CCSPlayerPawnBaseOwn {
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "maxdensity"?: number;
 	readonly "maxdensityLerpTo"?: number;
 	readonly "nIndex"?: number;
@@ -2109,6 +2074,7 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -2156,7 +2122,6 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 }
 
@@ -2259,6 +2224,7 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -2307,7 +2273,6 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 }
 
@@ -2402,7 +2367,6 @@ interface _CDecoyProjectileOwn {
 	readonly "m_vecZ"?: number;
 	readonly "m_vInitialPosition"?: [number, number, number];
 	readonly "m_vInitialVelocity"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 }
 
 interface _CEnvDetailControllerOwn {
@@ -2701,6 +2665,7 @@ interface _CKnifeOwn {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -2748,7 +2713,6 @@ interface _CKnifeOwn {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 }
 
@@ -2879,7 +2843,6 @@ interface _CMolotovProjectileOwn {
 	readonly "m_vecZ"?: number;
 	readonly "m_vInitialPosition"?: [number, number, number];
 	readonly "m_vInitialVelocity"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 }
 
 interface _CPlantedC4Own {
@@ -3237,7 +3200,6 @@ interface _CSmokeGrenadeProjectileOwn {
 	readonly "m_vecZ"?: number;
 	readonly "m_vInitialPosition"?: [number, number, number];
 	readonly "m_vInitialVelocity"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_VoxelFrameData"?: number;
 	readonly "m_vSmokeColor"?: [number, number, number];
 	readonly "m_vSmokeDetonationPos"?: [number, number, number];
@@ -3393,6 +3355,7 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -3441,7 +3404,6 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 	readonly "m_zoomLevel"?: number;
 }
@@ -3536,6 +3498,7 @@ interface _CWeaponTaserOwn {
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCollisionFunctionMask"?: number;
 	readonly "m_nCollisionGroup"?: number;
+	readonly "m_nDeployTick"?: number;
 	readonly "m_nDetailLayerMask"?: number;
 	readonly "m_nDetailLayerMaskType"?: number;
 	readonly "m_nDropTick"?: number;
@@ -3584,7 +3547,6 @@ interface _CWeaponTaserOwn {
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
-	readonly "m_vLookTargetPosition"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 	readonly "m_zoomLevel"?: number;
 }
@@ -3759,7 +3721,6 @@ export type ICCSPlayerPawn = Prefixed<"CCSPlayerPawn",
 	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
-	Prefixed<"PredictedDamageTag_t", _PredictedDamageTag_t> &
 	Prefixed<"ViewAngleServerChange_t", _ViewAngleServerChange_t> &
 	_CCSPlayerPawnOwn
 >;
