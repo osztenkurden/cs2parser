@@ -133,6 +133,7 @@ const D_BASE = 18;
 const D_AMMO = 19;
 const D_QANGLE_PRES = 20;
 const D_GAME_MODE_RULES = 21;
+const D_BINARY_BLOCK = 22;
 
 export type QuantalizedFloatDecoder = { type: typeof D_QUANTALIZED_FLOAT; decoder: number };
 export type Decoder = number | QuantalizedFloatDecoder;
@@ -159,7 +160,8 @@ export const Decoders = {
 	BaseDecoder: D_BASE,
 	AmmoDecoder: D_AMMO,
 	QanglePresDecoder: D_QANGLE_PRES,
-	GameModeRulesDecoder: D_GAME_MODE_RULES
+	GameModeRulesDecoder: D_GAME_MODE_RULES,
+	BinaryBlockDecoder: D_BINARY_BLOCK
 };
 
 const decoderMap: { [K in string]?: Decoder } = {
@@ -179,6 +181,8 @@ const decoderMap: { [K in string]?: Decoder } = {
 	Color: Decoders.UnsignedDecoder,
 	CPhysicsComponent: Decoders.ComponentDecoder,
 	CRenderComponent: Decoders.ComponentDecoder,
+	CGlobalSymbol: Decoders.StringDecoder,
+	CUtlBinaryBlock: Decoders.BinaryBlockDecoder,
 	CUtlString: Decoders.StringDecoder,
 	CUtlStringToken: Decoders.UnsignedDecoder,
 	CUtlSymbolLarge: Decoders.StringDecoder,
@@ -558,6 +562,12 @@ export const constructorFieldHelper = {
 				return reader.decodeQangleVariantPres();
 			case D_GAME_MODE_RULES:
 				return reader.ReadUBits(7);
+			case D_BINARY_BLOCK: {
+				const length = reader.ReadUVarInt32();
+				const out = new Uint8Array(length);
+				reader.readBytes(out);
+				return out;
+			}
 			default:
 				throw Error('unknown decoder');
 		}
@@ -578,6 +588,18 @@ export const constructorFieldHelper = {
 		}
 		if (field.varName === 'm_iClip1') {
 			return Decoders.AmmoDecoder;
+		}
+
+		// For container types, the per-element decoder is derived from the inner generic
+		// type (e.g. CNetworkUtlVectorBase<CGlobalSymbol> → element uses StringDecoder).
+		if (
+			field.fieldType.genericType &&
+			(field.fieldType.baseType === 'CNetworkUtlVectorBase' ||
+				field.fieldType.baseType === 'CUtlVectorEmbeddedNetworkVar' ||
+				field.fieldType.baseType === 'CUtlVector')
+		) {
+			const innerDecoder = decoderMap[field.fieldType.genericType.baseType];
+			if (innerDecoder) return innerDecoder;
 		}
 
 		const decoder = decoderMap[field.fieldType.baseType];
