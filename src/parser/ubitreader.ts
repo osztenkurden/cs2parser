@@ -8,6 +8,12 @@ for (let i = 1; i < 32; ++i) {
 	MASK[i] = (1 << i) - 1;
 }
 MASK[32] = 0xffffffff;
+
+const BIT_COORD_FRAC_SCALE = 1 / 32;
+const BIT_COORD_PRES_SCALE = 360 / (1 << 20);
+
+const _f32ReinterpretF = new Float32Array(1);
+const _f32ReinterpretU = new Uint32Array(_f32ReinterpretF.buffer);
 export class BitBuffer {
 	private static readonly BitMask = bitMask;
 	private static readonly _stringDecoder = new TextDecoder('utf-8');
@@ -16,7 +22,6 @@ export class BitBuffer {
 	public _buf = 0;
 	private _pointer: Uint8Array;
 	_byteOffset = 0;
-	_sumReadBits = 0;
 	private _uintbuffer: Buffer;
 	private _bufArray: Uint8Array;
 	private _bufArrayView: DataView;
@@ -39,7 +44,6 @@ export class BitBuffer {
 		this._buf = 0;
 		this._bitsAvail = 0;
 		this._byteOffset = 0;
-		this._sumReadBits = 0;
 
 		this.FetchNext();
 		return this;
@@ -98,7 +102,6 @@ export class BitBuffer {
 
 	/** Lightweight consume after PeekUBitsWithLog — advances by numBits without returning a value. */
 	public consumePeeked(numBits: number): void {
-		this._sumReadBits += numBits;
 		if (this._bitsAvail >= numBits) {
 			this._bitsAvail -= numBits;
 			if (this._bitsAvail !== 0) {
@@ -117,7 +120,6 @@ export class BitBuffer {
 		}
 	}
 	public ReadUBits(numBits: number) {
-		this._sumReadBits += numBits;
 		if (this._bitsAvail >= numBits) {
 			const ret = numBits === 32 ? this._buf >>> 0 : this._buf & BitBuffer.BitMask[numBits]!;
 			this._bitsAvail -= numBits;
@@ -147,7 +149,6 @@ export class BitBuffer {
 		return ret >>> 0;
 	}
 	public readBoolean() {
-		this._sumReadBits++;
 		if (this._bitsAvail <= 0) this.FetchNext();
 		const ret = this._buf & 1;
 		this._bitsAvail--;
@@ -161,6 +162,20 @@ export class BitBuffer {
 
 	public ReadByte() {
 		return this.ReadUBits(8);
+	}
+
+	public readFloat32LE(): number {
+		let bits: number;
+		if (this._bitsAvail === 32) {
+			bits = this._buf >>> 0;
+			this._bitsAvail = 0;
+			this.FetchNext();
+		} else {
+			bits = this.ReadUBits(32);
+		}
+		if (bits === 0) return 0;
+		_f32ReinterpretU[0] = bits;
+		return _f32ReinterpretF[0]!;
 	}
 
 	private UpdateBuffer() {
@@ -197,7 +212,6 @@ export class BitBuffer {
 		}
 
 		if (written >= size) {
-			this._sumReadBits += size * 8;
 			if (this._bitsAvail === 0) this.FetchNext();
 			return;
 		}
@@ -210,7 +224,6 @@ export class BitBuffer {
 				written += direct;
 				this._byteOffset += direct;
 			}
-			this._sumReadBits += size * 8;
 			this.FetchNext();
 		} else {
 			// Phase 2b: non-byte-aligned — shift-copy loop
@@ -232,13 +245,11 @@ export class BitBuffer {
 			this._byteOffset += count;
 			this._buf = carry;
 			// _bitsAvail stays the same (shift bits in carry)
-			this._sumReadBits += size * 8;
 		}
 	}
 
 	skipBytesBetter = (bytes: number) => {
 		const bitsToSkip = bytes * 8;
-		this._sumReadBits += bitsToSkip;
 
 		if (bitsToSkip <= this._bitsAvail) {
 			// Skip entirely within current buffer
@@ -286,7 +297,6 @@ export class BitBuffer {
 		if (this._bitsAvail >= 8) {
 			const b0 = this._buf & 0xff;
 			if ((b0 & 0x80) === 0) {
-				this._sumReadBits += 8;
 				this._bitsAvail -= 8;
 				if (this._bitsAvail !== 0) {
 					this._buf >>>= 8;
@@ -299,7 +309,6 @@ export class BitBuffer {
 			if (this._bitsAvail >= 16) {
 				const b1 = (this._buf >>> 8) & 0xff;
 				if ((b1 & 0x80) === 0) {
-					this._sumReadBits += 16;
 					this._bitsAvail -= 16;
 					if (this._bitsAvail !== 0) {
 						this._buf >>>= 16;
@@ -420,15 +429,14 @@ export class BitBuffer {
 			fracVal = this.ReadUBits(5);
 		}
 
-		const resol = 1 / 32;
-		const result = Math.fround(intVal + fracVal * resol);
+		const result = Math.fround(intVal + fracVal * BIT_COORD_FRAC_SCALE);
 
 		if (sign) return -result;
 		return result;
 	}
 
 	readBitCoordPres() {
-		return (this.ReadUBits(20) * 360) / (1 << 20) - 180;
+		return this.ReadUBits(20) * BIT_COORD_PRES_SCALE - 180;
 	}
 
 	decodeAmmo() {

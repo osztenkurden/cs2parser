@@ -123,7 +123,6 @@ export class EntityParser {
 	}
 
 	decodeEntityUpdate = (reader: BitBuffer, entityId: number, nUpdates: number) => {
-		let i = 0;
 		const entityClassId = this.entities[entityId];
 
 		if (entityClassId === undefined) {
@@ -135,22 +134,28 @@ export class EntityParser {
 			throw 'No class';
 		}
 
+		const serializer = cls.serializer;
+		const paths = this.paths;
 		const directEntities = this.directEntities;
 		const directPropIdToName = this.directPropIdToName;
-		while (i < nUpdates) {
-			const path = this.paths[i]!;
-			if (!path) break;
+		// Hoist per-entity lookups outside the hot loop: entityId is constant for this
+		// call, so directEntities[entityId] cannot change between iterations.
+		const ent = directEntities ? directEntities[entityId] : null;
+		const entProps = ent ? ent.properties : null;
+		const classPropIdToName = this.classInfo.propIdToName;
+		const emitEntityUpdates = !directEntities; // emit only when no direct-write target
 
-			const info = findFieldAndDecode(path, cls.serializer);
+		let i = 0;
+		while (i < nUpdates) {
+			const path = paths[i]!;
+
+			const info = findFieldAndDecode(path, serializer);
 			const result = constructorFieldHelper.decode(reader, info.decoder);
 			if (info.hasInfo) {
-				if (directEntities) {
-					const ent = directEntities[entityId];
-					if (ent) {
-						const name = directPropIdToName![info.propId];
-						if (name !== undefined) ent.properties[name] = result;
-					}
-				} else if (this.classInfo.propIdToName[info.propId] !== undefined) {
+				if (entProps) {
+					const name = directPropIdToName![info.propId];
+					if (name !== undefined) entProps[name] = result;
+				} else if (emitEntityUpdates && classPropIdToName[info.propId] !== undefined) {
 					this.enqueueEvent('entityupdated', { entityId, propId: info.propId, value: result });
 				}
 			}
