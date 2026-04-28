@@ -3,18 +3,21 @@
  * Probe a live CS2 GOTV HTTP broadcast.
  *
  * Usage:
- *   bun scripts/probe-broadcast.ts <broadcast-url>
+ *   bun scripts/probe-broadcast.ts <broadcast-url> [event-descriptors.bin]
  *
  * Logs the /sync metadata, the first ~10 game events, and the final tick +
  * entity count + terminal reason. Useful for sanity-checking the protocol
- * implementation against a real relay.
+ * implementation against a real relay. Optional descriptor file (produced by
+ * `dump-event-descriptors.ts`) preloads game-event names for mid-stream joins.
  */
 
+import fs from 'fs';
 import { DemoReader, EntityMode, HttpBroadcastReader } from '../src/index.js';
 
 const url = process.argv[2];
+const descriptorPath = process.argv[3];
 if (!url) {
-	console.error('Usage: bun scripts/probe-broadcast.ts <broadcast-url>');
+	console.error('Usage: bun scripts/probe-broadcast.ts <broadcast-url> [event-descriptors.bin]');
 	process.exit(1);
 }
 
@@ -36,8 +39,12 @@ parser.on('serverinfo', info => {
 	console.log('[serverinfo] tick_interval=', info.tick_interval, 'map=', info.map_name);
 });
 
+const gameEventDescriptors =
+	descriptorPath && fs.existsSync(descriptorPath) ? fs.readFileSync(descriptorPath) : undefined;
+
 const reader = new HttpBroadcastReader(parser, url, {
-	entities: EntityMode.ALL
+	entities: EntityMode.ALL,
+	gameEventDescriptors
 });
 
 const onSig = () => {

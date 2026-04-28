@@ -1,6 +1,7 @@
 import type { DemoReader } from '../parser/index.js';
 import { ParseSession, type ParseSettings } from '../parser/entities/parseSession.js';
 import { EntityMode, type EndReason } from '../parser/entities/types.js';
+import { CMsgSource1LegacyGameEventList } from '../ts-proto/gameevents.js';
 import { BroadcastFetchError } from './errors.js';
 import { createDefaultFetcher, type BroadcastFetcher, type FetchResult } from './fetcher.js';
 import { buildFragmentPrefix, validateSync, type BroadcastSyncDto } from './sync.js';
@@ -32,6 +33,15 @@ export interface HttpBroadcastOptions extends ParseSettings {
 	 * — return `'continue'` to skip the offending fragment and fetch the next.
 	 */
 	onFragmentError?: (err: Error, ctx: FragmentErrorContext) => 'abort' | 'continue';
+	/**
+	 * Pre-loaded `CMsgSource1LegacyGameEventList` for resolving game event names.
+	 * Broadcasts only deliver this descriptor list once at game start; clients
+	 * connecting mid-stream miss it and would emit `gameevent` payloads without
+	 * `event_name`. Pass either the decoded message (e.g. captured from a prior
+	 * `gameeventlist` event) or its protobuf-encoded bytes (produced by
+	 * `scripts/dump-event-descriptors.ts`).
+	 */
+	gameEventDescriptors?: CMsgSource1LegacyGameEventList | Uint8Array;
 }
 
 export interface BroadcastTerminus {
@@ -162,6 +172,16 @@ export class HttpBroadcastReader {
 			this._unhookListeners();
 			this._terminus = { reason: 'error', error: e };
 			throw e instanceof Error ? e : new Error(String(e));
+		}
+
+		// Preload event descriptors before any fragment so `gameevent` payloads
+		// can resolve their names. Broadcasts seldom resend the descriptor list.
+		if (this.opts.gameEventDescriptors) {
+			const list =
+				this.opts.gameEventDescriptors instanceof Uint8Array
+					? CMsgSource1LegacyGameEventList.decode(this.opts.gameEventDescriptors)
+					: this.opts.gameEventDescriptors;
+			this.parser.emit('gameeventlist', list);
 		}
 
 		// Signup fragment (tickOffset = -1)

@@ -1,9 +1,10 @@
 import fs from 'fs';
+import snappy from 'snappy';
 import { describe, test, expect } from 'bun:test';
 import { DemoReader } from '../../../src/index.js';
 import { HttpBroadcastReader } from '../../../src/broadcast/index.js';
 import { EntityMode } from '../../../src/parser/entities/types.js';
-import { EDemoCommands } from '../../../src/ts-proto/demo.js';
+import { CDemoPacket, EDemoCommands } from '../../../src/ts-proto/demo.js';
 import { writeLEUInt32, writeUVarInt32 } from '../../unit/broadcast/helpers.js';
 import { MockBroadcastFetcher, type FragmentResponse } from './mock-fetcher.js';
 
@@ -57,16 +58,33 @@ function readDemoFrames(buf: Uint8Array): DemoFrame[] {
  * For signup-fragment encoding, signon frames (tick === 0xffffffff) emit raw
  * tick = 0; the consumer applies tickOffset = -1 to recover the -1 sentinel.
  * Gameplay frames pass their tick through unchanged for tickOffset = 0.
+ *
+ * DEM_Packet/DEM_SignonPacket are unwrapped from their CDemoPacket envelope
+ * because broadcasts deliver the raw SVC bit-stream directly (matches
+ * demofile-net's `HttpBroadcastReader`/`OnDemoPacket` behavior).
  */
 function encodeBroadcast(frames: DemoFrame[], opts: { signon: boolean; endMarker: boolean }): Uint8Array {
 	const parts: Uint8Array[] = [];
 	for (const f of frames) {
-		parts.push(writeUVarInt32(f.cmd));
+		const cmdType = f.cmd & ~EDemoCommands.DEM_IsCompressed;
+		const isCompressed = (f.cmd & EDemoCommands.DEM_IsCompressed) !== 0;
+
+		let cmd = f.cmd;
+		let payload = f.payload;
+		if (cmdType === EDemoCommands.DEM_Packet || cmdType === EDemoCommands.DEM_SignonPacket) {
+			const proto = isCompressed
+				? (snappy.uncompressSync(Buffer.from(payload)) as Buffer)
+				: payload;
+			payload = CDemoPacket.decode(proto).data ?? new Uint8Array(0);
+			cmd = cmdType;
+		}
+
+		parts.push(writeUVarInt32(cmd));
 		const rawTick = opts.signon && f.tick === 0xffffffff ? 0 : f.tick;
 		parts.push(writeLEUInt32(rawTick));
 		parts.push(Uint8Array.of(0));
-		parts.push(writeLEUInt32(f.payload.length));
-		parts.push(f.payload);
+		parts.push(writeLEUInt32(payload.length));
+		parts.push(payload);
 	}
 	if (opts.endMarker) {
 		parts.push(writeUVarInt32(0));

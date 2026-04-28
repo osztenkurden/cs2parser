@@ -2,7 +2,7 @@
 
 A fast, typed CS2 demo parser for Node.js and Bun.
 
-Parses `.dem` files from Counter-Strike 2, providing typed access to entities, players, game events, and more.
+Parses `.dem` files and live HTTP GOTV broadcasts from Counter-Strike 2, providing typed access to entities, players, game events, and more.
 
 ## Install
 
@@ -115,6 +115,116 @@ Additional options can be passed to `parseDemo` to enable extra data:
 ```ts
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, commands: true, messages: true });
 ```
+
+## HTTP Broadcast (live GOTV)
+
+`DemoReader` can parse a live CS2 GOTV broadcast over HTTP using the same event surface as `.dem` parsing. The broadcast feed is the protocol Valve's relays speak (`/sync` + `/{N}/start` + `/{N}/full` + `/{N}/delta`) — see [Valve's reference relay](https://github.com/SteamDatabase/SteamTracking/blob/master/CSGO/csgo/scripts/relay.js) and `examples/relay.ts` in this repo.
+
+### Quick start
+
+```ts
+import { DemoReader, EntityMode } from 'cs2parser';
+
+const parser = new DemoReader();
+
+parser.gameEvents.on('player_death', e => {
+  console.log(`${e.attackerPlayer?.name} killed ${e.player?.name} with ${e.weapon}`);
+});
+
+await parser.parseHttpBroadcast('http://relay.example.com/match-id/', {
+  entities: EntityMode.ALL
+});
+```
+
+`parseHttpBroadcast` resolves when the broadcast ends (`{ reason: 'stop' }`), the relay stops returning new fragments (`'timeout'`), or the parser is cancelled. It throws if the relay returns a fatal error.
+
+### `HttpBroadcastReader` (finer control)
+
+Use `HttpBroadcastReader` directly when you want to inspect sync metadata, separate the start/run phases, or stop mid-stream.
+
+```ts
+import { DemoReader, HttpBroadcastReader } from 'cs2parser';
+
+const parser = new DemoReader();
+parser.on('broadcastsync', sync => console.log('connected', sync.map, 'tick', sync.tick));
+
+const reader = new HttpBroadcastReader(parser, 'http://relay.example.com/match-id/');
+await reader.start();                    // /sync + /start + first /full
+console.log('tail tick:', reader.tailTick);
+const terminus = await reader.run();     // /N/delta loop
+console.log(terminus.reason);            // 'stop' | 'timeout' | 'cancelled' | 'error'
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `entities` | `EntityMode` | `NONE` | Same modes as `parseDemo` |
+| `fetcher` | `BroadcastFetcher` | `globalThis.fetch` | Inject your own HTTP layer for tests, auth, or proxies |
+| `deltaThrottle` | `number` (ms) | `1000` | Minimum gap between successful `/delta` requests |
+| `deltaRetryInterval` | `number` (ms) | `1000` | Backoff on 404/405 (fragment not yet ready) |
+| `maxDeltaRetries` | `number` | `10` | Consecutive 404/405s on `/delta` before terminating with `'timeout'` |
+| `maxFullRetries` | `number` | `5` | Consecutive 404/405s on `/full` before terminating with `'error'` |
+| `signal` | `AbortSignal` | — | External cancellation |
+| `onFragmentError` | `(err, ctx) => 'abort' \| 'continue'` | `'abort'` | Skip a malformed fragment instead of aborting |
+| `gameEventDescriptors` | `CMsgSource1LegacyGameEventList \| Uint8Array` | — | Preload the game-event descriptor list (see below) |
+
+`reader.stop()` aborts the loop and pending fetches; `reader.sync`, `reader.fragment`, `reader.tailTick` expose live state.
+
+### Mid-stream joins and `gameEventDescriptors`
+
+Broadcasts deliver `CSVCMsg_GameEventList` once at game start. A client connecting at fragment 700 has already missed it, so `gameevent` payloads arrive without resolvable names. Preload the descriptor list to recover names:
+
+```bash
+# Generate from any .dem of the same game build (one-time, ~15 KB output)
+bun scripts/dump-event-descriptors.ts path/to/demo.dem event-descriptors.bin
+```
+
+```ts
+import fs from 'fs';
+const reader = new HttpBroadcastReader(parser, url, {
+  entities: EntityMode.ALL,
+  gameEventDescriptors: fs.readFileSync('event-descriptors.bin')
+});
+```
+
+The reader emits a synthetic `gameeventlist` event before processing the first fragment so the descriptor map is populated immediately. You can also pass an in-memory `CMsgSource1LegacyGameEventList` (e.g. captured from a previous parse) instead of a file.
+
+### Wire format notes
+
+Broadcasts deliver bytes in a slightly different framing from `.dem` files; this is handled internally but worth knowing if you're debugging at the protocol layer:
+
+- **Frame header** is `[uvarint cmd][LE u32 tick][1 reserved byte][LE u32 size][payload]`, with `cmd === 0` as the end-of-stream marker. (`.dem` files use varints for tick and size and have no reserved byte.)
+- **`DEM_Packet` / `DEM_SignonPacket` payloads** are the raw SVC bit-stream — they are *not* wrapped in a `CDemoPacket` proto envelope as they are in `.dem` files.
+- **`DEM_FullPacket.string_table`** carries the tables that have changed since the last full packet. The reader applies these on every full fragment so `instancebaseline` reflects the current tick — required for entity parsing on mid-stream joins.
+- **Compression** is per-command via the `DEM_IsCompressed` bit (`cmd | 0x40`) and uses Snappy.
+
+### Events
+
+All `DemoReader` events fire as usual. One additional event:
+
+```ts
+parser.on('broadcastsync', sync => {
+  // BroadcastSyncDto from /sync — fragment, signup_fragment, tick, tps, map, ...
+});
+```
+
+Terminus reasons returned by `run()`:
+
+| Reason | Meaning |
+| --- | --- |
+| `'stop'` | Broadcast ended cleanly (`cmd === 0` end-of-stream marker received) |
+| `'timeout'` | `maxDeltaRetries` consecutive 404/405s on `/delta` (relay stopped advancing) |
+| `'cancelled'` | `reader.stop()`, `parser.cancel()`, or external `signal` aborted |
+| `'error'` | Fatal error (HTTP failure, malformed fragment without `onFragmentError: 'continue'`) |
+
+### Diagnostic scripts
+
+| Script | Purpose |
+| --- | --- |
+| `scripts/probe-broadcast.ts <url> [descriptors.bin]` | Connect, log `/sync` and the first 10 game events, exit |
+| `scripts/capture-broadcast-fixture.ts <url> [outDir]` | Save `sync.json` + `/start` + `/full` + a few `/delta`s to disk for offline replay |
+| `scripts/dump-event-descriptors.ts <demo.dem> [out.bin]` | Extract `CMsgSource1LegacyGameEventList` for `gameEventDescriptors` |
+
+A reference relay implementation is provided in `examples/relay.ts` for local testing.
 
 ## Reader State
 
@@ -572,7 +682,16 @@ Demo: `demo.dem` (318 MB, 136,812 ticks)
 
 ## Examples
 
-The [`examples/`](examples/) directory contains runnable scripts covering header parsing, server info extraction, full demo parsing with all input modes, and low-level packet events. See [`examples/README.md`](examples/README.md) for details.
+The [`examples/`](examples/) directory contains runnable scripts:
+
+| File | Description |
+| --- | --- |
+| `header.ts` | `DemoReader.parseHeader` — fast metadata read |
+| `serverinfo.ts` | `DemoReader.parseServerInfo` — tick interval / map / max clients |
+| `stream.ts` | Streaming a `.dem` file via `Readable` |
+| `voicedata.ts` | Opt-in `svc_VoiceData` parsing |
+| `broadcast.ts` | Live HTTP broadcast with preloaded `gameEventDescriptors` |
+| `relay.ts` | Reference HTTP relay (Valve protocol) for local testing |
 
 ## Acknowledgements
 

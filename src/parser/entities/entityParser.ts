@@ -231,42 +231,35 @@ export class EntityParser {
 
 	parseEntityPacket = (msg: CSVCMsg_PacketEntities, baseline: Uint8Array[]) => {
 		const reader = this.cachedBitBuffer2.setTo(msg.entity_data!);
+		const hasPvsVisBits = msg.has_pvs_vis_bits_deprecated ?? 0;
 
 		let entityId = -1;
 		const max = msg.updated_entries!;
 
 		for (let i = 0; i < max; i++) {
-			const base = reader.readUbitVar();
-			entityId += 1 + base;
+			entityId += 1 + reader.readUbitVar();
 
-			const cmd = reader.ReadUBits(2);
+			const updateType = reader.ReadUBits(2);
 
-			switch (cmd) {
-				case 0b01:
-				case 0b11: {
+			if ((updateType & 0b01) !== 0) {
+				if (updateType === 0b11) {
 					this.entities[entityId] = undefined as any;
 					if (this.directEntities) {
 						this.directEntities[entityId] = undefined as any;
 					}
 					this.enqueueEvent('entitydeleted', entityId);
-					break;
 				}
-				case 0b10: {
-					this.createEntity(reader, entityId, baseline);
-					this.updateEntity(reader, entityId);
-					break;
-				}
-				case 0b00: {
-					const hasPvsBits = msg.has_pvs_vis_bits_deprecated ?? 0;
-					if (hasPvsBits > 0 && (reader.ReadUBits(2) & 0x01) === 1) {
+			} else if (updateType === 0b10) {
+				this.createEntity(reader, entityId, baseline);
+				this.updateEntity(reader, entityId);
+			} else {
+				if (hasPvsVisBits > 0) {
+					const deltaCmd = reader.ReadUBits(2);
+					if ((deltaCmd & 0x1) === 1) {
 						continue;
 					}
-					this.updateEntity(reader, entityId);
-					break;
 				}
-				default: {
-					throw 'WRONG COMMAND';
-				}
+				this.updateEntity(reader, entityId);
 			}
 		}
 	};

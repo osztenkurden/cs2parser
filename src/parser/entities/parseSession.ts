@@ -6,7 +6,12 @@ import { CDemoSendTables, EDemoCommands, type CDemoFullPacket, type CDemoPacket 
 import { EBaseGameEvents, type CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
 import { CSVCMsg_PacketEntities, SVC_Messages } from '../../ts-proto/netmessages.js';
 import { messages } from '../descriptors/index.js';
-import { createStringTable, updateStringTable, type StringTableObject } from '../stringtables.js';
+import {
+	applyStringTableSnapshot,
+	createStringTable,
+	updateStringTable,
+	type StringTableObject
+} from '../stringtables.js';
 import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
 import { parseClassInfo } from './classInfo.js';
 import { EntityParser } from './entityParser.js';
@@ -359,7 +364,15 @@ export class ParseSession {
 			this._frameBuf = buf;
 			this._frameOffset = off;
 			this._frameLimit = off + size;
-			this.handleFrame(decoder, size, isCompressed);
+			if (commandType === EDemoCommands.DEM_Packet || commandType === EDemoCommands.DEM_SignonPacket) {
+				// Broadcast wire format delivers the SVC bit-stream directly here;
+				// .dem files wrap it in a CDemoPacket envelope, broadcasts do not.
+				const data = this.decompressIfNeeded(size, isCompressed);
+				this.parsePacket({ data } as CDemoPacket);
+				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+			} else {
+				this.handleFrame(decoder, size, isCompressed);
+			}
 			off += size;
 		}
 
@@ -544,6 +557,11 @@ export class ParseSession {
 				break;
 			case EDemoCommands.DEM_FullPacket:
 				this.baseParse(decoder.decode, size, isCompressed, (fullPacket: CDemoFullPacket) => {
+					if (fullPacket.string_table) {
+						for (const snapshot of fullPacket.string_table.tables) {
+							applyStringTableSnapshot(snapshot, this.baselines);
+						}
+					}
 					if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
 				});
 				break;
