@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/osztenkurden/cs2parser/compare/v1.5.1...v1.6.0) (2026-04-28)
+
+
+### Features
+
+* added support for http broadcast ([#19](https://github.com/osztenkurden/cs2parser/issues/19)) ([0195db7](https://github.com/osztenkurden/cs2parser/commit/0195db79e4d6badcf9250194bd4f00592776db1b))
+
 ## [1.5.1](https://github.com/osztenkurden/cs2parser/compare/v1.5.0...v1.5.1) (2026-04-22)
 
 
