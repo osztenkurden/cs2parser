@@ -165,16 +165,25 @@ console.log(terminus.reason);            // 'stop' | 'timeout' | 'cancelled' | '
 | `maxFullRetries` | `number` | `5` | Consecutive 404/405s on `/full` before terminating with `'error'` |
 | `signal` | `AbortSignal` | — | External cancellation |
 | `onFragmentError` | `(err, ctx) => 'abort' \| 'continue'` | `'abort'` | Skip a malformed fragment instead of aborting |
-| `gameEventDescriptors` | `CMsgSource1LegacyGameEventList \| Uint8Array` | — | Preload the game-event descriptor list (see below) |
+| `gameEventDescriptors` | `CMsgSource1LegacyGameEventList \| Uint8Array \| false` | bundled | Preload the game-event descriptor list (see below). Defaults to the descriptor file shipped with the package; pass `false` to skip preload |
 
 `reader.stop()` aborts the loop and pending fetches; `reader.sync`, `reader.fragment`, `reader.tailTick` expose live state.
 
 ### Mid-stream joins and `gameEventDescriptors`
 
-Broadcasts deliver `CSVCMsg_GameEventList` once at game start. A client connecting at fragment 700 has already missed it, so `gameevent` payloads arrive without resolvable names. Preload the descriptor list to recover names:
+Broadcasts deliver `CSVCMsg_GameEventList` once at game start. A client connecting at fragment 700 has already missed it, so `gameevent` payloads would arrive without resolvable names.
+
+**The package ships a default descriptor list** at `dist/default-event-descriptors.bin` and the reader auto-loads it when no `gameEventDescriptors` option is passed. For most consumers this is enough — names like `player_death`, `weapon_fire`, `bomb_planted` resolve out of the box.
+
+```ts
+const reader = new HttpBroadcastReader(parser, url, { entities: EntityMode.ALL });
+// gameEventDescriptors omitted → bundled descriptors used automatically
+```
+
+To override with a fresher list (e.g. after a CS2 patch changed event IDs), generate one from any `.dem` of the same build:
 
 ```bash
-# Generate from any .dem of the same game build (one-time, ~15 KB output)
+# ~15 KB output, one-time per game build
 bun scripts/dump-event-descriptors.ts path/to/demo.dem event-descriptors.bin
 ```
 
@@ -186,7 +195,9 @@ const reader = new HttpBroadcastReader(parser, url, {
 });
 ```
 
-The reader emits a synthetic `gameeventlist` event before processing the first fragment so the descriptor map is populated immediately. You can also pass an in-memory `CMsgSource1LegacyGameEventList` (e.g. captured from a previous parse) instead of a file.
+Pass `gameEventDescriptors: false` to disable preload entirely — useful if the broadcast you're connecting to actually delivers its own descriptor list and you'd rather trust that one. You can also pass an in-memory `CMsgSource1LegacyGameEventList` instead of bytes.
+
+The reader emits a synthetic `gameeventlist` event before processing the first fragment so the descriptor map is populated immediately.
 
 ### Wire format notes
 

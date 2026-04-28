@@ -2,6 +2,7 @@ import type { DemoReader } from '../parser/index.js';
 import { ParseSession, type ParseSettings } from '../parser/entities/parseSession.js';
 import { EntityMode, type EndReason } from '../parser/entities/types.js';
 import { CMsgSource1LegacyGameEventList } from '../ts-proto/gameevents.js';
+import { loadBundledEventDescriptors } from './defaultEventDescriptors.js';
 import { BroadcastFetchError } from './errors.js';
 import { createDefaultFetcher, type BroadcastFetcher, type FetchResult } from './fetcher.js';
 import { buildFragmentPrefix, validateSync, type BroadcastSyncDto } from './sync.js';
@@ -40,8 +41,13 @@ export interface HttpBroadcastOptions extends ParseSettings {
 	 * `event_name`. Pass either the decoded message (e.g. captured from a prior
 	 * `gameeventlist` event) or its protobuf-encoded bytes (produced by
 	 * `scripts/dump-event-descriptors.ts`).
+	 *
+	 * If omitted, the reader falls back to a descriptor file bundled with the
+	 * package. Pass `false` to disable both — useful if the broadcast you're
+	 * connecting to actually delivers its own descriptor list and you'd rather
+	 * trust that one.
 	 */
-	gameEventDescriptors?: CMsgSource1LegacyGameEventList | Uint8Array;
+	gameEventDescriptors?: CMsgSource1LegacyGameEventList | Uint8Array | false;
 }
 
 export interface BroadcastTerminus {
@@ -175,13 +181,21 @@ export class HttpBroadcastReader {
 		}
 
 		// Preload event descriptors before any fragment so `gameevent` payloads
-		// can resolve their names. Broadcasts seldom resend the descriptor list.
-		if (this.opts.gameEventDescriptors) {
-			const list =
-				this.opts.gameEventDescriptors instanceof Uint8Array
-					? CMsgSource1LegacyGameEventList.decode(this.opts.gameEventDescriptors)
-					: this.opts.gameEventDescriptors;
-			this.parser.emit('gameeventlist', list);
+		// can resolve their names. Broadcasts seldom resend the descriptor list,
+		// so we either (a) use the caller-supplied descriptors, (b) fall back to
+		// the descriptor file bundled with the package, or (c) skip preload
+		// entirely if the caller passed `false`.
+		if (this.opts.gameEventDescriptors !== false) {
+			const supplied = this.opts.gameEventDescriptors;
+			let list: CMsgSource1LegacyGameEventList | null = null;
+			if (supplied instanceof Uint8Array) {
+				list = CMsgSource1LegacyGameEventList.decode(supplied);
+			} else if (supplied) {
+				list = supplied;
+			} else {
+				list = loadBundledEventDescriptors();
+			}
+			if (list) this.parser.emit('gameeventlist', list);
 		}
 
 		// Signup fragment (tickOffset = -1)
