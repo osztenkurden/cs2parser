@@ -18,6 +18,7 @@ import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
 import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
+import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
 
 /** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
 const steamIdToAccountId = (steamId: bigint | number): number => {
@@ -558,6 +559,42 @@ export class DemoReader extends EventEmitter<{
 		this._stream?.destroy(new Error('Stream canceled'));
 		this._stream = null;
 		this.emit('cancel');
-		this.emit('end', { incomplete: true });
+		this.emit('end', { incomplete: true, reason: 'cancelled' });
+	}
+
+	/**
+	 * Parse a live CS2 GOTV HTTP broadcast. Convenience wrapper around
+	 * {@link HttpBroadcastReader}. Resolves when the broadcast ends or is
+	 * cancelled; throws if the broadcast terminates with an error.
+	 *
+	 * For finer-grained control (live `sync`/`fragment`/`tailTick` inspection,
+	 * separate start/run, stop), construct `HttpBroadcastReader` directly.
+	 *
+	 * @example
+	 * await parser.parseHttpBroadcast('https://relay.example.com/match/', {
+	 *   entities: EntityMode.ALL
+	 * });
+	 */
+	async parseHttpBroadcast(baseUrl: string, opts: HttpBroadcastOptions = {}): Promise<void> {
+		const reader = new HttpBroadcastReader(this, baseUrl, opts);
+		await reader.start();
+		const terminus = await reader.run();
+		if (terminus.reason === 'error') {
+			throw terminus.error instanceof Error ? terminus.error : new Error(String(terminus.error));
+		}
+	}
+
+	/**
+	 * @internal Used by HttpBroadcastReader to wire a broadcast-mode ParseSession
+	 * to the parser's emit queue and direct-write entity tracking. Throws if a
+	 * previous parse already ended on this DemoReader.
+	 */
+	_attachBroadcastSession(opts: { entities?: EntityMode } & ParseSettings = {}): ParseSession {
+		if (this._hasEnded) throw 'Demo has already been parsed';
+		this._parseStartTime = process.hrtime.bigint();
+		const entityMode = opts.entities ?? EntityMode.NONE;
+		this._directWriteMode = true;
+		this.gameEvents.entityMode = entityMode;
+		return ParseSession.forBroadcast(entityMode, this._emitQueue, this, opts);
 	}
 }

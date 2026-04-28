@@ -1,3 +1,4 @@
+import type { BroadcastSyncDto } from '../../broadcast/sync.js';
 import type { ECstrike15UserMessages } from '../../ts-proto/cstrike15_usermessages.js';
 import type { CDemoFileHeader } from '../../ts-proto/demo.js';
 import type { CMsgSource1LegacyGameEventList, CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
@@ -5,6 +6,9 @@ import type { CSVCMsg_ServerInfo, MessageFns, SVC_Messages } from '../../ts-prot
 import type { optionalSvcMessages } from '../descriptors/svc.js';
 import type { createStringTable, updateStringTable } from '../stringtables.js';
 import type { EntityTypeEnum } from './entityParser.js';
+
+/** Why a parse session terminated. Set on the `end` event. */
+export type EndReason = 'stop' | 'timeout' | 'cancelled' | 'error';
 
 export const EntityMode = {
 	NONE: 0,
@@ -38,11 +42,12 @@ type OptionalSVCMessages = OptionalMessagesMap<OptionalMessagesId, typeof option
 export interface OnDemandEvents extends OptionalSVCMessages {}
 export interface OutputEvents extends OnDemandEvents {
 	progress: number;
-	end: { incomplete: boolean; error?: any };
+	end: { incomplete: boolean; error?: any; reason?: EndReason };
 	error: { error: Error };
 	tickstart: number;
 	tickend: number;
 	header: CDemoFileHeader;
+	broadcastsync: BroadcastSyncDto;
 	gameeventlist: CMsgSource1LegacyGameEventList;
 	gameevent: CMsgSource1LegacyGameEvent;
 	clearallstringtables: never;

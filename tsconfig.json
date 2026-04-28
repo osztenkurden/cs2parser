@@ -2,11 +2,12 @@
   "include": [
     "./src/**/*",
     "./examples/**/*",
-    "./scripts/**/*"
+    "./scripts/**/*",
+    "./tests/**/*"
   ],
   
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "bun-types"],
     /* Base Options: */
     "esModuleInterop": true,
     "skipLibCheck": true,
