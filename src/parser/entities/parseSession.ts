@@ -6,7 +6,12 @@ import { CDemoSendTables, EDemoCommands, type CDemoFullPacket, type CDemoPacket 
 import { EBaseGameEvents, type CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
 import { CSVCMsg_PacketEntities, SVC_Messages } from '../../ts-proto/netmessages.js';
 import { messages } from '../descriptors/index.js';
-import { createStringTable, updateStringTable, type StringTableObject } from '../stringtables.js';
+import {
+	applyStringTableSnapshot,
+	createStringTable,
+	updateStringTable,
+	type StringTableObject
+} from '../stringtables.js';
 import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
 import { parseClassInfo } from './classInfo.js';
 import { EntityParser } from './entityParser.js';
@@ -65,6 +70,10 @@ export class ParseSession {
 
 	private _stringTables: (StringTableObject['table'] | null)[] = [];
 
+	// Set by forBroadcast(). Disables file/stream entry points and skips the
+	// constructor's hardcoded 16-byte magic-prefix offset.
+	private _broadcastMode = false;
+
 	constructor(
 		buffer: Buffer | Uint8Array,
 		entityMode: EntityMode,
@@ -100,6 +109,24 @@ export class ParseSession {
 		session.readBuffer = readBuffer;
 		session.fileOffset = initialRead;
 		session.fileSize = fileSize;
+		return session;
+	}
+
+	/**
+	 * Create a session for HTTP broadcast parsing. The session has no source
+	 * buffer and no file descriptor; commands are fed via
+	 * {@link ParseSession.pushBroadcastFragment}.
+	 */
+	static forBroadcast(
+		entityMode: EntityMode,
+		emitMainQueue: EmitQueue,
+		parser: DemoReader,
+		settings?: ParseSettings
+	): ParseSession {
+		const session = new ParseSession(new Uint8Array(0), entityMode, emitMainQueue, parser, settings);
+		session._frameOffset = 0;
+		session._frameLimit = 0;
+		session._broadcastMode = true;
 		return session;
 	}
 
@@ -222,6 +249,9 @@ export class ParseSession {
 
 	/** Push a stream chunk for incremental parsing. */
 	pushChunk(chunk: Buffer): void {
+		if (this._broadcastMode) {
+			throw new Error('pushChunk is not supported on broadcast sessions; use pushBroadcastFragment');
+		}
 		this.chunks.push(chunk);
 	}
 
@@ -230,6 +260,9 @@ export class ParseSession {
 	 * Returns false if DEM_Stop was reached (parsing complete), true if waiting for more data.
 	 */
 	processFrames(): boolean {
+		if (this._broadcastMode) {
+			throw new Error('processFrames is not supported on broadcast sessions; use pushBroadcastFragment');
+		}
 		while (this._frameRemaining() > 0 || this.chunks.length > 0) {
 			this._frameMarked = this._frameOffset;
 			try {
@@ -244,6 +277,114 @@ export class ParseSession {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Process one HTTP-broadcast fragment.
+	 *
+	 * Walks the broadcast wire format
+	 * `[uvarint cmd][LE u32 tick][byte 0][LE u32 size][payload]` and dispatches
+	 * each command via the same `handleFrame` path used by file/stream parsing.
+	 *
+	 * @param buf            the fragment bytes (not snappy-compressed at this layer; per-command compression is handled by handleFrame).
+	 * @param tickOffset     -1 for `/start` fragments, 0 for `/full` and `/delta`.
+	 * @returns `{ ended: true }` if a `command === 0` end-of-stream marker was reached.
+	 */
+	pushBroadcastFragment(buf: Uint8Array, tickOffset: number): { ended: boolean } {
+		let off = 0;
+		const len = buf.length;
+
+		const readUVarInt32 = (): number => {
+			let result = 0;
+			let shift = 0;
+			let b: number;
+			do {
+				if (off >= len) throw new RangeError('Truncated broadcast fragment (varint)');
+				b = buf[off++]!;
+				result |= (b & 0x7f) << shift;
+				shift += 7;
+			} while ((b & 0x80) !== 0 && shift < 35);
+			return result >>> 0;
+		};
+		const readLEUInt32 = (): number => {
+			if (off + 4 > len) throw new RangeError('Truncated broadcast fragment (uint32)');
+			const v = (buf[off]! | (buf[off + 1]! << 8) | (buf[off + 2]! << 16) | (buf[off + 3]! << 24)) >>> 0;
+			off += 4;
+			return v;
+		};
+
+		while (off < len) {
+			const command = readUVarInt32();
+			const rawTick = readLEUInt32() | 0; // sign-extend 32 bits
+			if (off >= len) throw new RangeError('Truncated broadcast fragment (reserved byte)');
+			const reserved = buf[off++]!;
+			if (reserved !== 0) {
+				this.enqueueEvent(
+					'debug',
+					`broadcast fragment reserved byte was 0x${reserved.toString(16)}, expected 0`
+				);
+			}
+
+			if (command === 0) {
+				// End-of-stream marker. Don't read size/payload.
+				if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
+				this.enqueueEvent('end', { incomplete: false, reason: 'stop' });
+				this._resetFrameState();
+				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+				return { ended: true };
+			}
+
+			const size = readLEUInt32();
+			if (off + size > len) {
+				throw new RangeError(
+					`Truncated broadcast fragment (payload, want ${size} bytes, ${len - off} available)`
+				);
+			}
+
+			let tick = rawTick + tickOffset;
+			if (tick < 0) tick = -1;
+
+			if (this.currentTick !== tick) {
+				if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
+				this.currentTick = tick;
+				this.enqueueEvent('tickstart', this.currentTick);
+			}
+
+			const commandType = command & ~EDemoCommands.DEM_IsCompressed;
+			const isCompressed = (command & EDemoCommands.DEM_IsCompressed) !== 0;
+			const decoder = decoders[commandType as keyof typeof decoders];
+
+			if (!decoder) {
+				off += size;
+				continue;
+			}
+
+			// handleFrame -> baseParse -> decompressIfNeeded reads `size` bytes from
+			// _frameBuf starting at _frameOffset, and advances _frameOffset by `size`.
+			this._frameBuf = buf;
+			this._frameOffset = off;
+			this._frameLimit = off + size;
+			if (commandType === EDemoCommands.DEM_Packet || commandType === EDemoCommands.DEM_SignonPacket) {
+				// Broadcast wire format delivers the SVC bit-stream directly here;
+				// .dem files wrap it in a CDemoPacket envelope, broadcasts do not.
+				const data = this.decompressIfNeeded(size, isCompressed);
+				this.parsePacket({ data } as CDemoPacket);
+				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+			} else {
+				this.handleFrame(decoder, size, isCompressed);
+			}
+			off += size;
+		}
+
+		this._resetFrameState();
+		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+		return { ended: false };
+	}
+
+	private _resetFrameState(): void {
+		this._frameBuf = new Uint8Array(0);
+		this._frameOffset = 0;
+		this._frameLimit = 0;
 	}
 
 	/** Flush remaining events to the consumer. */
@@ -416,6 +557,11 @@ export class ParseSession {
 				break;
 			case EDemoCommands.DEM_FullPacket:
 				this.baseParse(decoder.decode, size, isCompressed, (fullPacket: CDemoFullPacket) => {
+					if (fullPacket.string_table) {
+						for (const snapshot of fullPacket.string_table.tables) {
+							applyStringTableSnapshot(snapshot, this.baselines);
+						}
+					}
 					if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
 				});
 				break;

@@ -33,7 +33,7 @@
 		"lint:fix": "eslint src/ --fix",
 		"format": "prettier --write src/",
 		"format:check": "prettier --check src/",
-		"build": "npm run typecheck && tsdown src/index.ts -d dist",
+		"build": "npm run typecheck && tsdown",
 		"test": "bun test --timeout 300000",
 		"test:watch": "bun test --watch --timeout 300000",
 		"test:coverage": "bun test --coverage --timeout 300000",

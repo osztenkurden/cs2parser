@@ -33,5 +33,5 @@ export default defineConfig(
 			'@typescript-eslint/no-empty-object-type': 0
 		}
 	},
-	globalIgnores(['types/*', 'dist/*', 'lib/*', 'src/ts-proto/*', 'src/generated/*', 'eslint.config.js'])
+	globalIgnores(['types/*', 'dist/*', 'lib/*', 'src/ts-proto/*', 'src/generated/*', 'eslint.config.js', 'examples/relay.ts'])
 );

@@ -1,3 +1,4 @@
+import type { CDemoStringTables_table_t } from '../ts-proto/demo.js';
 import type { CSVCMsg_CreateStringTable, CSVCMsg_UpdateStringTable } from '../ts-proto/netmessages.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { BitBuffer } from './ubitreader.js';
@@ -177,4 +178,32 @@ export const updateStringTable = (
 		players: updated.players,
 		table: updated.table
 	};
+};
+
+export const applyStringTableSnapshot = (
+	snapshot: CDemoStringTables_table_t,
+	baselines: Uint8Array[]
+): { name: string; players: CMsgPlayerInfo[] } | null => {
+	const name = snapshot.table_name;
+	if (name !== 'instancebaseline' && name !== 'userinfo') return null;
+
+	const players: CMsgPlayerInfo[] = [];
+	for (const item of snapshot.items) {
+		const key = item.str ?? '';
+		const value = item.data;
+		if (!value || value.length === 0) continue;
+
+		if (name === 'instancebaseline') {
+			// Keys may be either "<classId>" or "<classId>:<altBaseline>".
+			// We only care about the primary baseline (no colon) here, matching
+			// the existing parseStringTable behaviour.
+			if (key.includes(':')) continue;
+			const intKey = parseInt(key);
+			if (Number.isFinite(intKey)) baselines[intKey] = value;
+		} else {
+			players.push(CMsgPlayerInfo.decode(value));
+		}
+	}
+
+	return { name, players };
 };
