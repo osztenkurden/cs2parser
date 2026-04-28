@@ -48,11 +48,11 @@ function respondSimpleError(uri: string | undefined, response: ServerResponse, c
 	response.end();
 }
 
-function checkFragmentCdnDelayElapsed(fragmentRec: BroadCastMatchPart) {
+function checkFragmentCdnDelayElapsed(fragmentRec: BroadCastMatchPart, field?: string) {
 	// Validate that any injected CDN delay has elapsed
 	if (fragmentRec.cdndelay) {
 		if (!fragmentRec.timestamp) {
-			console.log('Refusing to serve cdndelay ' + field + ' without timestamp');
+			console.log('Refusing to serve cdndelay ' + (field ?? 'fragment') + ' without timestamp');
 			return false;
 		} else {
 			var iusElapsedLiveMilliseconds =
@@ -60,7 +60,7 @@ function checkFragmentCdnDelayElapsed(fragmentRec: BroadCastMatchPart) {
 			if (iusElapsedLiveMilliseconds < 0) {
 				console.log(
 					'Refusing to serve cdndelay ' +
-						field +
+						(field ?? 'fragment') +
 						' due to ' +
 						iusElapsedLiveMilliseconds +
 						' ms of delay remaining'
@@ -259,7 +259,7 @@ function serveBlob(request: IncomingMessage, response: ServerResponse, fragmentR
 	var ungzipped_length = fragmentRec[(field + '_ungzlen') as keyof BroadCastMatchPart];
 
 	// Validate that any injected CDN delay has elapsed
-	if (!checkFragmentCdnDelayElapsed(fragmentRec)) {
+	if (!checkFragmentCdnDelayElapsed(fragmentRec, field)) {
 		blob = null; // refuse to serve the blob due to artificial CDN delay
 	}
 

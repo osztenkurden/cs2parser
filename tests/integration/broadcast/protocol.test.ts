@@ -199,16 +199,21 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 
 	test('parser.cancel() during start propagates as cancellation', async () => {
 		const parser = new DemoReader();
+		// Block the sync fetch on an explicit promise so the cancel ordering is
+		// deterministic — no setTimeout race between cancel and sync resolution.
+		let resolveSync!: (v: typeof baseSync) => void;
+		const syncPromise = new Promise<typeof baseSync>(r => {
+			resolveSync = r;
+		});
 		const fetcher = new MockBroadcastFetcher({
-			sync: () => {
-				// Delay so we can call cancel mid-flight.
-				return new Promise(resolve => setTimeout(() => resolve(baseSync), 20));
-			},
+			sync: () => syncPromise,
 			bytes: {}
 		});
 		const reader = new HttpBroadcastReader(parser, 'https://example.com/', { fetcher });
-		setTimeout(() => parser.cancel(), 5);
-		await reader.start(); // resolves with terminus = cancelled
+		const startPromise = reader.start();
+		parser.cancel();
+		resolveSync(baseSync);
+		await startPromise; // resolves with terminus = cancelled
 		// Immediately running run() should resolve with 'cancelled' since terminus is set
 		const terminus = await reader.run();
 		expect(terminus.reason).toBe('cancelled');

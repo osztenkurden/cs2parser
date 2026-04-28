@@ -12,7 +12,7 @@ import EventEmitter from 'events';
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
 export class GameEvents extends EventEmitter<GameEventsArguments> {
-	_eventDescriptors!: Record<number, CMsgSource1LegacyGameEventList_descriptor_t>;
+	_eventDescriptors: Record<number, CMsgSource1LegacyGameEventList_descriptor_t> = {};
 	private _demoReader!: DemoReader;
 
 	private eventQueue: EventWithName[keyof _GameEventsArguments][] = [];

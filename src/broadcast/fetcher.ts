@@ -39,7 +39,8 @@ export function createDefaultFetcher(baseUrl: string, init?: RequestInit): Broad
 
 	const send = async (path: string, signal?: AbortSignal): Promise<Response> => {
 		const url = buildUrl(path);
-		return fetch(url, { ...init, signal });
+		const composed = init?.signal && signal ? AbortSignal.any([init.signal, signal]) : (signal ?? init?.signal);
+		return fetch(url, { ...init, signal: composed });
 	};
 
 	return {

@@ -11,7 +11,6 @@ export interface FragmentErrorContext {
 	fragment: number;
 	tickOffset: number;
 	phase: 'signup' | 'full' | 'delta';
-	bytesProcessed: number;
 }
 
 export interface HttpBroadcastOptions extends ParseSettings {
@@ -83,7 +82,7 @@ export class HttpBroadcastReader {
 	private readonly abortController = new AbortController();
 	private session: ParseSession | null = null;
 	private _sync: BroadcastSyncDto | null = null;
-	private _fragment = 0;
+	private _fragment = -1;
 	private _tailTick = -1;
 	private _started = false;
 	private _running = false;
@@ -105,13 +104,6 @@ export class HttpBroadcastReader {
 		this.parser = parser;
 		this.fetcher = opts.fetcher ?? createDefaultFetcher(baseUrl);
 		this.opts = opts;
-
-		// Wire cancellation sources to the internal abort controller.
-		parser.once('cancel', this._onParserCancel);
-		if (opts.signal) {
-			if (opts.signal.aborted) this.abortController.abort();
-			else opts.signal.addEventListener('abort', this._onSignalAbort, { once: true });
-		}
 	}
 
 	/** Latest `/sync` response (set after `start()` resolves). */
@@ -119,7 +111,7 @@ export class HttpBroadcastReader {
 		return this._sync;
 	}
 
-	/** Most recently requested fragment number. */
+	/** Most recently requested fragment number, or `-1` if `start()` has not yet resolved. */
 	get fragment(): number {
 		return this._fragment;
 	}
@@ -139,6 +131,14 @@ export class HttpBroadcastReader {
 		if (this._started) throw new Error('HttpBroadcastReader.start() already called');
 		this._started = true;
 
+		// Wire cancellation sources here (not in constructor) so a reader that is
+		// constructed but never started doesn't anchor a listener on the parser.
+		this.parser.once('cancel', this._onParserCancel);
+		if (this.opts.signal) {
+			if (this.opts.signal.aborted) this.abortController.abort();
+			else this.opts.signal.addEventListener('abort', this._onSignalAbort, { once: true });
+		}
+
 		this.parser.on('tickstart', this._onTickStart);
 
 		// /sync
@@ -146,12 +146,11 @@ export class HttpBroadcastReader {
 		try {
 			raw = await this.fetcher.json('sync', this.abortController.signal);
 		} catch (e) {
-			this._unhookListeners();
 			if (this._isAbortError(e) || this.abortController.signal.aborted) {
-				this._terminus = { reason: 'cancelled' };
+				this._terminate('cancelled');
 				return;
 			}
-			this._terminus = { reason: 'error', error: e };
+			this._terminate('error', e);
 			throw e;
 		}
 		if (this._aborted()) return;
@@ -160,8 +159,7 @@ export class HttpBroadcastReader {
 		try {
 			sync = validateSync(raw);
 		} catch (e) {
-			this._unhookListeners();
-			this._terminus = { reason: 'error', error: e };
+			this._terminate('error', e);
 			throw e;
 		}
 		this._sync = sync;
@@ -175,9 +173,8 @@ export class HttpBroadcastReader {
 		try {
 			this.session = this.parser._attachBroadcastSession(this.opts);
 		} catch (e) {
-			this._unhookListeners();
-			this._terminus = { reason: 'error', error: e };
-			throw e instanceof Error ? e : new Error(String(e));
+			this._terminate('error', e);
+			throw e;
 		}
 
 		// Preload event descriptors before any fragment so `gameevent` payloads
@@ -185,25 +182,31 @@ export class HttpBroadcastReader {
 		// so we either (a) use the caller-supplied descriptors, (b) fall back to
 		// the descriptor file bundled with the package, or (c) skip preload
 		// entirely if the caller passed `false`.
-		if (this.opts.gameEventDescriptors !== false) {
-			const supplied = this.opts.gameEventDescriptors;
-			let list: CMsgSource1LegacyGameEventList | null = null;
-			if (supplied instanceof Uint8Array) {
-				list = CMsgSource1LegacyGameEventList.decode(supplied);
-			} else if (supplied) {
-				list = supplied;
-			} else {
-				list = loadBundledEventDescriptors();
+		try {
+			if (this.opts.gameEventDescriptors !== false) {
+				const supplied = this.opts.gameEventDescriptors;
+				let list: CMsgSource1LegacyGameEventList | null = null;
+				if (supplied instanceof Uint8Array) {
+					list = CMsgSource1LegacyGameEventList.decode(supplied);
+				} else if (supplied) {
+					list = supplied;
+				} else {
+					list = loadBundledEventDescriptors();
+				}
+				if (list) this.parser.emit('gameeventlist', list);
 			}
-			if (list) this.parser.emit('gameeventlist', list);
+		} catch (e) {
+			this._terminate('error', e);
+			throw e;
 		}
 
 		// Signup fragment (tickOffset = -1)
-		const signupBytes = await this._fetchOrTerminate(`${this._prefix}${sync.signup_fragment}/start`, {
-			phase: 'signup',
-			maxRetries: 0,
-			fragment: sync.signup_fragment
-		});
+		const signupBytes = await this._fetchWithRetry(
+			`${this._prefix}${sync.signup_fragment}/start`,
+			'signup',
+			sync.signup_fragment,
+			0
+		);
 		if (!signupBytes) return;
 
 		if (await this._processFragment(signupBytes, -1, 'signup', sync.signup_fragment)) return;
@@ -223,8 +226,7 @@ export class HttpBroadcastReader {
 	/** @returns true if cancelled (and sets terminus accordingly). */
 	private _aborted(): boolean {
 		if (this.abortController.signal.aborted && !this._terminus) {
-			this._unhookListeners();
-			this._terminus = { reason: 'cancelled' };
+			this._terminate('cancelled');
 			return true;
 		}
 		return !!this._terminus && this._terminus.reason === 'cancelled';
@@ -262,6 +264,7 @@ export class HttpBroadcastReader {
 				if (!bytes) return this._terminus!;
 				this._lastDeltaAt = Date.now();
 
+				if (this.abortController.signal.aborted) return this._terminate('cancelled');
 				if (await this._processFragment(bytes, 0, 'delta', fragment)) return this._terminus!;
 				fragment++;
 			}
@@ -279,13 +282,6 @@ export class HttpBroadcastReader {
 	}
 
 	// ---- internals ----
-
-	private async _fetchOrTerminate(
-		path: string,
-		ctx: { phase: FragmentErrorContext['phase']; maxRetries: number; fragment: number }
-	): Promise<Uint8Array | null> {
-		return this._fetchWithRetry(path, ctx.phase, ctx.fragment, ctx.maxRetries);
-	}
 
 	private async _fetchWithRetry(
 		path: string,
@@ -317,14 +313,11 @@ export class HttpBroadcastReader {
 				if (phase === 'delta') {
 					this._terminate('timeout');
 				} else {
-					this._terminate(
-						'error',
-						new BroadcastFetchError(
-							`Exhausted ${maxRetries} retries on ${phase} fragment ${fragment}`,
-							result.status,
-							path
-						)
-					);
+					const message =
+						maxRetries === 0
+							? `${phase} fragment ${fragment} not available (HTTP ${result.status})`
+							: `${phase} fragment ${fragment}: HTTP ${result.status} after ${maxRetries} retries`;
+					this._terminate('error', new BroadcastFetchError(message, result.status, path));
 				}
 				return null;
 			}
@@ -352,8 +345,7 @@ export class HttpBroadcastReader {
 		try {
 			const { ended } = this.session.pushBroadcastFragment(bytes, tickOffset);
 			if (ended) {
-				this._terminus = { reason: 'stop' };
-				this._unhookListeners();
+				this._terminate('stop');
 				return true;
 			}
 		} catch (err) {
@@ -361,15 +353,16 @@ export class HttpBroadcastReader {
 			const decision = this.opts.onFragmentError?.(error, {
 				fragment,
 				tickOffset,
-				phase,
-				bytesProcessed: 0
+				phase
 			});
 
 			if (decision === 'continue') {
-				this.parser.emit(
-					'debug',
-					`broadcast: skipped ${phase} fragment ${fragment} after parse error: ${error.message}`
-				);
+				if (!this._terminus) {
+					this.parser.emit(
+						'debug',
+						`broadcast: skipped ${phase} fragment ${fragment} after parse error: ${error.message}`
+					);
+				}
 				return false;
 			}
 			this._terminate('error', error);
@@ -396,12 +389,7 @@ export class HttpBroadcastReader {
 	}
 
 	private _parserEnded(): boolean {
-		// DemoReader._hasEnded is private; the visible signal is that subsequent
-		// emits are dropped. Use the listenerCount as a heuristic — but the
-		// simpler approach is to rely on the EventEmitter to dedupe. The
-		// _emitQueue gate already drops duplicate ends; emitting once more is
-		// safe.
-		return false;
+		return this.parser.hasEnded;
 	}
 
 	private _unhookListeners(): void {

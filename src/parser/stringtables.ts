@@ -201,7 +201,11 @@ export const applyStringTableSnapshot = (
 			const intKey = parseInt(key);
 			if (Number.isFinite(intKey)) baselines[intKey] = value;
 		} else {
-			players.push(CMsgPlayerInfo.decode(value));
+			try {
+				players.push(CMsgPlayerInfo.decode(value));
+			} catch {
+				// Skip malformed userinfo entries rather than aborting the whole snapshot.
+			}
 		}
 	}
 
