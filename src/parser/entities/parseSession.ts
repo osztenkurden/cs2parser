@@ -159,6 +159,9 @@ export class ParseSession {
 
 	/** Run synchronous parse to completion. */
 	runSync(): void {
+		if (this._broadcastMode) {
+			throw new Error('runSync is not supported on broadcast sessions; use pushBroadcastFragment');
+		}
 		try {
 			this.runFrameLoop();
 		} finally {
@@ -169,6 +172,9 @@ export class ParseSession {
 
 	/** Run non-blocking parse to completion, yielding to the event loop periodically. */
 	async runAsync(): Promise<void> {
+		if (this._broadcastMode) {
+			throw new Error('runAsync is not supported on broadcast sessions; use pushBroadcastFragment');
+		}
 		let forceBreak = false;
 		this.parser?.on('cancel', () => {
 			forceBreak = true;
@@ -559,7 +565,25 @@ export class ParseSession {
 				this.baseParse(decoder.decode, size, isCompressed, (fullPacket: CDemoFullPacket) => {
 					if (fullPacket.string_table) {
 						for (const snapshot of fullPacket.string_table.tables) {
-							applyStringTableSnapshot(snapshot, this.baselines);
+							const result = applyStringTableSnapshot(snapshot, this.baselines);
+							// Mid-stream broadcast joiners receive their initial userinfo via
+							// FullPacket snapshots rather than incremental updatestringtable
+							// packets. Re-emit those entries as a synthetic updatestringtable
+							// so DemoReader's _playerInfoMap listener picks them up.
+							if (result?.name === 'userinfo' && result.players.length > 0) {
+								this.enqueueEvent('updatestringtable', {
+									tableId: -1,
+									players: result.players,
+									table: {
+										name: 'userinfo',
+										data: [],
+										user_data_size: 0,
+										user_data_fixed_size: false,
+										flags: 0,
+										using_varint_bitcounts: false
+									}
+								});
+							}
 						}
 					}
 					if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);

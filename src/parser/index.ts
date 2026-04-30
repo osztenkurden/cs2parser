@@ -57,6 +57,11 @@ export class DemoReader extends EventEmitter<{
 		return this._playerInfoMap;
 	}
 
+	/** True once a terminal `'end'` event has been observed (parse finished, errored, or cancelled). */
+	get hasEnded(): boolean {
+		return this._hasEnded;
+	}
+
 	private _getOrCreate<T>(cache: Map<number, T>, id: number, factory: (id: number) => T): T {
 		let cached = cache.get(id);
 		if (!cached) {
@@ -163,7 +168,8 @@ export class DemoReader extends EventEmitter<{
 		for (let i = 0; i < this.entities.length; i++) {
 			const e = this.entities[i];
 			if (e && e.className === 'CCSTeam') {
-				result.push(this._getOrCreate(this._teamCache, i, id => new Team(this, id)));
+				const t = this._getOrCreate(this._teamCache, i, id => new Team(this, id));
+				result[t.teamNumber] = t;
 			}
 		}
 		return result;
@@ -535,7 +541,7 @@ export class DemoReader extends EventEmitter<{
 		source: string | Buffer | Readable,
 		opts: { entities?: EntityMode; stream?: boolean } = {}
 	): Promise<void> {
-		if (this._hasEnded) throw 'Demo has already been parsed';
+		if (this._hasEnded) throw new Error('Demo has already been parsed');
 		this._parseStartTime = process.hrtime.bigint();
 
 		if (typeof source === 'string') {
@@ -553,7 +559,7 @@ export class DemoReader extends EventEmitter<{
 	}
 
 	public cancel() {
-		if (this._hasEnded) throw 'Demo has already been parsed';
+		if (this._hasEnded) throw new Error('Demo has already been parsed');
 
 		this._hasEnded = true;
 		this._stream?.destroy(new Error('Stream canceled'));
@@ -590,7 +596,7 @@ export class DemoReader extends EventEmitter<{
 	 * previous parse already ended on this DemoReader.
 	 */
 	_attachBroadcastSession(opts: { entities?: EntityMode } & ParseSettings = {}): ParseSession {
-		if (this._hasEnded) throw 'Demo has already been parsed';
+		if (this._hasEnded) throw new Error('Demo has already been parsed');
 		this._parseStartTime = process.hrtime.bigint();
 		const entityMode = opts.entities ?? EntityMode.NONE;
 		this._directWriteMode = true;

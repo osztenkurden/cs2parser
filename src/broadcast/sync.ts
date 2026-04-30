@@ -40,15 +40,23 @@ export interface BroadcastSyncDto {
  * missing or the protocol version is unsupported.
  */
 export function validateSync(json: unknown): BroadcastSyncDto {
-	if (json === null || typeof json !== 'object') {
+	if (json === null || typeof json !== 'object' || Array.isArray(json)) {
 		throw new BroadcastProtocolError('sync response is not an object');
 	}
 	const o = json as Record<string, unknown>;
 
 	const required = ['tick', 'rtdelay', 'rcvage', 'fragment', 'signup_fragment', 'tps', 'protocol'] as const;
 	for (const key of required) {
-		if (typeof o[key] !== 'number') {
+		if (!Number.isFinite(o[key] as number)) {
 			throw new BroadcastProtocolError(`sync response missing required numeric field "${key}"`);
+		}
+	}
+
+	const nonNegativeIntegers = ['tick', 'fragment', 'signup_fragment', 'tps', 'protocol'] as const;
+	for (const key of nonNegativeIntegers) {
+		const value = o[key] as number;
+		if (!Number.isInteger(value) || value < 0) {
+			throw new BroadcastProtocolError(`sync response field "${key}" must be a non-negative integer`);
 		}
 	}
 

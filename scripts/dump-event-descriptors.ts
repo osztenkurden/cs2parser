@@ -41,11 +41,7 @@ reader.on('gameeventlist', list => {
 });
 
 console.log(`[dump] parsing ${inputPath}…`);
-try {
-	await reader.parseDemo(inputPath);
-} catch {
-	// reader.cancel() rejects parseDemo; ignore.
-}
+await reader.parseDemo(inputPath);
 
 if (!captured) {
 	console.error('[dump] no gameeventlist found in demo (parsing finished without one)');
