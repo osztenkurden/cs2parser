@@ -168,7 +168,8 @@ export class DemoReader extends EventEmitter<{
 		for (let i = 0; i < this.entities.length; i++) {
 			const e = this.entities[i];
 			if (e && e.className === 'CCSTeam') {
-				result.push(this._getOrCreate(this._teamCache, i, id => new Team(this, id)));
+				const t = this._getOrCreate(this._teamCache, i, id => new Team(this, id));
+				result[t.teamNumber] = t;
 			}
 		}
 		return result;
