@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
-import { DemoReader, EntityMode } from '../../src/index.js';
+import { DemoReader, EntityMode, TeamNumber } from '../../src/index.js';
 import fs from 'fs';
 
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
@@ -42,6 +42,18 @@ describe.skipIf(!demoAvailable)('parse demo (full integration)', () => {
 
 	test('teams are available', () => {
 		expect(reader.teams.length).toBeGreaterThan(0);
+	});
+
+	test('teams are indexed by teamNumber', () => {
+		const ts = reader.teams[TeamNumber.Terrorists];
+		const ct = reader.teams[TeamNumber.CounterTerrorists];
+		expect(ts).toBeDefined();
+		expect(ct).toBeDefined();
+		expect(ts!.teamNumber).toBe(TeamNumber.Terrorists);
+		expect(ct!.teamNumber).toBe(TeamNumber.CounterTerrorists);
+		reader.teams.forEach((team, index) => {
+			if (team) expect(team.teamNumber).toBe(index as TeamNumber);
+		});
 	});
 
 	test('game rules are available', () => {
