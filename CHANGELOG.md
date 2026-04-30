@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/osztenkurden/cs2parser/compare/v1.6.0...v1.7.0) (2026-04-30)
+
+
+### Features
+
+* improve internal error surface ([#21](https://github.com/osztenkurden/cs2parser/issues/21)) ([bf514ec](https://github.com/osztenkurden/cs2parser/commit/bf514ec755e891f811c0ffa44b2b16e809ab6808))
+
 ## [1.6.0](https://github.com/osztenkurden/cs2parser/compare/v1.5.1...v1.6.0) (2026-04-28)
 
 
