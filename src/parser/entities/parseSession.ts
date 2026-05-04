@@ -38,6 +38,14 @@ export class ParseSession {
 	private _frameMarked = 0;
 	private chunks: Buffer[] = [];
 
+	// Reusable streaming buffer (grown on demand). Replaces per-coalesce
+	// `Buffer.concat([unread, ...chunks])` allocation in tryEnsureRemaining —
+	// concat showed up at 5.5% of total CPU in the profile because every
+	// boundary-crossing read allocated a fresh Buffer of size unread+chunks.
+	// We instead `copyWithin` the unread portion to the start and `copy()` each
+	// pending chunk after it, all into a single buffer that grows by doubling.
+	private _streamBuf: Buffer | null = null;
+
 	// File-based reading state (set by fromFile)
 	private fd: number | null = null;
 	private readBuffer: Buffer | null = null;
@@ -409,22 +417,50 @@ export class ParseSession {
 			return this.refillFromFile(bytes);
 		}
 
-		// Stream-based path: coalesce pending chunks
-		let left = bytes - remaining;
-		for (let i = 0; i < this.chunks.length && left > 0; ++i) left -= this.chunks[i]!.length;
-
-		// We don't have enough bytes with what we have buffered up
-		if (left > 0) return false;
+		// Stream-based path: coalesce pending chunks into the reusable _streamBuf.
+		// Compute total pending bytes to (a) early-out if not enough data is buffered
+		// and (b) size the eventual layout.
+		let pendingBytes = 0;
+		for (let i = 0; i < this.chunks.length; ++i) pendingBytes += this.chunks[i]!.length;
+		if (remaining + pendingBytes < bytes) return false;
 
 		const mark = Math.max(0, this._frameMarked);
+		const unreadLen = this._frameLimit - mark;
 		const newOffset = this._frameOffset - mark;
+		const newSize = unreadLen + pendingBytes;
 
-		// Coalesce: keep unread bytes from current position, append pending chunks
-		const unread = this._frameBuf.subarray(mark, this._frameLimit);
-		const merged = Buffer.concat([unread, ...this.chunks]);
-		this._frameBuf = merged;
+		// Grow _streamBuf if it can't fit the merged data. Double until it does.
+		// First call always allocates (initial capacity 64 KB).
+		let buf = this._streamBuf;
+		if (buf === null || buf.length < newSize) {
+			let cap = buf?.length || 64 * 1024;
+			while (cap < newSize) cap *= 2;
+			const fresh = Buffer.allocUnsafe(cap);
+			// Carry the unread tail across to the new buffer. Source may be either
+			// the previous _streamBuf (most common) or the original input buffer
+			// passed to the constructor (first coalesce only).
+			if (unreadLen > 0) {
+				fresh.set(this._frameBuf.subarray(mark, this._frameLimit), 0);
+			}
+			buf = fresh;
+			this._streamBuf = buf;
+		} else if (mark > 0 && unreadLen > 0) {
+			// Reusing the same buffer — shift unread bytes to the start in place.
+			buf.copyWithin(0, mark, this._frameLimit);
+		}
+
+		// Append pending chunks after the unread tail.
+		let writePos = unreadLen;
+		const chunks = this.chunks;
+		for (let i = 0; i < chunks.length; i++) {
+			const chunk = chunks[i]!;
+			buf.set(chunk, writePos);
+			writePos += chunk.length;
+		}
+
+		this._frameBuf = buf;
 		this._frameOffset = newOffset;
-		this._frameLimit = merged.length;
+		this._frameLimit = newSize;
 		this.chunks = [];
 
 		return true;

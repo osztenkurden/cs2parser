@@ -772,6 +772,55 @@ export const constructorFieldHelper = {
 		}
 	},
 
+	/**
+	 * Walk a class's serializer field tree and collect every reachable Value field's
+	 * `prop_id`. Used by EntityParser to pre-populate `entity.properties` with all
+	 * fields a class can carry, so V8 sees a stable hidden class for every entity of
+	 * that class (avoids megamorphic property writes in the hot decode loop).
+	 */
+	collectClassPropIds: (fields: (Field | null)[], out: Set<number>, visited: Set<SerializerN>): void => {
+		for (const field of fields) {
+			if (!field) continue;
+			switch (field.type) {
+				case FieldTypeEnum.Value: {
+					const v = field.value as { prop_id: number };
+					if (v.prop_id !== 0) out.add(v.prop_id);
+					break;
+				}
+				case FieldTypeEnum.Serializer:
+				case FieldTypeEnum.Pointer: {
+					const v = field.value as { serializer: SerializerN };
+					if (visited.has(v.serializer)) break;
+					visited.add(v.serializer);
+					constructorFieldHelper.collectClassPropIds(v.serializer.fields, out, visited);
+					break;
+				}
+				case FieldTypeEnum.Array: {
+					const v = field.value as { field_enum: Field };
+					if (v.field_enum.type === FieldTypeEnum.Value) {
+						const inner = v.field_enum.value as { prop_id: number };
+						if (inner.prop_id !== 0) out.add(inner.prop_id);
+					}
+					break;
+				}
+				case FieldTypeEnum.Vector: {
+					const v = field.value as { field_enum: Field };
+					const inner = v.field_enum;
+					if (inner.type === FieldTypeEnum.Value) {
+						const innerV = inner.value as { prop_id: number };
+						if (innerV.prop_id !== 0) out.add(innerV.prop_id);
+					} else if (inner.type === FieldTypeEnum.Serializer) {
+						const innerSer = inner.value as { serializer: SerializerN };
+						if (visited.has(innerSer.serializer)) break;
+						visited.add(innerSer.serializer);
+						constructorFieldHelper.collectClassPropIds(innerSer.serializer.fields, out, visited);
+					}
+					break;
+				}
+			}
+		}
+	},
+
 	createField: (field: ConstructorField, serializers: Record<string, SerializerN>): Field => {
 		let elementField: Field | null = null;
 		if (field.serializer_name) {
