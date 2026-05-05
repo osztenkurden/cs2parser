@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/osztenkurden/cs2parser/compare/v1.7.0...v1.8.0) (2026-05-05)
+
+
+### Features
+
+* added support for getting chat messages ([44b8aa6](https://github.com/osztenkurden/cs2parser/commit/44b8aa6e3210ba0218fa447744699bec3ee4b8cd))
+
 ## [1.7.0](https://github.com/osztenkurden/cs2parser/compare/v1.6.0...v1.7.0) (2026-04-30)
 
 
