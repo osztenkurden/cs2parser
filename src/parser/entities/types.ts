@@ -3,6 +3,7 @@ import type { ECstrike15UserMessages } from '../../ts-proto/cstrike15_usermessag
 import type { CDemoFileHeader } from '../../ts-proto/demo.js';
 import type { CMsgSource1LegacyGameEventList, CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
 import type { CSVCMsg_ServerInfo, MessageFns, SVC_Messages } from '../../ts-proto/netmessages.js';
+import type { EBaseUserMessages } from '../../ts-proto/usermessages.js';
 import type { optionalSvcMessages } from '../descriptors/svc.js';
 import type { createStringTable, updateStringTable } from '../stringtables.js';
 import type { EntityTypeEnum } from './entityParser.js';
@@ -37,7 +38,7 @@ export type RevertKeysAndValues<T extends Record<string, number>> = {
 	[K in keyof T as T[K]]: K;
 };
 
-export type OptionalMessagesId = typeof SVC_Messages & typeof ECstrike15UserMessages;
+export type OptionalMessagesId = typeof SVC_Messages & typeof ECstrike15UserMessages & typeof EBaseUserMessages;
 type OptionalSVCMessages = OptionalMessagesMap<OptionalMessagesId, typeof optionalSvcMessages>;
 export interface OnDemandEvents extends OptionalSVCMessages {}
 export interface OutputEvents extends OnDemandEvents {

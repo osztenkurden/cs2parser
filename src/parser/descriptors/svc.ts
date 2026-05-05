@@ -1,6 +1,7 @@
 import {
 	CCSUsrMsg_ServerRankRevealAll,
 	CCSUsrMsg_ServerRankUpdate,
+	CCSUsrMsgPreMatchSayText,
 	ECstrike15UserMessages
 } from '../../ts-proto/cstrike15_usermessages.js';
 import {
@@ -11,9 +12,11 @@ import {
 	CSVCMsg_ServerInfo,
 	CSVCMsg_UpdateStringTable,
 	CSVCMsg_UserCommands,
+	CSVCMsg_UserMessage,
 	CSVCMsg_VoiceData,
 	SVC_Messages
 } from '../../ts-proto/netmessages.js';
+import { CUserMessageSayText2, EBaseUserMessages } from '../../ts-proto/usermessages.js';
 import type { OptionalMessagesId, RevertKeysAndValues } from '../entities/types.js';
 
 //import ImportedCLCMessages = ;
@@ -30,7 +33,9 @@ export const optionalSvcMessages = {
 	[SVC_Messages.svc_VoiceData]: CSVCMsg_VoiceData,
 	[ECstrike15UserMessages.CS_UM_ServerRankRevealAll]: CCSUsrMsg_ServerRankRevealAll,
 	[ECstrike15UserMessages.CS_UM_ServerRankUpdate]: CCSUsrMsg_ServerRankUpdate,
-	[SVC_Messages.svc_UserCmds]: CSVCMsg_UserCommands
+	[EBaseUserMessages.UM_SayText2]: CUserMessageSayText2,
+	[SVC_Messages.svc_UserCmds]: CSVCMsg_UserCommands,
+	[SVC_Messages.svc_UserMessage]: CSVCMsg_UserMessage
 } as const;
 
 type svcIdToName = RevertKeysAndValues<OptionalMessagesId>;
@@ -38,7 +43,8 @@ type OptionalSvcIdToName = { [K in keyof typeof optionalSvcMessages]: svcIdToNam
 
 export const optionalSvcIds: OptionalSvcIdToName = Object.entries({
 	...SVC_Messages,
-	...ECstrike15UserMessages
+	...ECstrike15UserMessages,
+	...EBaseUserMessages
 }).reduce(
 	(prev, curr) => (curr[1] in optionalSvcMessages ? { ...prev, [curr[1]]: curr[0] } : prev),
 	{} as OptionalSvcIdToName
