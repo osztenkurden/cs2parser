@@ -29,6 +29,8 @@ export interface ApplyChunkContext {
 	enqueue: emit;
 	/** Sparse `(userid & 0xff) → CMsgPlayerInfo` map populated from `TAG_PLAYERINFO`. */
 	playerInfoMap: (CMsgPlayerInfo | undefined)[];
+	/** Optional check called between ops; when true, the dispatch loop bails out. */
+	isCancelled?: () => boolean;
 }
 
 export function applyDecodeResult(result: DecodeResultJs, enqueue: emit): void {
@@ -41,9 +43,11 @@ export function applyChunkResult(result: DecodeResultJs, ctx: ApplyChunkContext)
 	const blobs = result.blobs as Uint8Array[];
 	const classNames = result.classNames;
 	const len = opsBuf.length;
+	const isCancelled = ctx.isCancelled;
 	let off = 0;
 
 	while (off < len) {
+		if (isCancelled !== undefined && isCancelled()) return;
 		const tag = view.getUint8(off);
 		off += 1;
 

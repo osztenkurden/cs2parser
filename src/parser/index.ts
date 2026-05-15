@@ -519,14 +519,15 @@ export class DemoReader extends EventEmitter<{
 			if ((opts as Record<string, unknown>)[name as string]) enabledSvc.push(Number(idStr));
 		}
 		if (enabledSvc.length > 0) dec.setOptionalSvc(enabledSvc);
+		let cancelled = false;
 		const ctx: ApplyChunkContext = {
 			enqueue: (n, d) => {
 				(this.emit as (name: string, data: unknown) => boolean)(n, d);
 			},
-			playerInfoMap: this._playerInfoMap
+			playerInfoMap: this._playerInfoMap,
+			isCancelled: () => cancelled
 		};
 
-		let cancelled = false;
 		const onCancel = () => {
 			cancelled = true;
 		};
@@ -562,10 +563,15 @@ export class DemoReader extends EventEmitter<{
 				applyChunkResult(final, ctx);
 			}
 		} catch (e) {
-			const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
-			this.emit('debug', `[${this.currentTick}] parse aborted: ${error.message}`);
-			this.emit('error', { error });
-			this.emit('end', { error, incomplete: true });
+			// cancel() destroys the underlying stream with an error which
+			// surfaces here as the for-await throws. cancel() has already
+			// emitted 'cancel' + 'end', so swallow the corollary throw.
+			if (!cancelled) {
+				const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
+				this.emit('debug', `[${this.currentTick}] parse aborted: ${error.message}`);
+				this.emit('error', { error });
+				this.emit('end', { error, incomplete: true });
+			}
 		} finally {
 			this.off('cancel', onCancel);
 			this._hasEnded = true;
@@ -689,7 +695,12 @@ export class DemoReader extends EventEmitter<{
 	}
 
 	public cancel() {
-		if (this._hasEnded) throw new Error('Demo has already been parsed');
+		// Idempotent: in v2 Rust can dispatch many buffered tickend events in
+		// one drain, so a tickend listener that cancels on a tick threshold
+		// will see its listener re-fire before the cancel takes effect.
+		// Treating a second cancel as a no-op avoids an unhandled 'error'
+		// emit while keeping the v1 contract for the post-parse case.
+		if (this._hasEnded) return;
 
 		this._hasEnded = true;
 		this._stream?.destroy(new Error('Stream canceled'));
