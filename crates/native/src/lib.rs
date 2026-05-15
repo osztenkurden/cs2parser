@@ -522,6 +522,18 @@ impl EntityDecoderNative {
 		self.state.reset();
 	}
 
+	/// Configure which optional SVC message IDs the frame loop should emit
+	/// (TAG_OPTIONAL_SVC) instead of skipping. JS resolves the user-facing
+	/// `{ UM_SayText2: true }`-style settings into the integer SVC IDs and
+	/// hands them over here once per parse.
+	#[napi]
+	pub fn set_optional_svc(&mut self, cmd_ids: Vec<u32>) {
+		self.frame_loop.enabled_optional_svc.clear();
+		for id in cmd_ids {
+			self.frame_loop.enabled_optional_svc.insert(id);
+		}
+	}
+
 	// ─── v2 getter API ──────────────────────────────────────────────────────
 	// Stage 1: parallel to the existing DecodeResult emission. Reads come from
 	// the Rust-resident `EntityState.entities` table populated during decode.

@@ -187,6 +187,13 @@ export declare class EntityDecoderNative {
   parseEntityPacket(entityData: Uint8Array, updatedEntries: number, hasPvsVisBits: number): DecodeResultJs
   /** Reset entity state between parses (JS calls when a new `parseDemo` starts). */
   reset(): void
+  /**
+   * Configure which optional SVC message IDs the frame loop should emit
+   * (TAG_OPTIONAL_SVC) instead of skipping. JS resolves the user-facing
+   * `{ UM_SayText2: true }`-style settings into the integer SVC IDs and
+   * hands them over here once per parse.
+   */
+  setOptionalSvc(cmdIds: Array<number>): void
   /** Returns `true` if an entity with this id is currently live. */
   hasEntity(entityId: number): boolean
   getEntityClassId(entityId: number): number | null

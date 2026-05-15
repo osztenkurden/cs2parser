@@ -19,6 +19,7 @@ import { messages } from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
 import { native } from '../native/index.js';
 import { applyChunkResult, type ApplyChunkContext } from './entities/applyDecodeResult.js';
+import { optionalSvcIds } from './descriptors/svc.js';
 
 /** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
 const steamIdToAccountId = (steamId: bigint | number): number => {
@@ -195,13 +196,12 @@ export class DemoReader extends EventEmitter<{
 	 * callers that read many properties on hot paths should prefer the typed
 	 * getters (`getNumberProp`, etc.) directly.
 	 *
-	 * Returns `undefined` if no entity exists at `entityId`, or if `className`
-	 * is supplied and doesn't match.
+	 * Returns `undefined` if no entity exists at `entityId`, or if the entity
+	 * exists but its class doesn't match `className`. Signature matches v1.8.0
+	 * — `className` is mandatory and narrows the return type.
 	 */
-	getEntity<T extends KnownClassName>(entityId: number, className?: T): EntityProperties<T> | undefined {
-		const actual = this.getEntityClassName(entityId);
-		if (!actual) return undefined;
-		if (className !== undefined && actual !== className) return undefined;
+	getEntity<T extends KnownClassName>(entityId: number, className: T): EntityProperties<T> | undefined {
+		if (this.getEntityClassName(entityId) !== className) return undefined;
 		return this._buildPropertySnapshot(entityId) as EntityProperties<T>;
 	}
 
@@ -511,6 +511,14 @@ export class DemoReader extends EventEmitter<{
 		const onlyGameRules = entityMode === EntityMode.ONLY_GAME_RULES;
 		const skipEntities = entityMode === EntityMode.NONE;
 		const dec = (this._native = new native.EntityDecoderNative());
+
+		// Translate the user-facing `{ UM_SayText2: true, svc_VoiceData: true }`
+		// settings into the integer SVC IDs the Rust frame loop checks against.
+		const enabledSvc: number[] = [];
+		for (const [idStr, name] of Object.entries(optionalSvcIds)) {
+			if ((opts as Record<string, unknown>)[name as string]) enabledSvc.push(Number(idStr));
+		}
+		if (enabledSvc.length > 0) dec.setOptionalSvc(enabledSvc);
 		const ctx: ApplyChunkContext = {
 			enqueue: (n, d) => {
 				(this.emit as (name: string, data: unknown) => boolean)(n, d);
@@ -526,6 +534,10 @@ export class DemoReader extends EventEmitter<{
 
 		let lastYield = Date.now();
 		const empty = Buffer.alloc(0);
+		// v1.8.0 compatibility: parseDemo never rejects — parse errors surface
+		// through the EventEmitter (`debug` + `error` + `end`). Wrapping the
+		// whole feed/drain loop in try/catch preserves that contract for both
+		// the streaming Readable path and the file/buffer paths.
 		try {
 			for await (const chunk of chunks) {
 				if (cancelled) break;
@@ -549,6 +561,11 @@ export class DemoReader extends EventEmitter<{
 				const final = dec.finishStream();
 				applyChunkResult(final, ctx);
 			}
+		} catch (e) {
+			const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
+			this.emit('debug', `[${this.currentTick}] parse aborted: ${error.message}`);
+			this.emit('error', { error });
+			this.emit('end', { error, incomplete: true });
 		} finally {
 			this.off('cancel', onCancel);
 			this._hasEnded = true;
@@ -617,12 +634,9 @@ export class DemoReader extends EventEmitter<{
 				yield chunk as Uint8Array;
 			}
 		}
-		try {
-			await this._runChunked(gen(), opts);
-		} catch (e) {
-			const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
-			this.emit('end', { error, incomplete: false });
-		}
+		// _runChunked owns its own error handling and emits the v1-compatible
+		// event triad; this method is just an async iterator over `stream`.
+		await this._runChunked(gen(), opts);
 	}
 
 	/**
