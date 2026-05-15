@@ -131,7 +131,7 @@ jobs:
             ${{ matrix.settings.build }}
 
       - name: Upload .node artefact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bindings-${{ matrix.settings.target }}
           path: crates/native/${{ env.APP_NAME }}.*.node
