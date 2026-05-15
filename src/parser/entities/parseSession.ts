@@ -19,7 +19,6 @@ import {
 	type StringTableObject
 } from '../stringtables.js';
 import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
-import { parseClassInfo } from './classInfo.js';
 import { EntityParser } from './entityParser.js';
 import type { DemoReader } from '../index.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';

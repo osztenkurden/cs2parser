@@ -54,6 +54,21 @@ pub const TAG_CREATE: u8 = 1;
 pub const TAG_UPDATE: u8 = 2;
 pub const TAG_DELETE: u8 = 3;
 
+// Stage 4 lifecycle / frame-loop events. Each carries either a tick value or
+// a blob index into `result.blobs[]` holding raw protobuf bytes that JS
+// decodes via ts-proto.
+pub const TAG_TICKSTART: u8 = 10;
+pub const TAG_TICKEND: u8 = 11;
+pub const TAG_HEADER: u8 = 12; // [blobIdx u32]
+pub const TAG_SERVERINFO: u8 = 13; // [blobIdx u32]
+pub const TAG_GAMEEVENTLIST: u8 = 14; // [blobIdx u32]
+pub const TAG_GAMEEVENT: u8 = 15; // [blobIdx u32]
+pub const TAG_PLAYERINFO: u8 = 16; // [blobIdx u32] — raw CMsgPlayerInfo bytes
+pub const TAG_OPTIONAL_SVC: u8 = 22; // [cmdId u32][blobIdx u32]
+pub const TAG_DEM_STOP: u8 = 24; // (no payload) — DEM_Stop marker reached
+pub const TAG_DEBUG: u8 = 25; // [blobIdx u32] — utf8 string
+pub const TAG_PROGRESS: u8 = 26; // [u32 fraction-as-fixed-point-x-1000]
+
 pub const VK_BOOL: u8 = 0;
 pub const VK_I32: u8 = 1;
 pub const VK_U32: u8 = 2;
@@ -144,6 +159,32 @@ impl DecodeResult {
 	fn push_delete(&mut self, entity_id: u32) {
 		self.push_u8(TAG_DELETE);
 		self.push_u32(entity_id);
+		self.op_count += 1;
+	}
+
+	pub fn push_tick(&mut self, tag: u8, tick: i32) {
+		self.push_u8(tag);
+		self.push_u32(tick as u32);
+		self.op_count += 1;
+	}
+
+	pub fn push_blob_event(&mut self, tag: u8, bytes: Vec<u8>) {
+		let idx = self.alloc_blob(bytes);
+		self.push_u8(tag);
+		self.push_u32(idx);
+		self.op_count += 1;
+	}
+
+	pub fn push_optional_svc(&mut self, cmd_id: u32, bytes: Vec<u8>) {
+		let idx = self.alloc_blob(bytes);
+		self.push_u8(TAG_OPTIONAL_SVC);
+		self.push_u32(cmd_id);
+		self.push_u32(idx);
+		self.op_count += 1;
+	}
+
+	pub fn push_simple(&mut self, tag: u8) {
+		self.push_u8(tag);
 		self.op_count += 1;
 	}
 

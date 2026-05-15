@@ -76,6 +76,12 @@ export interface DecodeResultJs {
   strings: Array<string>
   blobs: Array<Buffer>
   classNames: Array<string>
+  /**
+   * Set by `feed_chunk` when Rust paused at a tick boundary and the caller
+   * should drain by calling `feed_chunk(empty, …)` again. Always false
+   * for `finish_stream`.
+   */
+  hasMore: boolean
 }
 /**
  * Phase 2: napi wrapper around the Rust `BitBuffer`. Exposes the same surface
@@ -141,6 +147,28 @@ export declare class FieldPathNative {
 }
 export declare class EntityDecoderNative {
   constructor()
+  /**
+   * Stage 4 entry point: feed a chunk of demo bytes; Rust accumulates,
+   * walks frames, snappy-decompresses, dispatches SVC messages, runs the
+   * entity decoder, and returns the events emitted during processing.
+   *
+   * `only_game_rules` is honoured the first time DEM_ClassInfo is observed;
+   * after that initial setup, the value is locked for the parse.
+   *
+   * Returns the events emitted while processing the chunk. If the result's
+   * `has_more` field is `true`, the caller must drain by calling
+   * `feed_chunk` again with an empty slice — Rust paused at a tick
+   * boundary to let JS dispatch events with entity state at the previous
+   * tick (required for correct gameevent listener semantics).
+   */
+  feedChunk(bytes: Uint8Array, onlyGameRules: boolean, skipEntities: boolean): DecodeResultJs
+  /** Signal end of input. Returns any final events (e.g. trailing tickend). */
+  finishStream(): DecodeResultJs
+  /**
+   * Build the v1-style ClassInfoMeta from the most recent class_info init.
+   * Returns `None` if DEM_ClassInfo hasn't been observed yet.
+   */
+  classInfoMeta(): ClassInfoMeta | null
   /**
    * Build the class tree from the inner CSVCMsg_FlattenedSerializer bytes
    * (already extracted from `CDemoSendTables.data` by JS) and CDemoClassInfo

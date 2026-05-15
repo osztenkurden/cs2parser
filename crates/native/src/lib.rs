@@ -16,11 +16,14 @@ mod bitbuffer;
 mod classinfo;
 mod entity_parser;
 mod fieldpath;
+mod frame_loop;
 mod quantized_float;
+mod string_tables;
 use bitbuffer::BitBuffer;
 use classinfo::{parse_class_info, ClassInfo};
 use entity_parser::{DecodeResult, EntityState};
 use fieldpath::FieldPath;
+use frame_loop::FrameLoop;
 use napi::bindgen_prelude::Buffer;
 use quantized_float::{get_quantized_float, QuantizedFloat};
 use std::collections::HashMap;
@@ -369,6 +372,10 @@ pub struct DecodeResultJs {
 	pub strings: Vec<String>,
 	pub blobs: Vec<Buffer>,
 	pub class_names: Vec<String>,
+	/// Set by `feed_chunk` when Rust paused at a tick boundary and the caller
+	/// should drain by calling `feed_chunk(empty, …)` again. Always false
+	/// for `finish_stream`.
+	pub has_more: bool,
 }
 
 #[napi]
@@ -376,13 +383,85 @@ pub struct EntityDecoderNative {
 	class_info: Option<ClassInfo>,
 	state: EntityState,
 	scratch: DecodeResult,
+	frame_loop: FrameLoop,
 }
 
 #[napi]
 impl EntityDecoderNative {
 	#[napi(constructor)]
 	pub fn new() -> Self {
-		Self { class_info: None, state: EntityState::new(), scratch: DecodeResult::default() }
+		Self {
+			class_info: None,
+			state: EntityState::new(),
+			scratch: DecodeResult::default(),
+			frame_loop: FrameLoop::new(),
+		}
+	}
+
+	/// Stage 4 entry point: feed a chunk of demo bytes; Rust accumulates,
+	/// walks frames, snappy-decompresses, dispatches SVC messages, runs the
+	/// entity decoder, and returns the events emitted during processing.
+	///
+	/// `only_game_rules` is honoured the first time DEM_ClassInfo is observed;
+	/// after that initial setup, the value is locked for the parse.
+	///
+	/// Returns the events emitted while processing the chunk. If the result's
+	/// `has_more` field is `true`, the caller must drain by calling
+	/// `feed_chunk` again with an empty slice — Rust paused at a tick
+	/// boundary to let JS dispatch events with entity state at the previous
+	/// tick (required for correct gameevent listener semantics).
+	#[napi]
+	pub fn feed_chunk(
+		&mut self,
+		bytes: &[u8],
+		only_game_rules: bool,
+		skip_entities: bool,
+	) -> Result<DecodeResultJs, Error> {
+		self.frame_loop.only_game_rules = only_game_rules;
+		self.frame_loop.skip_entities = skip_entities;
+		self.scratch.reset();
+		let has_more = self.frame_loop.feed_chunk(bytes, &mut self.class_info, &mut self.state, &mut self.scratch);
+		let mut r = self.take_result();
+		r.has_more = has_more;
+		Ok(r)
+	}
+
+	/// Signal end of input. Returns any final events (e.g. trailing tickend).
+	#[napi]
+	pub fn finish_stream(&mut self) -> Result<DecodeResultJs, Error> {
+		self.scratch.reset();
+		self.frame_loop.finish_stream(&mut self.class_info, &mut self.state, &mut self.scratch);
+		Ok(self.take_result())
+	}
+
+	/// Build the v1-style ClassInfoMeta from the most recent class_info init.
+	/// Returns `None` if DEM_ClassInfo hasn't been observed yet.
+	#[napi]
+	pub fn class_info_meta(&self) -> Option<ClassInfoMeta> {
+		let ci = self.class_info.as_ref()?;
+		Some(ClassInfoMeta {
+			prop_id_to_name: ci.prop_id_to_name.iter().map(|(k, v)| (k.to_string(), v.clone())).collect(),
+			prop_id_to_decoder: ci
+				.prop_id_to_decoder
+				.iter()
+				.map(|(k, d)| (k.to_string(), decoder_to_id(*d)))
+				.collect(),
+			class_count: ci.classes.len() as u32,
+		})
+	}
+
+	fn take_result(&mut self) -> DecodeResultJs {
+		let r = std::mem::take(&mut self.scratch);
+		DecodeResultJs {
+			ops: Buffer::from(r.ops),
+			op_count: r.op_count,
+			f64_values: napi::bindgen_prelude::Float64Array::new(r.f64_values),
+			bigint_values: napi::bindgen_prelude::BigInt64Array::new(r.bigint_values),
+			strings: r.strings,
+			blobs: r.blobs.into_iter().map(Buffer::from).collect(),
+			class_names: r.class_names,
+			has_more: false,
+		}
 	}
 
 	/// Build the class tree from the inner CSVCMsg_FlattenedSerializer bytes
@@ -434,16 +513,7 @@ impl EntityDecoderNative {
 		self.scratch.reset();
 		self.state.parse_entity_packet(entity_data, updated_entries, has_pvs_vis_bits, class_info, &mut self.scratch);
 
-		let r = std::mem::take(&mut self.scratch);
-		Ok(DecodeResultJs {
-			ops: Buffer::from(r.ops),
-			op_count: r.op_count,
-			f64_values: Float64Array::new(r.f64_values),
-			bigint_values: BigInt64Array::new(r.bigint_values),
-			strings: r.strings,
-			blobs: r.blobs.into_iter().map(Buffer::from).collect(),
-			class_names: r.class_names,
-		})
+		Ok(self.take_result())
 	}
 
 	/// Reset entity state between parses (JS calls when a new `parseDemo` starts).

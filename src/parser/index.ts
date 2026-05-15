@@ -19,6 +19,7 @@ import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
 import { native } from '../native/index.js';
+import { applyChunkResult, type ApplyChunkContext } from './entities/applyDecodeResult.js';
 
 /** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
 const steamIdToAccountId = (steamId: bigint | number): number => {
@@ -492,106 +493,132 @@ export class DemoReader extends EventEmitter<{
 		queue.length = 0;
 	};
 
+	/**
+	 * v2 Stage 4: drives a parse by feeding chunks to Rust + walking the
+	 * event op stream returned. Shared by all three entry points
+	 * (Buffer / file path / Readable stream).
+	 */
+	private async _runChunked(
+		chunks: AsyncIterable<Uint8Array>,
+		opts: { entities?: EntityMode } & ParseSettings
+	): Promise<void> {
+		const entityMode = opts.entities ?? EntityMode.NONE;
+		this.gameEvents.entityMode = entityMode;
+		const onlyGameRules = entityMode === EntityMode.ONLY_GAME_RULES;
+		const skipEntities = entityMode === EntityMode.NONE;
+		const dec = (this._native = new native.EntityDecoderNative());
+		const ctx: ApplyChunkContext = {
+			enqueue: (n, d) => {
+				(this.emit as (name: string, data: unknown) => boolean)(n, d);
+			},
+			playerInfoMap: this._playerInfoMap
+		};
+
+		let cancelled = false;
+		const onCancel = () => {
+			cancelled = true;
+		};
+		this.on('cancel', onCancel);
+
+		let lastYield = Date.now();
+		const empty = Buffer.alloc(0);
+		try {
+			for await (const chunk of chunks) {
+				if (cancelled) break;
+				const buf = chunk instanceof Buffer ? chunk : Buffer.from(chunk);
+				let result = dec.feedChunk(buf, onlyGameRules, skipEntities);
+				this._maybePopulateClassInfo();
+				applyChunkResult(result, ctx);
+				// Rust pauses at each tick boundary so JS can dispatch events
+				// with entity state at the *previous* tick. Drain the buffer.
+				while (result.hasMore) {
+					result = dec.feedChunk(empty, onlyGameRules, skipEntities);
+					applyChunkResult(result, ctx);
+				}
+				const now = Date.now();
+				if (now - lastYield >= 64) {
+					lastYield = now;
+					await new Promise<void>(r => setTimeout(r, 0));
+				}
+			}
+			if (!cancelled) {
+				const final = dec.finishStream();
+				applyChunkResult(final, ctx);
+			}
+		} finally {
+			this.off('cancel', onCancel);
+			this._hasEnded = true;
+		}
+	}
+
+	private _maybePopulateClassInfo(): void {
+		if (this._propIdByName.size > 0) return;
+		const meta = this._native?.classInfoMeta();
+		if (!meta) return;
+		const idToName: Record<number, string> = {};
+		const nameToId = new Map<string, number>();
+		for (const [k, v] of Object.entries(meta.propIdToName)) {
+			const id = Number(k);
+			idToName[id] = v;
+			nameToId.set(v, id);
+		}
+		this.propIdToName = idToName;
+		this._propIdByName = nameToId;
+		const idToDec: Record<number, number> = {};
+		for (const [k, v] of Object.entries(meta.propIdToDecoder)) idToDec[Number(k)] = v;
+		this.propIdToDecoder = idToDec as never;
+	}
+
 	/** Non-blocking parse from a pre-loaded Buffer. */
 	private async _parseBuffer(buffer: Buffer, opts: { entities?: EntityMode } & ParseSettings = {}) {
-		const entityMode = opts.entities ?? EntityMode.NONE;
-		this._directWriteMode = true;
-		this.gameEvents.entityMode = entityMode;
-		await new ParseSession(buffer, entityMode, this._emitQueue, this, opts).runAsync();
-		this._directWriteMode = false;
-		this._hasEnded = true;
+		// Split big buffers into ~4MB chunks so the cooperative yield can fire
+		// between them; otherwise a 600MB buffer would block the event loop
+		// for the entire parse duration.
+		const CHUNK = 4 * 1024 * 1024;
+		async function* gen() {
+			for (let i = 0; i < buffer.length; i += CHUNK) {
+				yield buffer.subarray(i, Math.min(i + CHUNK, buffer.length));
+			}
+		}
+		await this._runChunked(gen(), opts);
 	}
 
 	/** Non-blocking parse from a file path using chunked reads (low memory). */
 	private async _parseFile(filePath: string, opts: { entities?: EntityMode } & ParseSettings = {}) {
-		const entityMode = opts.entities ?? EntityMode.NONE;
-		this._directWriteMode = true;
-		this.gameEvents.entityMode = entityMode;
-		await ParseSession.fromFile(filePath, entityMode, this._emitQueue, this, opts).runAsync();
-		this._directWriteMode = false;
-		this._hasEnded = true;
+		const fd = fs.openSync(filePath, 'r');
+		const size = fs.fstatSync(fd).size;
+		const READ = 4 * 1024 * 1024;
+		const buf = Buffer.alloc(READ);
+		async function* gen() {
+			let off = 0;
+			while (off < size) {
+				const toRead = Math.min(READ, size - off);
+				fs.readSync(fd, buf, 0, toRead, off);
+				off += toRead;
+				yield Buffer.from(buf.subarray(0, toRead));
+			}
+		}
+		try {
+			await this._runChunked(gen(), opts);
+		} finally {
+			fs.closeSync(fd);
+		}
 	}
 
 	/** Core streaming parse from a Readable. */
-	private _parseStream(stream: Readable, opts: { entities?: EntityMode } & ParseSettings = {}): Promise<void> {
-		const entityMode = opts.entities ?? EntityMode.NONE;
+	private async _parseStream(stream: Readable, opts: { entities?: EntityMode } & ParseSettings = {}): Promise<void> {
 		this._stream = stream;
-		this._directWriteMode = true;
-		this.gameEvents.entityMode = entityMode;
-
-		const { promise, resolve } = Promise.withResolvers<void>();
-
-		let session: ParseSession | null = null;
-		let finished = false;
-		let pendingChunks: Buffer[] = [];
-
-		const finish = () => {
-			finished = true;
-			stream.off('data', onData);
-			stream.off('error', onError);
-			stream.off('end', onEnd);
-			this._directWriteMode = false;
-			this._hasEnded = true;
-		};
-
-		const tryInit = () => {
-			const totalPending = pendingChunks.reduce((s, c) => s + c.length, 0);
-			if (totalPending < 16) return false;
-
-			session = new ParseSession(Buffer.concat(pendingChunks), entityMode, this._emitQueue, this, opts);
-			pendingChunks = [];
-			return true;
-		};
-
-		const onData = (chunk: Buffer) => {
-			if (finished) return;
-
-			if (!session) {
-				pendingChunks.push(chunk);
-				if (!tryInit()) return;
-			} else {
-				session.pushChunk(chunk);
+		async function* gen() {
+			for await (const chunk of stream) {
+				yield chunk as Uint8Array;
 			}
-
-			try {
-				const more = session!.processFrames();
-				if (!more) {
-					session!.flush();
-					finish();
-					resolve();
-				}
-			} catch (e) {
-				finish();
-				const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
-				this.emit('end', { error, incomplete: false });
-				resolve();
-			}
-		};
-
-		const onError = (err: Error) => {
-			if (finished) return;
-			finish();
-			this.emit('end', { error: err, incomplete: true });
-			resolve();
-		};
-
-		const onEnd = () => {
-			if (finished) return;
-			if (session) {
-				try {
-					session.processFrames();
-				} catch {}
-			}
-			finish();
-			this.emit('end', { incomplete: true });
-			resolve();
-		};
-
-		stream.on('data', onData);
-		stream.on('error', onError);
-		stream.on('end', onEnd);
-
-		return promise;
+		}
+		try {
+			await this._runChunked(gen(), opts);
+		} catch (e) {
+			const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
+			this.emit('end', { error, incomplete: false });
+		}
 	}
 
 	/**
