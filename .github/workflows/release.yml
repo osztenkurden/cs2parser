@@ -5,12 +5,16 @@ name: Release
 #      is "ready", it opens or updates a release PR. Merging that PR creates a
 #      GitHub release + tag + emits `release_created` on the next workflow run.
 #   2. On `release_created`, the `build` matrix produces per-triple .node
-#      binaries and uploads them as artefacts.
-#   3. `publish` downloads every artefact, syncs the new version across the
-#      loader + per-triple sub-package + main package manifests, and pushes
-#      them to npm. The main `cs2parser` package's `cs2parser-native`
-#      dependency picks the matching triple via that loader's
-#      `optionalDependencies`.
+#      binaries and attaches them to that release as release assets via
+#      `gh release upload`. Release assets (vs CI artefacts) are permanent,
+#      visible in the GH UI, immune to artefact-action version drift, and
+#      keep the binary co-located with the version tag for the lifetime of
+#      the release.
+#   3. `publish` downloads every release asset via `gh release download`,
+#      syncs the new version across the loader + per-triple sub-package +
+#      main package manifests, and pushes them to npm. The main `cs2parser`
+#      package's `cs2parser-native` dependency picks the matching triple via
+#      that loader's `optionalDependencies`.
 
 on:
   push:
@@ -62,24 +66,18 @@ jobs:
         settings:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            build: bun run build:native
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: bun run build:native
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: cd crates/native && npx napi build --platform --release --target x86_64-unknown-linux-musl
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: cd crates/native && npx napi build --platform --release --target aarch64-unknown-linux-gnu
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: bun run build:native
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: bun run build:native -- --target aarch64-apple-darwin
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v6
@@ -118,7 +116,7 @@ jobs:
 
       - name: Build (host)
         if: ${{ !matrix.settings.docker }}
-        run: ${{ matrix.settings.build }}
+        run: cd crates/native && npx napi build --platform --release --target ${{ matrix.settings.target }}
 
       - name: Build (docker)
         if: ${{ matrix.settings.docker }}
@@ -128,14 +126,13 @@ jobs:
           options: -v ${{ github.workspace }}:/workspace -w /workspace
           run: |
             npm install --ignore-scripts
-            ${{ matrix.settings.build }}
+            cd crates/native && npx napi build --platform --release --target ${{ matrix.settings.target }}
 
-      - name: Upload .node artefact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bindings-${{ matrix.settings.target }}
-          path: crates/native/${{ env.APP_NAME }}.*.node
-          if-no-files-found: error
+      - name: Attach .node to GitHub release
+        run: gh release upload "$TAG" crates/native/${APP_NAME}.*.node --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
 
   publish:
     name: Publish to npm
@@ -158,12 +155,15 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Download all .node artefacts
-        uses: actions/download-artifact@v5
-        with:
-          pattern: bindings-*
-          merge-multiple: true
-          path: crates/native/
+      - name: Download .node binaries from release
+        run: |
+          mkdir -p crates/native
+          gh release download "$TAG" \
+            --pattern "${APP_NAME}.*.node" \
+            --dir crates/native/
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Move binaries into per-triple sub-package dirs
         run: |

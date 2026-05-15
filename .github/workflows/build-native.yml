@@ -47,24 +47,18 @@ jobs:
         settings:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            build: bun run build:native
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: bun run build:native
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: cd crates/native && npx napi build --platform --release --target x86_64-unknown-linux-musl
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: cd crates/native && npx napi build --platform --release --target aarch64-unknown-linux-gnu
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: bun run build:native
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: bun run build:native -- --target aarch64-apple-darwin
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -100,9 +94,13 @@ jobs:
         if: ${{ !matrix.settings.docker }}
         run: bun install --frozen-lockfile
 
+      # Always pass --target explicitly. `napi build` without it targets the
+      # host triple, which is wrong for darwin: `macos-latest` is arm64, so
+      # the `x86_64-apple-darwin` leg would otherwise produce an arm64 .node
+      # and the artefact glob would fail to match.
       - name: Build (host)
         if: ${{ !matrix.settings.docker }}
-        run: ${{ matrix.settings.build }}
+        run: cd crates/native && npx napi build --platform --release --target ${{ matrix.settings.target }}
 
       - name: Build (docker)
         if: ${{ matrix.settings.docker }}
@@ -112,11 +110,18 @@ jobs:
           options: -v ${{ github.workspace }}:/workspace -w /workspace
           run: |
             npm install --ignore-scripts
-            ${{ matrix.settings.build }}
+            cd crates/native && npx napi build --platform --release --target ${{ matrix.settings.target }}
 
-      - name: Upload .node artefact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bindings-${{ matrix.settings.target }}
-          path: crates/native/${{ env.APP_NAME }}.*.node
-          if-no-files-found: error
+      # No upload here — this workflow is a sanity check on PRs / master
+      # pushes that touch Rust. The build succeeding is the signal; the
+      # actual binaries used for releases come from `release.yml`'s matrix,
+      # which attaches them to the GitHub release.
+      - name: Confirm binary exists
+        run: |
+          shopt -s nullglob
+          files=(crates/native/${APP_NAME}.*.node)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no .node binary produced"
+            exit 1
+          fi
+          ls -la "${files[@]}"
