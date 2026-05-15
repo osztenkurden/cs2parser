@@ -27,6 +27,13 @@
         "typescript-eslint": "^8.45.0",
       },
     },
+    "crates/native": {
+      "name": "cs2parser-native",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@napi-rs/cli": "^2.18.4",
+      },
+    },
   },
   "packages": {
     "@babel/code-frame": ["@babel/code-frame@7.29.0", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.28.5", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, ""],
@@ -118,6 +125,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, ""],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, ""],
+
+    "@napi-rs/cli": ["@napi-rs/cli@2.18.4", "", { "bin": { "napi": "scripts/index.js" } }, "sha512-SgJeA4df9DE2iAEpr3M2H0OKl/yjtg1BnRI5/JyowS71tUWhrfSu2LT0V3vlHET+g1hBVlrO60PmEXwUEKp8Mg=="],
 
     "@napi-rs/snappy-android-arm-eabi": ["@napi-rs/snappy-android-arm-eabi@7.3.3", "", { "os": "android", "cpu": "arm" }, "sha512-d4vUFFzNBvazGfB/KU8MnEax6itTIgRWXodPdZDnWKHy9HwVBndpCiedQDcSNHcZNYV36rx034rpn7SAuTL2NA=="],
 
@@ -332,6 +341,8 @@
     "cosmiconfig-typescript-loader": ["cosmiconfig-typescript-loader@6.2.0", "", { "dependencies": { "jiti": "^2.6.1" }, "peerDependencies": { "@types/node": "*", "cosmiconfig": ">=9", "typescript": ">=5" } }, ""],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, ""],
+
+    "cs2parser-native": ["cs2parser-native@workspace:crates/native"],
 
     "debug": ["debug@4.4.3", "", { "dependencies": { "ms": "^2.1.3" } }, ""],
 
