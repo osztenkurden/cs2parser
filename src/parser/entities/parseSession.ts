@@ -2,7 +2,13 @@ import fs from 'fs';
 import snappy from 'snappy';
 import { BitBuffer } from '../ubitreader.js';
 import { decoders, type DecoderKeys, type Decoders } from '../descriptors/decoders.js';
-import { CDemoSendTables, EDemoCommands, type CDemoFullPacket, type CDemoPacket } from '../../ts-proto/demo.js';
+import {
+	CDemoClassInfo,
+	CDemoSendTables,
+	EDemoCommands,
+	type CDemoFullPacket,
+	type CDemoPacket
+} from '../../ts-proto/demo.js';
 import { EBaseGameEvents, type CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
 import { CSVCMsg_PacketEntities, SVC_Messages } from '../../ts-proto/netmessages.js';
 import { messages } from '../descriptors/index.js';
@@ -19,6 +25,17 @@ import type { DemoReader } from '../index.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
 import { createAllocator } from './allocator.js';
 import { optionalSvcIds, type optionalSvcMessages } from '../descriptors/svc.js';
+import { native } from '../../native/index.js';
+import { applyDecodeResult } from './applyDecodeResult.js';
+
+/**
+ * Phase 7 default: the Rust entity decoder owns the per-packet hot path. Set
+ * `CS2P_RUST_DECODER=0` to fall back to the TypeScript `EntityParser` during
+ * the soak window; both implementations are kept side-by-side until the
+ * deprecated JS files (entityParser.ts / fieldPath{s,Ops}.ts / quantizedFloat.ts
+ * / classInfo.ts / constructorFields.ts / allocator.ts) are removed.
+ */
+const USE_NATIVE_DECODER = process.env.CS2P_RUST_DECODER !== '0';
 
 // This will allow to optionally parse any message defined in optionalSvcMessages, and will add autocomplete to all options defined there.
 export type ParseSettings = {
@@ -46,6 +63,8 @@ export class ParseSession {
 
 	// Parse state
 	private entityParser: EntityParser | null = null;
+	private nativeDecoder: InstanceType<typeof native.EntityDecoderNative> | null = null;
+	private nativeReady = false;
 	private sendTables: CDemoSendTables | null = null;
 	private readonly baselines: Uint8Array[] = [];
 	private currentTick = -1;
@@ -538,16 +557,46 @@ export class ParseSession {
 				const data = this.baseParse(decoder.decode, size, isCompressed);
 				if (!data || !this.sendTables) break;
 
-				const classInfo = parseClassInfo(this.sendTables, data);
-				this.sendTables = null;
-				this.entityParser = new EntityParser(classInfo, this.enqueueEvent);
-				this.entityParser.onlyGameRules = this.entityMode === EntityMode.ONLY_GAME_RULES;
-				if (this.parser) {
-					this.parser.propIdToName = classInfo.propIdToName;
-					this.parser.propIdToDecoder = classInfo.propIdToDecoder;
-					this.entityParser.directEntities = this.parser.entities;
-					this.entityParser.directPropIdToName = classInfo.propIdToName;
+				if (USE_NATIVE_DECODER) {
+					// Rust builds the canonical classInfo. Reuse its propIdToName /
+					// propIdToDecoder so the JS helpers (Player.health etc.) read
+					// from the same name table the decoder writes through.
+					const stData = this.sendTables.data!;
+					const stReader = new BitBuffer(stData);
+					const innerSize = stReader.ReadUVarInt32();
+					const innerBytes = Buffer.alloc(innerSize);
+					stReader.readBytes(innerBytes);
+					const classInfoBytes = Buffer.from(CDemoClassInfo.encode(data).finish());
+					this.nativeDecoder = new native.EntityDecoderNative();
+					const meta = this.nativeDecoder.initClassInfo(
+						innerBytes,
+						classInfoBytes,
+						this.entityMode === EntityMode.ONLY_GAME_RULES
+					);
+					if (this.parser) {
+						const idToName: Record<number, string> = {};
+						for (const [k, v] of Object.entries(meta.propIdToName)) idToName[Number(k)] = v;
+						this.parser.propIdToName = idToName;
+						// propIdToDecoder uses the same integer IDs as the JS Decoders.*
+						// constants; meta returns them already-coerced.
+						const idToDec: Record<number, number> = {};
+						for (const [k, v] of Object.entries(meta.propIdToDecoder)) idToDec[Number(k)] = v;
+						this.parser.propIdToDecoder = idToDec as never;
+					}
+					this.nativeReady = true;
+				} else {
+					const classInfo = parseClassInfo(this.sendTables, data);
+					this.entityParser = new EntityParser(classInfo, this.enqueueEvent);
+					this.entityParser.onlyGameRules = this.entityMode === EntityMode.ONLY_GAME_RULES;
+					if (this.parser) {
+						this.parser.propIdToName = classInfo.propIdToName;
+						this.parser.propIdToDecoder = classInfo.propIdToDecoder;
+						this.entityParser.directEntities = this.parser.entities;
+						this.entityParser.directPropIdToName = classInfo.propIdToName;
+					}
 				}
+
+				this.sendTables = null;
 				break;
 			}
 			case EDemoCommands.DEM_FileHeader:
@@ -695,13 +744,52 @@ export class ParseSession {
 		}
 
 		for (const queueElement of packetEntitiesQueue) {
-			this.entityParser?.parseEntityPacket(queueElement, this.baselines);
+			if (USE_NATIVE_DECODER && this.nativeReady && this.nativeDecoder) {
+				this.syncBaselinesToNative();
+				const result = this.nativeDecoder.parseEntityPacket(
+					queueElement.entity_data!,
+					queueElement.updated_entries!,
+					queueElement.has_pvs_vis_bits_deprecated ?? 0
+				);
+				if (this.parser) {
+					applyDecodeResult(result, {
+						entities: this.parser.entities,
+						propIdToName: this.parser.propIdToName,
+						directWriteMode: true,
+						enqueue: this.enqueueEvent,
+						onlyGameRules: this.entityMode === EntityMode.ONLY_GAME_RULES
+					});
+				}
+			} else {
+				this.entityParser?.parseEntityPacket(queueElement, this.baselines);
+			}
 		}
 		for (const allocatedElement of allocated) {
 			ParseSession.entityAllocator.free(allocatedElement);
 		}
 		for (const event of gameEventQueue) {
 			this.enqueueEvent('gameevent', event);
+		}
+	}
+
+	/**
+	 * Push any new baseline entries to the Rust decoder. Cheap (~200 classes,
+	 * called only on packets that contain entity updates). We dedupe by tracking
+	 * lengths — if a baseline's bytes haven't changed since the last sync, the
+	 * Rust side already has them.
+	 *
+	 * Future optimisation: hook directly into stringtables.ts so individual
+	 * baseline writes forward via callback instead of a full sweep here.
+	 */
+	private _baselineSyncedLens: number[] = [];
+	private syncBaselinesToNative(): void {
+		if (!this.nativeDecoder) return;
+		for (let i = 0; i < this.baselines.length; i++) {
+			const b = this.baselines[i];
+			if (!b) continue;
+			if (this._baselineSyncedLens[i] === b.length) continue;
+			this.nativeDecoder.setBaseline(i, b);
+			this._baselineSyncedLens[i] = b.length;
 		}
 	}
 

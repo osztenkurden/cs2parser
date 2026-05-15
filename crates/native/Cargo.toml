@@ -1,0 +1,25 @@
+[package]
+name        = "cs2parser-native"
+version     = "0.1.0"
+edition     = "2021"
+publish     = false
+description = "Rust hot path for cs2parser (entity bit-stream decoder)."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi        = { version = "2.16", default-features = false, features = ["napi8"] }
+napi-derive = "2.16"
+prost       = "0.13"
+
+[build-dependencies]
+napi-build           = "2"
+prost-build          = "0.13"
+protoc-bin-vendored  = "3"
+
+[profile.release]
+lto       = true
+codegen-units = 1
+opt-level = 3
+strip     = "symbols"

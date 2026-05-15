@@ -27,12 +27,17 @@
 		".": "./dist/index.mjs",
 		"./package.json": "./package.json"
 	},
+	"workspaces": [
+		"crates/native"
+	],
 	"scripts": {
 		"typecheck": "tsgo",
 		"lint": "eslint src/",
 		"lint:fix": "eslint src/ --fix",
 		"format": "prettier --write src/",
 		"format:check": "prettier --check src/",
+		"build:native": "npm --workspace cs2parser-native run build",
+		"build:native:debug": "npm --workspace cs2parser-native run build:debug",
 		"build": "npm run typecheck && tsdown",
 		"test": "bun test --timeout 300000",
 		"test:watch": "bun test --watch --timeout 300000",

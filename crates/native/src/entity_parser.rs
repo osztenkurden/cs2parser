@@ -1,0 +1,565 @@
+//! Per-packet entity decoder. 1:1 port of `src/parser/entities/entityParser.ts`.
+//!
+//! Reads `CSVCMsg_PacketEntities.entity_data` bytes, walks each updated entity,
+//! decodes its field-path stream + value stream, and writes the operations into
+//! a `DecodeResult` for JS to apply to the entities array.
+
+use crate::bitbuffer::BitBuffer;
+use crate::classinfo::{Class, ClassInfo, Decoder, Field, SerializerN};
+use crate::fieldpath::{do_op, FieldPath};
+use crate::quantized_float::{decode_qfloat, QFF_ENCODE_ZERO, QFF_ROUNDDOWN, QFF_ROUNDUP};
+
+const NSERIALBITS: u32 = 17;
+
+// Mirrors `EntityTypeEnum` in JS.
+const ENTITY_TYPE_PLAYER_CONTROLLER: u8 = 0;
+const ENTITY_TYPE_RULES: u8 = 1;
+const ENTITY_TYPE_PROJECTILE: u8 = 2;
+const ENTITY_TYPE_TEAM: u8 = 3;
+const ENTITY_TYPE_NORMAL: u8 = 4;
+const ENTITY_TYPE_C4: u8 = 5;
+
+fn entity_type(name: &str) -> u8 {
+	match name {
+		"CCSPlayerController" => ENTITY_TYPE_PLAYER_CONTROLLER,
+		"CCSGameRulesProxy" => ENTITY_TYPE_RULES,
+		"CTeam" => ENTITY_TYPE_TEAM,
+		"CC4" => ENTITY_TYPE_C4,
+		_ if name.contains("Projectile") || name == "CIncendiaryGrenade" => ENTITY_TYPE_PROJECTILE,
+		_ => ENTITY_TYPE_NORMAL,
+	}
+}
+
+// ─── DecodeResult struct-of-arrays ───────────────────────────────────────────
+//
+// Wire format documented in `lib.rs` next to the napi #[napi(object)] mirror.
+// Ops byte stream:
+//   CREATE: tag=1, entityId u32 LE, classId u32 LE, entityType u8,
+//           classNameIdx u32 LE, updateCount u32 LE, updateCount × update_rec
+//   UPDATE: tag=2, entityId u32 LE, updateCount u32 LE, updateCount × update_rec
+//   DELETE: tag=3, entityId u32 LE
+// update_rec: propId u32 LE, valueKind u8, valueIdx u32 LE
+//
+// valueKind:
+//   0 bool  — f64_values[idx] is 0 or 1
+//   1 i32   — f64_values[idx]
+//   2 u32   — f64_values[idx]
+//   3 f32   — f64_values[idx]
+//   4 vec3  — f64_values[idx..idx+3]
+//   5 u64   — bigint_values[idx] (as i64-bit-bag of u64)
+//   6 str   — strings[idx]
+//   7 blob  — blobs[idx]
+
+pub const TAG_CREATE: u8 = 1;
+pub const TAG_UPDATE: u8 = 2;
+pub const TAG_DELETE: u8 = 3;
+
+pub const VK_BOOL: u8 = 0;
+pub const VK_I32: u8 = 1;
+pub const VK_U32: u8 = 2;
+pub const VK_F32: u8 = 3;
+pub const VK_VEC3: u8 = 4;
+pub const VK_U64: u8 = 5;
+pub const VK_STRING: u8 = 6;
+pub const VK_BLOB: u8 = 7;
+
+#[derive(Default)]
+pub struct DecodeResult {
+	pub ops: Vec<u8>,
+	pub op_count: u32,
+	pub f64_values: Vec<f64>,
+	pub bigint_values: Vec<i64>,
+	pub strings: Vec<String>,
+	pub blobs: Vec<Vec<u8>>,
+	pub class_names: Vec<String>,
+	class_name_idx: std::collections::HashMap<String, u32>,
+	/// Running counter of `update_rec` entries appended within the current op
+	/// window. Used to patch the placeholder update-count slot after the
+	/// records are written. Reset at the start of each op (begin_create /
+	/// begin_update).
+	pub transient_rec_count: u32,
+}
+
+impl DecodeResult {
+	pub fn reset(&mut self) {
+		self.ops.clear();
+		self.op_count = 0;
+		self.f64_values.clear();
+		self.bigint_values.clear();
+		self.strings.clear();
+		self.blobs.clear();
+		self.class_names.clear();
+		self.class_name_idx.clear();
+	}
+
+	fn intern_class(&mut self, name: &str) -> u32 {
+		if let Some(&i) = self.class_name_idx.get(name) {
+			return i;
+		}
+		let i = self.class_names.len() as u32;
+		self.class_names.push(name.to_string());
+		self.class_name_idx.insert(name.to_string(), i);
+		i
+	}
+
+	fn push_u8(&mut self, b: u8) {
+		self.ops.push(b);
+	}
+	fn push_u32(&mut self, v: u32) {
+		self.ops.extend_from_slice(&v.to_le_bytes());
+	}
+	fn patch_u32(&mut self, at: usize, v: u32) {
+		let bytes = v.to_le_bytes();
+		self.ops[at] = bytes[0];
+		self.ops[at + 1] = bytes[1];
+		self.ops[at + 2] = bytes[2];
+		self.ops[at + 3] = bytes[3];
+	}
+
+	fn push_delete(&mut self, entity_id: u32) {
+		self.push_u8(TAG_DELETE);
+		self.push_u32(entity_id);
+		self.op_count += 1;
+	}
+
+	/// Returns the byte offset of the update-count slot so it can be patched
+	/// after the value records are appended.
+	fn begin_create(
+		&mut self,
+		entity_id: u32,
+		class_id: u32,
+		entity_type: u8,
+		class_name: &str,
+	) -> usize {
+		let name_idx = self.intern_class(class_name);
+		self.push_u8(TAG_CREATE);
+		self.push_u32(entity_id);
+		self.push_u32(class_id);
+		self.push_u8(entity_type);
+		self.push_u32(name_idx);
+		let count_slot = self.ops.len();
+		self.push_u32(0); // placeholder
+		self.op_count += 1;
+		count_slot
+	}
+
+	fn begin_update(&mut self, entity_id: u32) -> usize {
+		self.push_u8(TAG_UPDATE);
+		self.push_u32(entity_id);
+		let count_slot = self.ops.len();
+		self.push_u32(0);
+		self.op_count += 1;
+		count_slot
+	}
+
+	fn push_update_rec(&mut self, prop_id: u32, kind: u8, idx: u32) {
+		self.push_u32(prop_id);
+		self.push_u8(kind);
+		self.push_u32(idx);
+	}
+
+	fn alloc_f64(&mut self, v: f64) -> u32 {
+		let idx = self.f64_values.len() as u32;
+		self.f64_values.push(v);
+		idx
+	}
+	fn alloc_vec3(&mut self, v: [f64; 3]) -> u32 {
+		let idx = self.f64_values.len() as u32;
+		self.f64_values.extend_from_slice(&v);
+		idx
+	}
+	fn alloc_bigint(&mut self, v: u64) -> u32 {
+		let idx = self.bigint_values.len() as u32;
+		self.bigint_values.push(v as i64);
+		idx
+	}
+	fn alloc_string(&mut self, s: String) -> u32 {
+		let idx = self.strings.len() as u32;
+		self.strings.push(s);
+		idx
+	}
+	fn alloc_blob(&mut self, b: Vec<u8>) -> u32 {
+		let idx = self.blobs.len() as u32;
+		self.blobs.push(b);
+		idx
+	}
+}
+
+// ─── findFieldAndDecode ──────────────────────────────────────────────────────
+
+fn get_inner_ext<'a>(field: &'a Field, index: usize) -> &'a Field {
+	match field {
+		Field::Array { field_enum, .. } | Field::Vector { field_enum, .. } => field_enum,
+		Field::Serializer { serializer } | Field::Pointer { serializer, .. } => {
+			serializer.fields[index].as_ref().expect("ILLEGAL PATH")
+		}
+		Field::Value { .. } | Field::None => panic!("ILLEGAL PATH"),
+	}
+}
+
+#[derive(Clone, Copy)]
+struct FieldInfo {
+	decoder: Decoder,
+	prop_id: u32,
+	has_info: bool,
+}
+
+fn find_field_and_decode(fp: &FieldPath, ser: &SerializerN) -> FieldInfo {
+	let f = ser.fields[fp.path[0] as usize].as_ref().expect("Noo field");
+	if fp.last == 0 {
+		if let Field::Value { decoder, prop_id, .. } = f {
+			return FieldInfo { decoder: *decoder, prop_id: *prop_id, has_info: true };
+		}
+	}
+	let mut field = f;
+	for depth in 1..=fp.last as usize {
+		field = get_inner_ext(field, fp.path[depth] as usize);
+	}
+	match field {
+		Field::Value { decoder, prop_id, .. } => FieldInfo { decoder: *decoder, prop_id: *prop_id, has_info: true },
+		Field::Vector { field_enum, .. } => {
+			let inner = field_enum.as_ref();
+			if let Field::Value { prop_id, .. } = inner {
+				FieldInfo { decoder: Decoder::Unsigned, prop_id: *prop_id, has_info: true }
+			} else {
+				FieldInfo { decoder: Decoder::Unsigned, prop_id: 0, has_info: false }
+			}
+		}
+		Field::Pointer { decoder, .. } => FieldInfo { decoder: *decoder, prop_id: 0, has_info: false },
+		Field::Array { .. } | Field::Serializer { .. } | Field::None => {
+			FieldInfo { decoder: Decoder::Unsigned, prop_id: 0, has_info: false }
+		}
+	}
+}
+
+// ─── Per-field decode ────────────────────────────────────────────────────────
+
+fn decode_field(
+	br: &mut BitBuffer,
+	decoder: Decoder,
+	prop_id: u32,
+	has_info: bool,
+	class_prop_id_to_name_contains: bool,
+	result: &mut DecodeResult,
+) {
+	use Decoder::*;
+	// Decode unconditionally — the bit stream must advance regardless of whether
+	// the prop survives the propIdToName filter (it's a wire-format invariant).
+	let kind: u8;
+	let idx: u32;
+	match decoder {
+		QuantizedFloat(qi) => {
+			// SAFETY/NB: qf_table is borrowed through the EntityState; passed
+			// via a thread-local because this fn is shape-locked.
+			let qf = unsafe { &QF_TABLE_PTR.expect("qf_table set")[qi as usize] };
+			let v = decode_qfloat(br, qf);
+			kind = VK_F32;
+			idx = result.alloc_f64(v as f64);
+		}
+		VectorNormal => {
+			let v = br.decode_normal_vec();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		VectorNoScale => {
+			let v = br.decode_vector_noscale();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		VectorFloatCoord => {
+			let v = br.decode_vector_float_coord();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		Boolean | Component => {
+			let v = br.read_boolean();
+			kind = VK_BOOL;
+			idx = result.alloc_f64(if v { 1.0 } else { 0.0 });
+		}
+		NoScale => {
+			let v = br.read_float32_le();
+			kind = VK_F32;
+			idx = result.alloc_f64(v as f64);
+		}
+		Signed => {
+			let v = br.read_varint32();
+			kind = VK_I32;
+			idx = result.alloc_f64(v as f64);
+		}
+		Unsigned | Base | CentityHandle => {
+			let v = br.read_uvarint32();
+			kind = VK_U32;
+			idx = result.alloc_f64(v as f64);
+		}
+		FloatSimulationTime => {
+			let v = (br.read_uvarint32() as f64) * (1.0 / 30.0);
+			kind = VK_F32;
+			idx = result.alloc_f64(v);
+		}
+		FloatCoord => {
+			let v = br.read_bit_coord();
+			kind = VK_F32;
+			idx = result.alloc_f64(v as f64);
+		}
+		Fixed64 => {
+			let v = br.decode_uint64();
+			kind = VK_U64;
+			idx = result.alloc_bigint(v);
+		}
+		Unsigned64 => {
+			let v = br.read_uvarint64();
+			kind = VK_U64;
+			idx = result.alloc_bigint(v);
+		}
+		Qangle3 => {
+			let v = br.decode_qangle_all3();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		QanglePitchYaw => {
+			let v = br.decode_qangle_pitch_yaw();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		QangleVar => {
+			let v = br.decode_qangle_variant();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		QanglePres => {
+			let v = br.decode_qangle_variant_pres();
+			kind = VK_VEC3;
+			idx = result.alloc_vec3(v);
+		}
+		String => {
+			let s = br.read_string();
+			kind = VK_STRING;
+			idx = result.alloc_string(s);
+		}
+		Ammo => {
+			let v = br.decode_ammo();
+			kind = VK_U32;
+			idx = result.alloc_f64(v as f64);
+		}
+		GameModeRules => {
+			let v = br.read_ubits(7);
+			kind = VK_U32;
+			idx = result.alloc_f64(v as f64);
+		}
+		BinaryBlock => {
+			let len = br.read_uvarint32() as usize;
+			let mut out = vec![0u8; len];
+			br.read_bytes_into(&mut out);
+			kind = VK_BLOB;
+			idx = result.alloc_blob(out);
+		}
+	}
+	if has_info && class_prop_id_to_name_contains {
+		result.push_update_rec(prop_id, kind, idx);
+		result.transient_rec_count += 1;
+	}
+}
+
+/// Static pointer to the active session's qf_table. Set on every call to
+/// `parse_entity_packet`. Used by `decode_field` to avoid threading the table
+/// through every dispatch level. Single-threaded use; not thread-safe.
+static mut QF_TABLE_PTR: Option<&'static [crate::quantized_float::QuantizedFloat]> = None;
+
+// ─── EntityState (per-decoder live state) ────────────────────────────────────
+
+pub struct EntityState {
+	/// classId per entityId; None = no entity at this slot.
+	pub entities: Vec<Option<u32>>,
+	/// Pre-allocated FieldPath pool sized to the worst-case packet (JS uses 8192).
+	pub paths: Vec<FieldPath>,
+	/// Baselines indexed by classId. Populated by `set_baseline` (JS forwards
+	/// these from string-table parsing).
+	pub baselines: std::collections::HashMap<u32, Vec<u8>>,
+	pub only_game_rules: bool,
+}
+
+impl EntityState {
+	pub fn new() -> Self {
+		Self {
+			entities: Vec::new(),
+			paths: vec![FieldPath::new(); 8192],
+			baselines: Default::default(),
+			only_game_rules: false,
+		}
+	}
+
+	pub fn reset(&mut self) {
+		self.entities.clear();
+		self.baselines.clear();
+	}
+
+	fn ensure_capacity(&mut self, id: u32) {
+		if (id as usize) >= self.entities.len() {
+			self.entities.resize((id as usize) + 1, None);
+		}
+	}
+
+	pub fn parse_entity_packet(
+		&mut self,
+		entity_data: &[u8],
+		updated_entries: u32,
+		has_pvs_vis_bits: u32,
+		class_info: &ClassInfo,
+		result: &mut DecodeResult,
+	) {
+		// SAFETY: single-threaded; cleared at end. Extend the qf_table lifetime
+		// to 'static through the static pointer trick. The table is owned by
+		// `class_info` whose lifetime exceeds this call.
+		unsafe {
+			QF_TABLE_PTR = Some(std::mem::transmute::<&[_], &'static [_]>(class_info.qf_table.as_slice()));
+		}
+		let _restore_guard = scopeguard_inline(|| unsafe { QF_TABLE_PTR = None });
+
+		let mut br = BitBuffer::new(entity_data.to_vec());
+		let mut entity_id: i64 = -1;
+
+		for _ in 0..updated_entries {
+			entity_id += 1 + br.read_ubit_var() as i64;
+			let ent_id_u32 = entity_id as u32;
+			let update_type = br.read_ubits(2);
+
+			if (update_type & 0b01) != 0 {
+				if update_type == 0b11 {
+					self.ensure_capacity(ent_id_u32);
+					self.entities[ent_id_u32 as usize] = None;
+					result.push_delete(ent_id_u32);
+				}
+			} else if update_type == 0b10 {
+				self.create_entity(&mut br, ent_id_u32, class_info, result);
+			} else {
+				if has_pvs_vis_bits > 0 {
+					let delta_cmd = br.read_ubits(2);
+					if (delta_cmd & 0x1) == 1 {
+						continue;
+					}
+				}
+				self.update_entity(&mut br, ent_id_u32, class_info, result);
+			}
+		}
+	}
+
+	fn create_entity(&mut self, br: &mut BitBuffer, entity_id: u32, class_info: &ClassInfo, result: &mut DecodeResult) {
+		let class_id = br.read_ubits(8);
+		let _serial = br.read_ubits(NSERIALBITS);
+		let _ = br.read_uvarint32();
+
+		let Some(cls) = class_info.classes.get(&class_id) else {
+			// Unknown class — skip silently. JS would throw, but we'd rather
+			// keep the decoder rolling and let JS report.
+			return;
+		};
+		let etype = entity_type(&cls.name);
+		self.ensure_capacity(entity_id);
+		self.entities[entity_id as usize] = Some(class_id);
+
+		// `onlyGameRules` skips emitting create/update ops for non-rules entities
+		// but still tracks classId so subsequent updates parse correctly.
+		let is_rules = etype == ENTITY_TYPE_RULES;
+		let emit = !self.only_game_rules || is_rules;
+
+		let count_slot = if emit {
+			let slot = result.begin_create(entity_id, class_id, etype, &cls.name);
+			result.transient_rec_count = 0;
+			Some(slot)
+		} else {
+			None
+		};
+
+		// Apply baseline first (initial property snapshot for this class), then
+		// the in-band delta. Both produce update records appended to the same op.
+		if let Some(baseline) = self.baselines.get(&class_id).cloned() {
+			let mut bl_reader = BitBuffer::new(baseline);
+			self.update_entity_inner(&mut bl_reader, entity_id, class_info, result, emit);
+		}
+		self.update_entity_inner(br, entity_id, class_info, result, emit);
+
+		if let Some(slot) = count_slot {
+			let n = result.transient_rec_count;
+			result.patch_u32(slot, n);
+		}
+	}
+
+	fn update_entity(&mut self, br: &mut BitBuffer, entity_id: u32, class_info: &ClassInfo, result: &mut DecodeResult) {
+		let class_id = match self.entities.get(entity_id as usize).copied().flatten() {
+			Some(c) => c,
+			None => return,
+		};
+		let is_rules = class_info
+			.class_is_rules
+			.get(&class_id)
+			.copied()
+			.unwrap_or(false);
+		let emit = !self.only_game_rules || is_rules;
+
+		let slot = if emit {
+			let s = result.begin_update(entity_id);
+			result.transient_rec_count = 0;
+			Some(s)
+		} else {
+			None
+		};
+
+		self.update_entity_inner(br, entity_id, class_info, result, emit);
+
+		if let Some(slot) = slot {
+			let n = result.transient_rec_count;
+			result.patch_u32(slot, n);
+		}
+	}
+
+	fn update_entity_inner(
+		&mut self,
+		br: &mut BitBuffer,
+		entity_id: u32,
+		class_info: &ClassInfo,
+		result: &mut DecodeResult,
+		emit: bool,
+	) {
+		let class_id = match self.entities.get(entity_id as usize).copied().flatten() {
+			Some(c) => c,
+			None => return,
+		};
+		let cls = &class_info.classes[&class_id];
+
+		// parse_paths writes successive FieldPaths into `paths`. Caller pool
+		// must be sized for the worst case (JS uses 8192).
+		let n_updates = crate::fieldpath::parse_paths(br, &mut self.paths);
+
+		let class_prop_set = &class_info.prop_id_to_name;
+
+		for i in 0..n_updates {
+			let path = self.paths[i];
+			let info = find_field_and_decode(&path, &cls.serializer);
+			let prop_known = info.has_info && class_prop_set.contains_key(&info.prop_id);
+			decode_field(
+				br,
+				info.decoder,
+				info.prop_id,
+				info.has_info,
+				emit && prop_known,
+				result,
+			);
+		}
+	}
+}
+
+// Tiny scopeguard polyfill so we don't pull a crate dep for one closure.
+struct ScopeGuard<F: FnOnce()>(Option<F>);
+impl<F: FnOnce()> Drop for ScopeGuard<F> {
+	fn drop(&mut self) {
+		if let Some(f) = self.0.take() {
+			f();
+		}
+	}
+}
+fn scopeguard_inline<F: FnOnce()>(f: F) -> ScopeGuard<F> {
+	ScopeGuard(Some(f))
+}
+
+// Suppress the unused-import for QFF_* used by decode_qfloat indirectly.
+const _: u32 = QFF_ROUNDDOWN + QFF_ROUNDUP + QFF_ENCODE_ZERO;

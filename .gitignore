@@ -4,8 +4,13 @@ dist
 replay-generator
 *.tgz
 tests/fixtures/*.dem
+tests/fixtures/*.bin
+examples/*.actual.txt
 coverage/
 comparison
 *.dem
 .vscode
 .claude
+# Phase 0+: Rust artefacts + per-platform .node binaries
+crates/native/target/
+crates/native/*.node

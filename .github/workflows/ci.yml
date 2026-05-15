@@ -38,7 +38,24 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/native/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('crates/native/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - run: bun install --frozen-lockfile
+
+      - name: Build native addon (linux-x64-gnu)
+        run: npm run build:native
 
       - run: npm run build
 

@@ -1,3 +1,7 @@
+// Side-effect: load native addon at package init (Phase 0 placeholder; real
+// entity-decoder wiring lands in later phases).
+import './native/index.js';
+
 export { DemoReader } from './parser/index.js';
 export { EntityMode } from './parser/entities/types.js';
 export type { EndReason } from './parser/entities/types.js';

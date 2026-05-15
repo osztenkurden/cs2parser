@@ -1,4 +1,4 @@
-import { createReadStream, readFileSync } from 'fs';
+import { createReadStream, readFileSync, writeFileSync } from 'fs';
 import { DemoReader, EntityMode } from './../src/index.js';
 
 const MODES = ['path-stream', 'path-chunked', 'buffer', 'stream'] as const;
@@ -92,10 +92,43 @@ parser.on('end', () => {
 // parser.on('svc_ServerInfo', console.log);
 // parser.on('debug', console.log);
 
+/**
+ * Decode a Node Buffer as text, auto-detecting UTF-8 / UTF-16 LE / UTF-16 BE BOMs.
+ * The repo's `stream_output.txt` reference is stored as UTF-16 LE, but a
+ * regenerated one may be UTF-8 depending on the writer — handle both.
+ */
+function decodeText(buf: Buffer): string {
+	if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+		return buf.toString('utf16le').slice(1); // strip BOM
+	}
+	if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+		// UTF-16 BE — swap bytes, then decode as LE
+		const swapped = Buffer.alloc(buf.length - 2);
+		for (let i = 2; i < buf.length; i += 2) {
+			swapped[i - 2] = buf[i + 1]!;
+			swapped[i - 1] = buf[i]!;
+		}
+		return swapped.toString('utf16le');
+	}
+	// UTF-8 (with or without BOM)
+	const start = buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf ? 3 : 0;
+	return buf.subarray(start).toString('utf8');
+}
+
 function compare(refPath: string) {
-	const reference = readFileSync(refPath, 'utf-8');
-	const refLines = reference.split('\n').filter(l => l.length > 0);
-	const outLines = output.filter(l => l.trim().length > 0);
+	// Dump actual output alongside the reference so it can be inspected /
+	// promoted as the new reference if the diff is intentional.
+	const actualPath = refPath.replace(/(\.[^.]+)?$/, '.actual$1');
+	writeFileSync(actualPath, output.join('\n') + '\n', 'utf-8');
+
+	const reference = decodeText(readFileSync(refPath));
+	// Strip CR so CRLF references and LF actuals compare equal. Also split
+	// multi-line entries (e.g. `log('\n=== Header ===')`) so the actual side
+	// matches the line-per-entry shape of the reference.
+	const normalize = (s: string) => s.replace(/\r$/, '');
+	const splitFilter = (s: string) => s.split('\n').map(normalize).filter(l => l.length > 0);
+	const refLines = splitFilter(reference);
+	const outLines = output.flatMap(splitFilter);
 
 	let mismatches = 0;
 	const maxLines = Math.max(refLines.length, outLines.length);
@@ -112,10 +145,11 @@ function compare(refPath: string) {
 		}
 	}
 
+	console.log(`\n(actual output written to ${actualPath})`);
 	if (mismatches === 0) {
-		console.log('\n=== Compare: OK (output matches reference) ===');
+		console.log('=== Compare: OK (output matches reference) ===');
 	} else {
-		console.log(`\n=== Compare: ${mismatches} difference(s) found ===`);
+		console.log(`=== Compare: ${mismatches} difference(s) found ===`);
 		process.exitCode = 1;
 	}
 }

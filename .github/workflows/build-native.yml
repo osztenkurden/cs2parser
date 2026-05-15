@@ -1,0 +1,103 @@
+name: Build native
+
+# Builds the per-platform `cs2parser-native` .node binaries.
+# Runs on every push to master + on release tags. Artefacts get downloaded by
+# release.yml when a release is cut.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  DEBUG: napi:*
+  APP_NAME: cs2parser-native
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: npm run build:native
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: |
+              sudo apt-get update -y
+              sudo apt-get install -y gcc-x86-64-linux-gnu
+              npm run build:native
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            build: cd crates/native && npx napi build --platform --release --target x86_64-unknown-linux-musl
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+            build: cd crates/native && npx napi build --platform --release --target aarch64-unknown-linux-gnu
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: npm run build:native
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: |
+              rustup target add aarch64-apple-darwin
+              cd crates/native && npx napi build --platform --release --target aarch64-apple-darwin
+    name: ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.host }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Setup Rust toolchain
+        if: ${{ !matrix.settings.docker }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/native/target
+          key: ${{ matrix.settings.target }}-cargo-${{ hashFiles('crates/native/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.settings.target }}-cargo-
+
+      - name: Install dependencies
+        if: ${{ !matrix.settings.docker }}
+        run: npm install --ignore-scripts
+
+      - name: Build (host)
+        if: ${{ !matrix.settings.docker }}
+        run: ${{ matrix.settings.build }}
+
+      - name: Build (docker)
+        if: ${{ matrix.settings.docker }}
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ matrix.settings.docker }}
+          options: -v ${{ github.workspace }}:/workspace -w /workspace
+          run: |
+            npm install --ignore-scripts
+            ${{ matrix.settings.build }}
+
+      - name: Upload .node artefact
+        uses: actions/upload-artifact@v5
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: crates/native/${{ env.APP_NAME }}.*.node
+          if-no-files-found: error
