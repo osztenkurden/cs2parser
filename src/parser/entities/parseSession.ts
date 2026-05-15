@@ -19,22 +19,11 @@ import {
 	type StringTableObject
 } from '../stringtables.js';
 import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
-import { EntityParser } from './entityParser.js';
 import type { DemoReader } from '../index.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
-import { createAllocator } from './allocator.js';
 import { optionalSvcIds, type optionalSvcMessages } from '../descriptors/svc.js';
 import { native } from '../../native/index.js';
 import { applyDecodeResult } from './applyDecodeResult.js';
-
-/**
- * Phase 7 default: the Rust entity decoder owns the per-packet hot path. Set
- * `CS2P_RUST_DECODER=0` to fall back to the TypeScript `EntityParser` during
- * the soak window; both implementations are kept side-by-side until the
- * deprecated JS files (entityParser.ts / fieldPath{s,Ops}.ts / quantizedFloat.ts
- * / classInfo.ts / constructorFields.ts / allocator.ts) are removed.
- */
-const USE_NATIVE_DECODER = process.env.CS2P_RUST_DECODER !== '0';
 
 // This will allow to optionally parse any message defined in optionalSvcMessages, and will add autocomplete to all options defined there.
 export type ParseSettings = {
@@ -44,7 +33,6 @@ export type ParseSettings = {
 export class ParseSession {
 	// Module-level singletons (shared across sessions)
 	private static readonly PACKET_TEMP_BUFFER = new Uint8Array(new ArrayBuffer(2 ** 18));
-	private static readonly entityAllocator = createAllocator();
 	private static readonly READ_BUFFER_SIZE = 4 * 1024 * 1024; // 4 MB
 
 	// Buffer state (replaces ByteBuffer for zero-overhead frame reading)
@@ -61,7 +49,6 @@ export class ParseSession {
 	private fileSize = 0;
 
 	// Parse state
-	private entityParser: EntityParser | null = null;
 	private nativeDecoder: InstanceType<typeof native.EntityDecoderNative> | null = null;
 	private nativeReady = false;
 	private sendTables: CDemoSendTables | null = null;
@@ -560,45 +547,38 @@ export class ParseSession {
 				const data = this.baseParse(decoder.decode, size, isCompressed);
 				if (!data || !this.sendTables) break;
 
-				if (USE_NATIVE_DECODER) {
-					// Rust builds the canonical classInfo. Reuse its propIdToName /
-					// propIdToDecoder so the JS helpers (Player.health etc.) read
-					// from the same name table the decoder writes through.
-					const stData = this.sendTables.data!;
-					const stReader = new BitBuffer(stData);
-					const innerSize = stReader.ReadUVarInt32();
-					const innerBytes = Buffer.alloc(innerSize);
-					stReader.readBytes(innerBytes);
-					const classInfoBytes = Buffer.from(CDemoClassInfo.encode(data).finish());
-					this.nativeDecoder = new native.EntityDecoderNative();
-					const meta = this.nativeDecoder.initClassInfo(
-						innerBytes,
-						classInfoBytes,
-						this.entityMode === EntityMode.ONLY_GAME_RULES
-					);
-					if (this.parser) {
-						const idToName: Record<number, string> = {};
-						const nameToId = new Map<string, number>();
-						for (const [k, v] of Object.entries(meta.propIdToName)) {
-							const id = Number(k);
-							idToName[id] = v;
-							nameToId.set(v, id);
-						}
-						this.parser.propIdToName = idToName;
-						this.parser._propIdByName = nameToId;
-						this.parser._native = this.nativeDecoder;
-						// propIdToDecoder uses the same integer IDs as the JS Decoders.*
-						// constants; meta returns them already-coerced.
-						const idToDec: Record<number, number> = {};
-						for (const [k, v] of Object.entries(meta.propIdToDecoder)) idToDec[Number(k)] = v;
-						this.parser.propIdToDecoder = idToDec as never;
+				// Hand off to Rust: build classInfo internally, mirror the
+				// resulting propIdToName / propIdToDecoder onto the DemoReader
+				// so the typed helpers read from the same name table the
+				// decoder writes through.
+				const stData = this.sendTables.data!;
+				const stReader = new BitBuffer(stData);
+				const innerSize = stReader.ReadUVarInt32();
+				const innerBytes = Buffer.alloc(innerSize);
+				stReader.readBytes(innerBytes);
+				const classInfoBytes = Buffer.from(CDemoClassInfo.encode(data).finish());
+				this.nativeDecoder = new native.EntityDecoderNative();
+				const meta = this.nativeDecoder.initClassInfo(
+					innerBytes,
+					classInfoBytes,
+					this.entityMode === EntityMode.ONLY_GAME_RULES
+				);
+				if (this.parser) {
+					const idToName: Record<number, string> = {};
+					const nameToId = new Map<string, number>();
+					for (const [k, v] of Object.entries(meta.propIdToName)) {
+						const id = Number(k);
+						idToName[id] = v;
+						nameToId.set(v, id);
 					}
-					this.nativeReady = true;
-				} else {
-					// v2: the JS-side EntityParser fallback was retired. Use
-					// the Rust decoder (default) or fail loudly.
-					throw new Error('CS2P_RUST_DECODER=0 is no longer supported; remove the env var.');
+					this.parser.propIdToName = idToName;
+					this.parser._propIdByName = nameToId;
+					this.parser._native = this.nativeDecoder;
+					const idToDec: Record<number, number> = {};
+					for (const [k, v] of Object.entries(meta.propIdToDecoder)) idToDec[Number(k)] = v;
+					this.parser.propIdToDecoder = idToDec;
 				}
+				this.nativeReady = true;
 
 				this.sendTables = null;
 				break;
@@ -689,7 +669,11 @@ export class ParseSession {
 						reader.skipBytesBetter(size);
 						continue;
 					}
-					const msgContent = ParseSession.entityAllocator.alloc(size);
+					// Used to allocate from the JS-side `entityAllocator` pool;
+					// after Stage 5 the .dem path is fully Rust-resident and only
+					// broadcast lands here. A fresh Buffer per entity packet is
+					// cheap enough for that path.
+					const msgContent = Buffer.alloc(size);
 					allocated.push(msgContent);
 					reader.readBytes(msgContent);
 					packetEntitiesQueue.push(CSVCMsg_PacketEntities.decode(msgContent));
@@ -760,9 +744,9 @@ export class ParseSession {
 				}
 			}
 		}
-		for (const allocatedElement of allocated) {
-			ParseSession.entityAllocator.free(allocatedElement);
-		}
+		// Buffers from `allocated` (one per svc_PacketEntities in this packet)
+		// drop on GC; pre-Stage-5 we recycled them via the entityAllocator pool.
+		allocated.length = 0;
 		for (const event of gameEventQueue) {
 			this.enqueueEvent('gameevent', event);
 		}

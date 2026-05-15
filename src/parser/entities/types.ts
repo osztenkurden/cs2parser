@@ -6,7 +6,13 @@ import type { CSVCMsg_ServerInfo, MessageFns, SVC_Messages } from '../../ts-prot
 import type { EBaseUserMessages } from '../../ts-proto/usermessages.js';
 import type { optionalSvcMessages } from '../descriptors/svc.js';
 import type { createStringTable, updateStringTable } from '../stringtables.js';
-import type { EntityTypeEnum } from './entityParser.js';
+
+/**
+ * Entity-type discriminator written by the Rust decoder in `entitycreated`
+ * events. Values map to the Rust constants in `entity_parser.rs`:
+ * 0 = PlayerController, 1 = Rules, 2 = Projectile, 3 = Team, 4 = Normal, 5 = C4.
+ */
+export type EntityTypeEnum = 0 | 1 | 2 | 3 | 4 | 5;
 
 /** Why a parse session terminated. Set on the `end` event. */
 export type EndReason = 'stop' | 'timeout' | 'cancelled' | 'error';

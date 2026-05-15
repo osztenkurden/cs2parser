@@ -12,8 +12,13 @@ import { fileURLToPath } from 'url';
 
 // Import parsing internals
 import { DemoReader } from '../src/parser/index.js';
-import type { Decoder } from '../src/parser/entities/constructorFields.js';
 import { EntityMode } from '../src/index.js';
+
+// The Rust decoder exposes `propIdToDecoder` as `Record<number, number>` —
+// numeric IDs matching the old JS `Decoders.*` enum (see
+// `crates/native/src/classinfo.rs::decoder_to_id`). 0 = QuantizedFloat (the
+// only variant the JS used to represent as an object).
+type Decoder = number;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, '..', 'src', 'generated');
@@ -47,7 +52,6 @@ const DECODER_ID_TO_TS: Record<number, string> = {
 };
 
 function decoderToTsType(decoder: Decoder): string {
-	if (typeof decoder === 'object') return 'number'; // QuantalizedFloatDecoder
 	return DECODER_ID_TO_TS[decoder] ?? 'unknown';
 }
 

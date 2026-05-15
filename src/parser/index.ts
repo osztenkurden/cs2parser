@@ -6,7 +6,6 @@ import { GameEvents } from './descriptors/gameEventEmitter.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { type Readable } from 'stream';
 import { EntityMode, type EmitQueue, type OutputEvents } from './entities/types.js';
-import type { Decoder } from './entities/constructorFields.js';
 import { ParseSession, type ParseSettings } from './entities/parseSession.js';
 import { Player } from '../helpers/player.js';
 import snappy from 'snappy';
@@ -482,7 +481,12 @@ export class DemoReader extends EventEmitter<{
 	};
 
 	propIdToName: Record<number, string> = {};
-	propIdToDecoder: Record<number, Decoder> = {};
+	/** Numeric decoder ID per prop_id. Mirrors the integer constants of the
+	 * old `Decoders.*` enum from `src/parser/entities/constructorFields.ts` —
+	 * 0 = QuantizedFloat, 1 = VectorNormal, …, 22 = BinaryBlock. The Rust
+	 * decoder populates these; the map is exposed for callers that want to
+	 * introspect what wire decoder a given prop uses. */
+	propIdToDecoder: Record<number, number> = {};
 
 	private _emitQueue: EmitQueue = queue => {
 		if (this._hasEnded) return;
