@@ -108,7 +108,12 @@ jobs:
         with:
           image: ${{ matrix.settings.docker }}
           options: -v ${{ github.workspace }}:/workspace -w /workspace
+          # The `napi-rs/nodejs-rust:lts-*` images ship a Rust toolchain that's
+          # behind current stable. `prost-build` pulls in `wit-bindgen-rust-macro`
+          # which needs the `edition2024` feature (stable since Rust 1.85), so
+          # refresh the toolchain before building.
           run: |
+            rustup update stable && rustup default stable
             npm install --ignore-scripts
             cd crates/native && npx napi build --platform --release --target ${{ matrix.settings.target }}
 
