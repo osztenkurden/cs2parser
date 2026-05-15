@@ -63,6 +63,31 @@ pub const VK_U64: u8 = 5;
 pub const VK_STRING: u8 = 6;
 pub const VK_BLOB: u8 = 7;
 
+/// Per-property decoded value. Stored in `EntityRecord.properties` so the
+/// JS getter API can read them on demand (Stage 1+).
+#[derive(Clone, Debug)]
+pub enum Value {
+	Bool(bool),
+	I32(i32),
+	U32(u32),
+	F32(f32),
+	Vec3([f64; 3]),
+	U64(u64),
+	String(String),
+	Blob(Vec<u8>),
+}
+
+/// Live entity record. Properties are keyed by the global `prop_id` assigned
+/// at classInfo build time (matches the JS `propIdToName` / `propIdToDecoder`
+/// indices).
+#[derive(Debug)]
+pub struct EntityRecord {
+	pub class_id: u32,
+	pub entity_type: u8,
+	pub class_name: String,
+	pub properties: std::collections::HashMap<u32, Value>,
+}
+
 #[derive(Default)]
 pub struct DecodeResult {
 	pub ops: Vec<u8>,
@@ -122,34 +147,23 @@ impl DecodeResult {
 		self.op_count += 1;
 	}
 
-	/// Returns the byte offset of the update-count slot so it can be patched
-	/// after the value records are appended.
-	fn begin_create(
+	/// v2: lifecycle-only create. No nested update records — properties are
+	/// already in the entity's Rust-resident HashMap by the time JS receives
+	/// this op, so the 'entitycreated' listener can read them via getters.
+	fn begin_create_lifecycle(
 		&mut self,
 		entity_id: u32,
 		class_id: u32,
 		entity_type: u8,
 		class_name: &str,
-	) -> usize {
+	) {
 		let name_idx = self.intern_class(class_name);
 		self.push_u8(TAG_CREATE);
 		self.push_u32(entity_id);
 		self.push_u32(class_id);
 		self.push_u8(entity_type);
 		self.push_u32(name_idx);
-		let count_slot = self.ops.len();
-		self.push_u32(0); // placeholder
 		self.op_count += 1;
-		count_slot
-	}
-
-	fn begin_update(&mut self, entity_id: u32) -> usize {
-		self.push_u8(TAG_UPDATE);
-		self.push_u32(entity_id);
-		let count_slot = self.ops.len();
-		self.push_u32(0);
-		self.op_count += 1;
-		count_slot
 	}
 
 	fn push_update_rec(&mut self, prop_id: u32, kind: u8, idx: u32) {
@@ -182,6 +196,23 @@ impl DecodeResult {
 		let idx = self.blobs.len() as u32;
 		self.blobs.push(b);
 		idx
+	}
+
+	/// Encode a `Value` into the side-buffers, returning `(kind, idx)` for the
+	/// matching `update_rec`. Used by `decode_field` after Stage 1: the value
+	/// is already decoded + stored in the entity record, and we just need to
+	/// stream it into the result for the transitional JS apply path.
+	fn push_value(&mut self, v: &Value) -> (u8, u32) {
+		match v {
+			Value::Bool(b) => (VK_BOOL, self.alloc_f64(if *b { 1.0 } else { 0.0 })),
+			Value::I32(n) => (VK_I32, self.alloc_f64(*n as f64)),
+			Value::U32(n) => (VK_U32, self.alloc_f64(*n as f64)),
+			Value::F32(f) => (VK_F32, self.alloc_f64(*f as f64)),
+			Value::Vec3(v) => (VK_VEC3, self.alloc_vec3(*v)),
+			Value::U64(u) => (VK_U64, self.alloc_bigint(*u)),
+			Value::String(s) => (VK_STRING, self.alloc_string(s.clone())),
+			Value::Blob(b) => (VK_BLOB, self.alloc_blob(b.clone())),
+		}
 	}
 }
 
@@ -234,142 +265,60 @@ fn find_field_and_decode(fp: &FieldPath, ser: &SerializerN) -> FieldInfo {
 
 // ─── Per-field decode ────────────────────────────────────────────────────────
 
-fn decode_field(
+/// Decodes the next field from the bit stream and returns its `Value`.
+/// The bit stream MUST advance regardless of whether the value is wanted —
+/// skipping a field is a protocol-level error.
+fn decode_value(
 	br: &mut BitBuffer,
 	decoder: Decoder,
-	prop_id: u32,
-	has_info: bool,
-	class_prop_id_to_name_contains: bool,
-	result: &mut DecodeResult,
-) {
+	qf_table: &[crate::quantized_float::QuantizedFloat],
+) -> Value {
 	use Decoder::*;
-	// Decode unconditionally — the bit stream must advance regardless of whether
-	// the prop survives the propIdToName filter (it's a wire-format invariant).
-	let kind: u8;
-	let idx: u32;
 	match decoder {
-		QuantizedFloat(qi) => {
-			// SAFETY/NB: qf_table is borrowed through the EntityState; passed
-			// via a thread-local because this fn is shape-locked.
-			let qf = unsafe { &QF_TABLE_PTR.expect("qf_table set")[qi as usize] };
-			let v = decode_qfloat(br, qf);
-			kind = VK_F32;
-			idx = result.alloc_f64(v as f64);
-		}
-		VectorNormal => {
-			let v = br.decode_normal_vec();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		VectorNoScale => {
-			let v = br.decode_vector_noscale();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		VectorFloatCoord => {
-			let v = br.decode_vector_float_coord();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		Boolean | Component => {
-			let v = br.read_boolean();
-			kind = VK_BOOL;
-			idx = result.alloc_f64(if v { 1.0 } else { 0.0 });
-		}
-		NoScale => {
-			let v = br.read_float32_le();
-			kind = VK_F32;
-			idx = result.alloc_f64(v as f64);
-		}
-		Signed => {
-			let v = br.read_varint32();
-			kind = VK_I32;
-			idx = result.alloc_f64(v as f64);
-		}
-		Unsigned | Base | CentityHandle => {
-			let v = br.read_uvarint32();
-			kind = VK_U32;
-			idx = result.alloc_f64(v as f64);
-		}
-		FloatSimulationTime => {
-			let v = (br.read_uvarint32() as f64) * (1.0 / 30.0);
-			kind = VK_F32;
-			idx = result.alloc_f64(v);
-		}
-		FloatCoord => {
-			let v = br.read_bit_coord();
-			kind = VK_F32;
-			idx = result.alloc_f64(v as f64);
-		}
-		Fixed64 => {
-			let v = br.decode_uint64();
-			kind = VK_U64;
-			idx = result.alloc_bigint(v);
-		}
-		Unsigned64 => {
-			let v = br.read_uvarint64();
-			kind = VK_U64;
-			idx = result.alloc_bigint(v);
-		}
-		Qangle3 => {
-			let v = br.decode_qangle_all3();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		QanglePitchYaw => {
-			let v = br.decode_qangle_pitch_yaw();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		QangleVar => {
-			let v = br.decode_qangle_variant();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		QanglePres => {
-			let v = br.decode_qangle_variant_pres();
-			kind = VK_VEC3;
-			idx = result.alloc_vec3(v);
-		}
-		String => {
-			let s = br.read_string();
-			kind = VK_STRING;
-			idx = result.alloc_string(s);
-		}
-		Ammo => {
-			let v = br.decode_ammo();
-			kind = VK_U32;
-			idx = result.alloc_f64(v as f64);
-		}
-		GameModeRules => {
-			let v = br.read_ubits(7);
-			kind = VK_U32;
-			idx = result.alloc_f64(v as f64);
-		}
+		QuantizedFloat(qi) => Value::F32(decode_qfloat(br, &qf_table[qi as usize])),
+		VectorNormal => Value::Vec3(br.decode_normal_vec()),
+		VectorNoScale => Value::Vec3(br.decode_vector_noscale()),
+		VectorFloatCoord => Value::Vec3(br.decode_vector_float_coord()),
+		Boolean | Component => Value::Bool(br.read_boolean()),
+		NoScale => Value::F32(br.read_float32_le()),
+		Signed => Value::I32(br.read_varint32()),
+		Unsigned | Base | CentityHandle => Value::U32(br.read_uvarint32()),
+		FloatSimulationTime => Value::F32(((br.read_uvarint32() as f64) * (1.0 / 30.0)) as f32),
+		FloatCoord => Value::F32(br.read_bit_coord()),
+		Fixed64 => Value::U64(br.decode_uint64()),
+		Unsigned64 => Value::U64(br.read_uvarint64()),
+		Qangle3 => Value::Vec3(br.decode_qangle_all3()),
+		QanglePitchYaw => Value::Vec3(br.decode_qangle_pitch_yaw()),
+		QangleVar => Value::Vec3(br.decode_qangle_variant()),
+		QanglePres => Value::Vec3(br.decode_qangle_variant_pres()),
+		String => Value::String(br.read_string()),
+		Ammo => Value::U32(br.decode_ammo()),
+		GameModeRules => Value::U32(br.read_ubits(7)),
 		BinaryBlock => {
 			let len = br.read_uvarint32() as usize;
 			let mut out = vec![0u8; len];
 			br.read_bytes_into(&mut out);
-			kind = VK_BLOB;
-			idx = result.alloc_blob(out);
+			Value::Blob(out)
 		}
-	}
-	if has_info && class_prop_id_to_name_contains {
-		result.push_update_rec(prop_id, kind, idx);
-		result.transient_rec_count += 1;
 	}
 }
 
-/// Static pointer to the active session's qf_table. Set on every call to
-/// `parse_entity_packet`. Used by `decode_field` to avoid threading the table
-/// through every dispatch level. Single-threaded use; not thread-safe.
-static mut QF_TABLE_PTR: Option<&'static [crate::quantized_float::QuantizedFloat]> = None;
 
 // ─── EntityState (per-decoder live state) ────────────────────────────────────
 
 pub struct EntityState {
-	/// classId per entityId; None = no entity at this slot.
-	pub entities: Vec<Option<u32>>,
+	/// Full live record per entity id. `None` = the entity isn't tracked for
+	/// property storage (deleted, never created, or filtered by
+	/// `only_game_rules`). Even when `entities[id]` is `None`, `class_ids[id]`
+	/// may be `Some` — see `class_ids`.
+	pub entities: Vec<Option<EntityRecord>>,
+	/// Per-entity class id, tracked independently of `entities`. Required
+	/// because subsequent updates to an entity need its class serializer to
+	/// walk the wire stream, even when the entity itself isn't being stored
+	/// (e.g. non-Rules entities in `only_game_rules` mode). Without this,
+	/// skipped updates would not consume their bit-stream bytes and desync the
+	/// decoder for every entity that follows in the same packet.
+	pub class_ids: Vec<Option<u32>>,
 	/// Pre-allocated FieldPath pool sized to the worst-case packet (JS uses 8192).
 	pub paths: Vec<FieldPath>,
 	/// Baselines indexed by classId. Populated by `set_baseline` (JS forwards
@@ -382,6 +331,7 @@ impl EntityState {
 	pub fn new() -> Self {
 		Self {
 			entities: Vec::new(),
+			class_ids: Vec::new(),
 			paths: vec![FieldPath::new(); 8192],
 			baselines: Default::default(),
 			only_game_rules: false,
@@ -390,12 +340,14 @@ impl EntityState {
 
 	pub fn reset(&mut self) {
 		self.entities.clear();
+		self.class_ids.clear();
 		self.baselines.clear();
 	}
 
 	fn ensure_capacity(&mut self, id: u32) {
 		if (id as usize) >= self.entities.len() {
-			self.entities.resize((id as usize) + 1, None);
+			self.entities.resize_with((id as usize) + 1, || None);
+			self.class_ids.resize((id as usize) + 1, None);
 		}
 	}
 
@@ -407,14 +359,6 @@ impl EntityState {
 		class_info: &ClassInfo,
 		result: &mut DecodeResult,
 	) {
-		// SAFETY: single-threaded; cleared at end. Extend the qf_table lifetime
-		// to 'static through the static pointer trick. The table is owned by
-		// `class_info` whose lifetime exceeds this call.
-		unsafe {
-			QF_TABLE_PTR = Some(std::mem::transmute::<&[_], &'static [_]>(class_info.qf_table.as_slice()));
-		}
-		let _restore_guard = scopeguard_inline(|| unsafe { QF_TABLE_PTR = None });
-
 		let mut br = BitBuffer::new(entity_data.to_vec());
 		let mut entity_id: i64 = -1;
 
@@ -426,8 +370,12 @@ impl EntityState {
 			if (update_type & 0b01) != 0 {
 				if update_type == 0b11 {
 					self.ensure_capacity(ent_id_u32);
+					let was_stored = self.entities[ent_id_u32 as usize].is_some();
 					self.entities[ent_id_u32 as usize] = None;
-					result.push_delete(ent_id_u32);
+					self.class_ids[ent_id_u32 as usize] = None;
+					if was_stored {
+						result.push_delete(ent_id_u32);
+					}
 				}
 			} else if update_type == 0b10 {
 				self.create_entity(&mut br, ent_id_u32, class_info, result);
@@ -455,110 +403,95 @@ impl EntityState {
 		};
 		let etype = entity_type(&cls.name);
 		self.ensure_capacity(entity_id);
-		self.entities[entity_id as usize] = Some(class_id);
+		self.class_ids[entity_id as usize] = Some(class_id);
 
-		// `onlyGameRules` skips emitting create/update ops for non-rules entities
-		// but still tracks classId so subsequent updates parse correctly.
+		// `onlyGameRules` mode: track only Rules-type entities. Non-rules entities
+		// still parse their wire bytes (mandatory for byte-stream alignment) but
+		// we don't allocate an EntityRecord for them.
 		let is_rules = etype == ENTITY_TYPE_RULES;
-		let emit = !self.only_game_rules || is_rules;
+		let store = !self.only_game_rules || is_rules;
 
-		let count_slot = if emit {
-			let slot = result.begin_create(entity_id, class_id, etype, &cls.name);
-			result.transient_rec_count = 0;
-			Some(slot)
+		if store {
+			self.entities[entity_id as usize] = Some(EntityRecord {
+				class_id,
+				entity_type: etype,
+				class_name: cls.name.clone(),
+				properties: std::collections::HashMap::new(),
+			});
 		} else {
-			None
-		};
+			self.entities[entity_id as usize] = None;
+		}
 
-		// Apply baseline first (initial property snapshot for this class), then
-		// the in-band delta. Both produce update records appended to the same op.
+		// v2: emit only the create lifecycle event — properties aren't shipped
+		// in the result stream anymore (Rust is the source of truth, JS reads
+		// via getters). Walk both baseline + delta so the entity's HashMap is
+		// populated before the JS-side 'entitycreated' listener fires.
+		if store {
+			result.begin_create_lifecycle(entity_id, class_id, etype, &cls.name);
+		}
 		if let Some(baseline) = self.baselines.get(&class_id).cloned() {
 			let mut bl_reader = BitBuffer::new(baseline);
-			self.update_entity_inner(&mut bl_reader, entity_id, class_info, result, emit);
+			self.run_path_stream(&mut bl_reader, entity_id, class_id, class_info, result, store);
 		}
-		self.update_entity_inner(br, entity_id, class_info, result, emit);
-
-		if let Some(slot) = count_slot {
-			let n = result.transient_rec_count;
-			result.patch_u32(slot, n);
-		}
+		self.run_path_stream(br, entity_id, class_id, class_info, result, store);
 	}
 
-	fn update_entity(&mut self, br: &mut BitBuffer, entity_id: u32, class_info: &ClassInfo, result: &mut DecodeResult) {
-		let class_id = match self.entities.get(entity_id as usize).copied().flatten() {
+	fn update_entity(&mut self, br: &mut BitBuffer, entity_id: u32, class_info: &ClassInfo, _result: &mut DecodeResult) {
+		// v2: updates write to Rust-resident state only. The JS apply path
+		// no longer walks per-property records — callers read on demand via
+		// the getter API. We still need to consume the wire bytes correctly,
+		// so `store` still gates HashMap writes but no result ops are emitted.
+		let class_id = match self.class_ids.get(entity_id as usize).copied().flatten() {
 			Some(c) => c,
 			None => return,
 		};
-		let is_rules = class_info
-			.class_is_rules
-			.get(&class_id)
-			.copied()
-			.unwrap_or(false);
-		let emit = !self.only_game_rules || is_rules;
+		let is_rules = class_info.class_is_rules.get(&class_id).copied().unwrap_or(false);
+		let store = !self.only_game_rules || is_rules;
 
-		let slot = if emit {
-			let s = result.begin_update(entity_id);
-			result.transient_rec_count = 0;
-			Some(s)
-		} else {
-			None
-		};
-
-		self.update_entity_inner(br, entity_id, class_info, result, emit);
-
-		if let Some(slot) = slot {
-			let n = result.transient_rec_count;
-			result.patch_u32(slot, n);
-		}
+		self.run_path_stream(br, entity_id, class_id, class_info, _result, store);
 	}
 
-	fn update_entity_inner(
+	/// Decode one path-stream from `br` against `entity_id`'s class serializer.
+	/// `store=false` skips the entity-record + result writes but still advances
+	/// the bit stream (mandatory for stream alignment).
+	fn run_path_stream(
 		&mut self,
 		br: &mut BitBuffer,
 		entity_id: u32,
+		class_id: u32,
 		class_info: &ClassInfo,
 		result: &mut DecodeResult,
-		emit: bool,
+		store: bool,
 	) {
-		let class_id = match self.entities.get(entity_id as usize).copied().flatten() {
-			Some(c) => c,
-			None => return,
-		};
 		let cls = &class_info.classes[&class_id];
-
-		// parse_paths writes successive FieldPaths into `paths`. Caller pool
-		// must be sized for the worst case (JS uses 8192).
 		let n_updates = crate::fieldpath::parse_paths(br, &mut self.paths);
-
 		let class_prop_set = &class_info.prop_id_to_name;
+		let qf_table = &class_info.qf_table;
 
 		for i in 0..n_updates {
 			let path = self.paths[i];
 			let info = find_field_and_decode(&path, &cls.serializer);
-			let prop_known = info.has_info && class_prop_set.contains_key(&info.prop_id);
-			decode_field(
-				br,
-				info.decoder,
-				info.prop_id,
-				info.has_info,
-				emit && prop_known,
-				result,
-			);
-		}
-	}
-}
+			let value = decode_value(br, info.decoder, qf_table);
 
-// Tiny scopeguard polyfill so we don't pull a crate dep for one closure.
-struct ScopeGuard<F: FnOnce()>(Option<F>);
-impl<F: FnOnce()> Drop for ScopeGuard<F> {
-	fn drop(&mut self) {
-		if let Some(f) = self.0.take() {
-			f();
+			if !store {
+				continue;
+			}
+			// Filter: only properties registered in the global propIdToName map
+			// (i.e. fields on "interesting" serializers) are stored / emitted.
+			// Other reads advance the bit stream but produce no visible state.
+			let prop_known = info.has_info && info.prop_id != 0 && class_prop_set.contains_key(&info.prop_id);
+			if !prop_known {
+				continue;
+			}
+
+			// v2: write to Rust-resident state only. JS reads via getters
+			// instead of walking a result-side record stream.
+			if let Some(ent) = self.entities[entity_id as usize].as_mut() {
+				ent.properties.insert(info.prop_id, value);
+			}
+			let _ = result; // suppress unused param
 		}
 	}
-}
-fn scopeguard_inline<F: FnOnce()>(f: F) -> ScopeGuard<F> {
-	ScopeGuard(Some(f))
 }
 
 // Suppress the unused-import for QFF_* used by decode_qfloat indirectly.

@@ -1,5 +1,4 @@
 import type { DemoReader } from '../parser/index.js';
-import type { ICCSPlayerPawn } from '../generated/entityTypes.js';
 import type { Player } from './player.js';
 
 const CELL_BITS = 9;
@@ -11,30 +10,31 @@ export interface Vector {
 	readonly z: number;
 }
 
-type PawnProps = Partial<ICCSPlayerPawn>;
-type PawnKey = keyof ICCSPlayerPawn;
-
+/**
+ * Pawn helper. Reads via the Rust-resident decoder's getter API. Position is
+ * computed from six separate cell/vec props — six FFI calls per position read.
+ * For tight loops, callers should cache the result.
+ */
 export class PlayerPawn {
 	constructor(
 		private _parser: DemoReader,
 		public readonly entityId: number
 	) {}
 
-	get entity() {
-		return this._parser.entities[this.entityId];
+	private _num(name: string): number | undefined {
+		return this._parser.getNumberProp(this.entityId, name);
 	}
-
-	private _prop<K extends PawnKey>(name: K): ICCSPlayerPawn[K] | undefined {
-		return (this.entity?.properties as PawnProps)?.[name];
+	private _bool(name: string): boolean | undefined {
+		return this._parser.getBoolProp(this.entityId, name);
 	}
 
 	get position(): Vector {
-		const cellX = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellX') ?? 0) as number;
-		const cellY = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellY') ?? 0) as number;
-		const cellZ = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellZ') ?? 0) as number;
-		const vecX = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecX') ?? 0) as number;
-		const vecY = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecY') ?? 0) as number;
-		const vecZ = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecZ') ?? 0) as number;
+		const cellX = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellX') ?? 0;
+		const cellY = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellY') ?? 0;
+		const cellZ = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellZ') ?? 0;
+		const vecX = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecX') ?? 0;
+		const vecY = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecY') ?? 0;
+		const vecZ = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecZ') ?? 0;
 		return {
 			x: cellX * (1 << CELL_BITS) - MAX_COORD + vecX,
 			y: cellY * (1 << CELL_BITS) - MAX_COORD + vecY,
@@ -43,19 +43,19 @@ export class PlayerPawn {
 	}
 
 	get health(): number {
-		return (this._prop('CCSPlayerPawn.m_iHealth') ?? 0) as number;
+		return this._num('CCSPlayerPawn.m_iHealth') ?? 0;
 	}
 
 	get maxHealth(): number {
-		return (this._prop('CCSPlayerPawn.m_iMaxHealth') ?? 100) as number;
+		return this._num('CCSPlayerPawn.m_iMaxHealth') ?? 100;
 	}
 
 	get armor(): number {
-		return (this._prop('CCSPlayerPawn.m_ArmorValue') ?? 0) as number;
+		return this._num('CCSPlayerPawn.m_ArmorValue') ?? 0;
 	}
 
 	get lifeState(): number {
-		return (this._prop('CCSPlayerPawn.m_lifeState') ?? 0) as number;
+		return this._num('CCSPlayerPawn.m_lifeState') ?? 0;
 	}
 
 	get isAlive(): boolean {
@@ -63,33 +63,33 @@ export class PlayerPawn {
 	}
 
 	get hasDefuser(): boolean {
-		return (this._prop('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasDefuser') ?? false) as boolean;
+		return this._bool('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasDefuser') ?? false;
 	}
 
 	get hasHelmet(): boolean {
-		return (this._prop('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasHelmet') ?? false) as boolean;
+		return this._bool('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasHelmet') ?? false;
 	}
 
 	get isScoped(): boolean {
-		return (this._prop('CCSPlayerPawn.m_bIsScoped') ?? false) as boolean;
+		return this._bool('CCSPlayerPawn.m_bIsScoped') ?? false;
 	}
 
 	get isWalking(): boolean {
-		return (this._prop('CCSPlayerPawn.m_bIsWalking') ?? false) as boolean;
+		return this._bool('CCSPlayerPawn.m_bIsWalking') ?? false;
 	}
 
 	get isDefusing(): boolean {
-		return (this._prop('CCSPlayerPawn.m_bIsDefusing') ?? false) as boolean;
+		return this._bool('CCSPlayerPawn.m_bIsDefusing') ?? false;
 	}
 
 	get eyeAngles(): { pitch: number; yaw: number } {
-		const raw = this._prop('CCSPlayerPawn.m_angEyeAngles');
-		if (Array.isArray(raw)) return { pitch: raw[0] ?? 0, yaw: raw[1] ?? 0 };
+		const raw = this._parser.getVec3Prop(this.entityId, 'CCSPlayerPawn.m_angEyeAngles');
+		if (raw && raw.length >= 2) return { pitch: raw[0]!, yaw: raw[1]! };
 		return { pitch: 0, yaw: 0 };
 	}
 
 	get flags(): number {
-		return (this._prop('CCSPlayerPawn.m_fFlags') ?? 0) as number;
+		return this._num('CCSPlayerPawn.m_fFlags') ?? 0;
 	}
 
 	get controller(): Player | undefined {
@@ -97,6 +97,6 @@ export class PlayerPawn {
 	}
 
 	get ownerEntityHandle(): number {
-		return (this._prop('CCSPlayerPawn.m_hOwnerEntity') ?? 0) as number;
+		return this._num('CCSPlayerPawn.m_hOwnerEntity') ?? 0;
 	}
 }

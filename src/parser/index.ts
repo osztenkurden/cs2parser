@@ -12,13 +12,13 @@ import { Player } from '../helpers/player.js';
 import snappy from 'snappy';
 import { Team } from '../helpers/team.js';
 import { GameRules } from '../helpers/gameRules.js';
-import type { TypedEntity, EntityProperties, KnownClassName, ICCSPlayerController } from '../generated/entityTypes.js';
-import { isEntityClass } from '../generated/entityTypes.js';
+import type { EntityProperties, KnownClassName } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
 import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
+import { native } from '../native/index.js';
 
 /** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
 const steamIdToAccountId = (steamId: bigint | number): number => {
@@ -34,10 +34,9 @@ export class DemoReader extends EventEmitter<{
 	private _hasEnded = false;
 	private _stream: Readable | null = null;
 
-	entities: TypedEntity[];
-	private _directWriteMode = false;
 	private tickInterval = NaN;
 	currentTick = -1;
+	private _directWriteMode = false; // legacy, retained for ParseSession internals
 
 	private _playerInfoMap: (CMsgPlayerInfo | undefined)[] = [];
 
@@ -48,6 +47,25 @@ export class DemoReader extends EventEmitter<{
 	private _accountIdToEntityId: Map<number, number> = new Map();
 
 	gameEvents = new GameEvents();
+
+	/**
+	 * Reverse lookup populated from `propIdToName` after `init_class_info`.
+	 * Helpers and the v2 getter API use this to translate fully-qualified
+	 * property names ("CCSPlayerController.m_iKills") into the integer
+	 * `prop_id` that the Rust decoder uses as its storage key.
+	 *
+	 * @internal — public for ParseSession to populate.
+	 */
+	_propIdByName: Map<string, number> = new Map();
+
+	/**
+	 * The active Rust decoder handle for the current parse. Populated by
+	 * `ParseSession` after `DEM_ClassInfo` arrives; used by the v2 getter
+	 * methods on `DemoReader` and (Stage 2+) by the helpers.
+	 *
+	 * @internal
+	 */
+	_native: InstanceType<typeof native.EntityDecoderNative> | null = null;
 
 	get currentTime(): number {
 		return this.currentTick * this.tickInterval;
@@ -73,16 +91,14 @@ export class DemoReader extends EventEmitter<{
 
 	/** Get a Player helper by controller entity ID. Requires EntityMode.ALL. */
 	getPlayer(entityId: number): Player | null {
-		const e = this.entities[entityId];
-		if (e && e.className === 'CCSPlayerController') {
+		if (this.getEntityClassName(entityId) === 'CCSPlayerController') {
 			return this._getOrCreate(this._playerCache, entityId, id => new Player(this, id));
 		}
 		return null;
 	}
 
 	getPawn(entityId: number): PlayerPawn | null {
-		const e = this.entities[entityId];
-		if (e && e.className === 'CCSPlayerPawn') {
+		if (this.getEntityClassName(entityId) === 'CCSPlayerPawn') {
 			return this._getOrCreate(this._pawnCache, entityId, id => new PlayerPawn(this, id));
 		}
 		return null;
@@ -90,14 +106,9 @@ export class DemoReader extends EventEmitter<{
 
 	/** All player controller entities as Player helpers. Requires EntityMode.ALL. */
 	get playerControllers(): Player[] {
-		const result: Player[] = [];
-		for (let i = 0; i < this.entities.length; i++) {
-			const e = this.entities[i];
-			if (e && e.className === 'CCSPlayerController') {
-				result.push(this._getOrCreate(this._playerCache, i, id => new Player(this, id)));
-			}
-		}
-		return result;
+		return this.findEntityIdsByClass('CCSPlayerController').map(id =>
+			this._getOrCreate(this._playerCache, id, eid => new Player(this, eid))
+		);
 	}
 
 	/**
@@ -113,13 +124,11 @@ export class DemoReader extends EventEmitter<{
 	getPlayerByInfo(info: CMsgPlayerInfo | null | undefined): Player | null {
 		if (!info || info.steamid === undefined) return null;
 		const target = String(info.steamid);
-		if (target === '0') return null; // bots share steamid '0' — ambiguous
-		for (let i = 0; i < this.entities.length; i++) {
-			const e = this.entities[i];
-			if (!e || e.className !== 'CCSPlayerController') continue;
-			const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
+		if (target === '0') return null;
+		for (const id of this.findEntityIdsByClass('CCSPlayerController')) {
+			const raw = this.getBigIntProp(id, 'CCSPlayerController.m_steamID');
 			if (raw !== undefined && String(raw) === target) {
-				return this._getOrCreate(this._playerCache, i, id => new Player(this, id));
+				return this._getOrCreate(this._playerCache, id, eid => new Player(this, eid));
 			}
 		}
 		return null;
@@ -132,56 +141,44 @@ export class DemoReader extends EventEmitter<{
 	 * controllers whose `m_steamID` was set after entity creation.
 	 */
 	getByAccountId(accountId: number): Player | null {
-		// Fast path: cached entityId. Validate against the live entity in case the slot
-		// was deleted, reused, or the controller's steamID changed.
 		const cached = this._accountIdToEntityId.get(accountId);
 		if (cached !== undefined) {
-			const e = this.entities[cached];
-			if (e && e.className === 'CCSPlayerController') {
-				const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
+			if (this.getEntityClassName(cached) === 'CCSPlayerController') {
+				const raw = this.getBigIntProp(cached, 'CCSPlayerController.m_steamID');
 				if (raw !== undefined && steamIdToAccountId(raw) === accountId) {
-					return this._getOrCreate(this._playerCache, cached, id => new Player(this, id));
+					return this._getOrCreate(this._playerCache, cached, eid => new Player(this, eid));
 				}
 			}
 			this._accountIdToEntityId.delete(accountId);
 		}
-
-		// Fallback: linear scan. Re-populates the map for any controller that was
-		// missing m_steamID at entitycreated time.
-		for (let i = 0; i < this.entities.length; i++) {
-			const e = this.entities[i];
-			if (!e || e.className !== 'CCSPlayerController') continue;
-			const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
+		for (const id of this.findEntityIdsByClass('CCSPlayerController')) {
+			const raw = this.getBigIntProp(id, 'CCSPlayerController.m_steamID');
 			if (raw === undefined) continue;
-			const id = steamIdToAccountId(raw);
-			this._accountIdToEntityId.set(id, i);
-			if (id === accountId) {
-				return this._getOrCreate(this._playerCache, i, id => new Player(this, id));
+			const accId = steamIdToAccountId(raw);
+			this._accountIdToEntityId.set(accId, id);
+			if (accId === accountId) {
+				return this._getOrCreate(this._playerCache, id, eid => new Player(this, eid));
 			}
 		}
 		return null;
 	}
 
-	/** All team entities as Team helper objects */
+	/** All team entities as Team helper objects, indexed by `teamNumber`. */
 	get teams(): Team[] {
 		const result: Team[] = [];
-		for (let i = 0; i < this.entities.length; i++) {
-			const e = this.entities[i];
-			if (e && e.className === 'CCSTeam') {
-				const t = this._getOrCreate(this._teamCache, i, id => new Team(this, id));
-				result[t.teamNumber] = t;
-			}
+		for (const id of this.findEntityIdsByClass('CCSTeam')) {
+			const t = this._getOrCreate(this._teamCache, id, eid => new Team(this, eid));
+			result[t.teamNumber] = t;
 		}
 		return result;
 	}
 
 	private _gameRulesEntityId: number | null = null;
 
-	/** Game rules helper (or null if not yet created) */
+	/** Game rules helper (or null if not yet created). */
 	get gameRules(): GameRules | null {
 		if (this._gameRulesEntityId === null) return null;
-		const e = this.entities[this._gameRulesEntityId];
-		if (!e) {
+		if (!this.getEntityClassName(this._gameRulesEntityId)) {
 			this._gameRulesEntityId = null;
 			this._gameRulesCache = null;
 			return null;
@@ -192,33 +189,140 @@ export class DemoReader extends EventEmitter<{
 		return this._gameRulesCache;
 	}
 
-	/** Get a typed entity by index and class name. Returns typed properties or undefined. */
-	getEntity<T extends KnownClassName>(entityId: number, className: T): EntityProperties<T> | undefined {
-		const e = this.entities[entityId];
-		if (isEntityClass(e, className)) {
-			return e.properties as EntityProperties<T>;
-		}
-		return undefined;
+	/**
+	 * v2: returns a fresh snapshot of an entity's properties, keyed by name.
+	 * Slower than the per-property getters (one FFI per prop on the entity);
+	 * callers that read many properties on hot paths should prefer the typed
+	 * getters (`getNumberProp`, etc.) directly.
+	 *
+	 * Returns `undefined` if no entity exists at `entityId`, or if `className`
+	 * is supplied and doesn't match.
+	 */
+	getEntity<T extends KnownClassName>(entityId: number, className?: T): EntityProperties<T> | undefined {
+		const actual = this.getEntityClassName(entityId);
+		if (!actual) return undefined;
+		if (className !== undefined && actual !== className) return undefined;
+		return this._buildPropertySnapshot(entityId) as EntityProperties<T>;
 	}
 
-	/** Find all entities of a specific class, with typed properties */
+	/** v2: find ids by class + build a snapshot per id. */
 	findEntities<T extends KnownClassName>(className: T): { entityId: number; properties: EntityProperties<T> }[] {
-		const result: { entityId: number; properties: EntityProperties<T> }[] = [];
-		for (let i = 0; i < this.entities.length; i++) {
-			const e = this.entities[i];
-			if (isEntityClass(e, className)) {
-				result.push({ entityId: i, properties: e.properties as EntityProperties<T> });
+		return this.findEntityIdsByClass(className).map(entityId => ({
+			entityId,
+			properties: this._buildPropertySnapshot(entityId) as EntityProperties<T>
+		}));
+	}
+
+	private _buildPropertySnapshot(entityId: number): Record<string, unknown> {
+		if (!this._native) return {};
+		const propIds = this._native.getEntityPropIds(entityId) ?? [];
+		const out: Record<string, unknown> = {};
+		for (const propId of propIds) {
+			const name = this.propIdToName[propId];
+			if (!name) continue;
+			// One typed read in priority order; matches the variant that's actually stored.
+			const num = this._native.getPropertyNumber(entityId, propId);
+			if (num !== null && num !== undefined) {
+				// Bool kind stored as 0/1 — recover the boolean via a second probe.
+				const asBool = this._native.getPropertyBool(entityId, propId);
+				out[name] = asBool !== null && asBool !== undefined ? asBool : num;
+				continue;
+			}
+			const s = this._native.getPropertyString(entityId, propId);
+			if (s !== null && s !== undefined) {
+				out[name] = s;
+				continue;
+			}
+			const v3 = this._native.getPropertyVec3(entityId, propId);
+			if (v3 !== null && v3 !== undefined) {
+				out[name] = Array.from(v3);
+				continue;
+			}
+			const big = this._native.getPropertyBigint(entityId, propId);
+			if (big !== null && big !== undefined) {
+				out[name] = big;
+				continue;
+			}
+			const blob = this._native.getPropertyBlob(entityId, propId);
+			if (blob !== null && blob !== undefined) {
+				out[name] = blob;
+				continue;
 			}
 		}
-		return result;
+		return out;
 	}
 
-	/** Re-exported type guard for narrowing entities */
-	static isEntityClass = isEntityClass;
+	// ─── v2 getter API (Rust-resident state) ──────────────────────────────
+	// Added alongside the existing `entities` array. Reads come from the Rust
+	// decoder's internal storage — no JS-side object materialisation.
+
+	/**
+	 * Look up a property's `prop_id` by its fully-qualified name
+	 * ("CCSPlayerController.m_iKills"). Cached on the DemoReader after
+	 * classInfo init; one Map probe per call.
+	 */
+	getPropId(name: string): number | undefined {
+		return this._propIdByName.get(name);
+	}
+
+	/**
+	 * Read a number-typed property (bool widened to 0/1, i32/u32/f32 widened
+	 * to JS number). Returns `undefined` if the entity / prop is unset, the
+	 * name doesn't resolve, or the stored value isn't number-shaped.
+	 */
+	getNumberProp(entityId: number, name: string): number | undefined {
+		const id = this._propIdByName.get(name);
+		if (id === undefined || !this._native) return undefined;
+		return this._native.getPropertyNumber(entityId, id) ?? undefined;
+	}
+
+	getStringProp(entityId: number, name: string): string | undefined {
+		const id = this._propIdByName.get(name);
+		if (id === undefined || !this._native) return undefined;
+		return this._native.getPropertyString(entityId, id) ?? undefined;
+	}
+
+	getVec3Prop(entityId: number, name: string): Float64Array | undefined {
+		const id = this._propIdByName.get(name);
+		if (id === undefined || !this._native) return undefined;
+		return this._native.getPropertyVec3(entityId, id) ?? undefined;
+	}
+
+	getBigIntProp(entityId: number, name: string): bigint | undefined {
+		const id = this._propIdByName.get(name);
+		if (id === undefined || !this._native) return undefined;
+		return this._native.getPropertyBigint(entityId, id) ?? undefined;
+	}
+
+	getBoolProp(entityId: number, name: string): boolean | undefined {
+		const id = this._propIdByName.get(name);
+		if (id === undefined || !this._native) return undefined;
+		return this._native.getPropertyBool(entityId, id) ?? undefined;
+	}
+
+	getBlobProp(entityId: number, name: string): Uint8Array | undefined {
+		const id = this._propIdByName.get(name);
+		if (id === undefined || !this._native) return undefined;
+		return this._native.getPropertyBlob(entityId, id) ?? undefined;
+	}
+
+	/** Class name of the live entity at `entityId`, or `undefined`. */
+	getEntityClassName(entityId: number): string | undefined {
+		return this._native?.getEntityClassName(entityId) ?? undefined;
+	}
+
+	/** All live entity ids. Snapshot at call time. */
+	getEntityIds(): number[] {
+		return this._native?.getEntityIds() ?? [];
+	}
+
+	/** Entity ids whose class name matches `className` exactly. */
+	findEntityIdsByClass<T extends string>(className: T): number[] {
+		return this._native?.findEntityIdsByClass(className) ?? [];
+	}
 
 	constructor() {
 		super();
-		this.entities = [];
 		this.gameEvents.listen(this);
 		this.on('end', () => {
 			this._hasEnded = true;
@@ -246,7 +350,7 @@ export class DemoReader extends EventEmitter<{
 			}
 		});
 
-		this.on('entitycreated', ([entityId, classId, entityType, className]) => {
+		this.on('entitycreated', ([entityId, _classId, _entityType, className]) => {
 			this._playerCache.delete(entityId);
 			this._teamCache.delete(entityId);
 			this._pawnCache.delete(entityId);
@@ -255,32 +359,15 @@ export class DemoReader extends EventEmitter<{
 				this._gameRulesCache = null;
 			}
 			if (className === 'CCSPlayerController') {
-				// In direct-write mode, baseline + initial-update properties are written
-				// before this listener fires (queue is flushed after the packet), so
-				// m_steamID is already populated for most controllers.
-				const e = this.entities[entityId];
-				const raw = (e?.properties as Partial<ICCSPlayerController> | undefined)?.[
-					'CCSPlayerController.m_steamID'
-				];
+				// Properties are already written into Rust-resident state before
+				// the 'entitycreated' event reaches us (baseline + initial delta run
+				// inside `parse_entity_packet`), so the steamID is readable here.
+				const raw = this.getBigIntProp(entityId, 'CCSPlayerController.m_steamID');
 				if (raw !== undefined) {
 					const accountId = steamIdToAccountId(raw);
 					if (accountId !== 0) this._accountIdToEntityId.set(accountId, entityId);
 				}
 			}
-			if (this._directWriteMode) return;
-			this.entities[entityId] = {
-				classId,
-				entityType,
-				className,
-				properties: {}
-			};
-		});
-
-		this.on('entityupdated', info => {
-			if (this._directWriteMode) return;
-			if (!this.entities[info.entityId]) return;
-			//@ts-expect-error We know what we doin son
-			this.entities[info.entityId]!.properties[this.propIdToName[info.propId]!] = info.value;
 		});
 
 		this.on('entitydeleted', entityId => {
@@ -291,8 +378,6 @@ export class DemoReader extends EventEmitter<{
 			this._playerCache.delete(entityId);
 			this._teamCache.delete(entityId);
 			this._pawnCache.delete(entityId);
-			if (this._directWriteMode) return;
-			this.entities[entityId] = undefined as any;
 		});
 		this.once('header', header => {
 			this.header = header;

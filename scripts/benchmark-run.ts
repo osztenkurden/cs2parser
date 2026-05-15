@@ -33,6 +33,6 @@ console.log(JSON.stringify({
 	ms,
 	rss: (mem.rss / 1024 / 1024).toFixed(0) + 'MB',
 	heap: (mem.heapUsed / 1024 / 1024).toFixed(0) + 'MB',
-	entities: p.entities.filter(Boolean).length,
+	entities: p.getEntityIds().length,
 	tick: p.currentTick
 }));

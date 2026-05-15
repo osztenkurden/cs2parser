@@ -21,7 +21,7 @@ describe.skipIf(!demoAvailable)('entity mode consistency', () => {
 			await reader.parseDemo(demoPath, { entities: mode });
 			results[name as keyof typeof results] = {
 				tick: reader.currentTick,
-				entities: reader.entities.filter(Boolean).length,
+				entities: reader.getEntityIds().length,
 				players: reader.players.length
 			};
 		}

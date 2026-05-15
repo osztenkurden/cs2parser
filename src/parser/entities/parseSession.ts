@@ -211,7 +211,11 @@ export class ParseSession {
 					if (!this.readFrame()) break;
 
 					const now = Date.now();
-					if (now - lastYieldTime >= 16) {
+					if (now - lastYieldTime >= 64) {
+						// 64 ms (was 16 ms) — setTimeout(0) has ~1 ms minimum delay on
+						// Node; a tighter interval just burns wall time on the yield
+						// itself without helping responsiveness. 64 ms is still under
+						// a render frame budget for any UI driving this parser.
 						lastYieldTime = now;
 						await new Promise<void>(resolve => setTimeout(resolve, 0));
 					}
@@ -575,8 +579,15 @@ export class ParseSession {
 					);
 					if (this.parser) {
 						const idToName: Record<number, string> = {};
-						for (const [k, v] of Object.entries(meta.propIdToName)) idToName[Number(k)] = v;
+						const nameToId = new Map<string, number>();
+						for (const [k, v] of Object.entries(meta.propIdToName)) {
+							const id = Number(k);
+							idToName[id] = v;
+							nameToId.set(v, id);
+						}
 						this.parser.propIdToName = idToName;
+						this.parser._propIdByName = nameToId;
+						this.parser._native = this.nativeDecoder;
 						// propIdToDecoder uses the same integer IDs as the JS Decoders.*
 						// constants; meta returns them already-coerced.
 						const idToDec: Record<number, number> = {};
@@ -585,15 +596,9 @@ export class ParseSession {
 					}
 					this.nativeReady = true;
 				} else {
-					const classInfo = parseClassInfo(this.sendTables, data);
-					this.entityParser = new EntityParser(classInfo, this.enqueueEvent);
-					this.entityParser.onlyGameRules = this.entityMode === EntityMode.ONLY_GAME_RULES;
-					if (this.parser) {
-						this.parser.propIdToName = classInfo.propIdToName;
-						this.parser.propIdToDecoder = classInfo.propIdToDecoder;
-						this.entityParser.directEntities = this.parser.entities;
-						this.entityParser.directPropIdToName = classInfo.propIdToName;
-					}
+					// v2: the JS-side EntityParser fallback was retired. Use
+					// the Rust decoder (default) or fail loudly.
+					throw new Error('CS2P_RUST_DECODER=0 is no longer supported; remove the env var.');
 				}
 
 				this.sendTables = null;
@@ -744,7 +749,7 @@ export class ParseSession {
 		}
 
 		for (const queueElement of packetEntitiesQueue) {
-			if (USE_NATIVE_DECODER && this.nativeReady && this.nativeDecoder) {
+			if (this.nativeReady && this.nativeDecoder) {
 				this.syncBaselinesToNative();
 				const result = this.nativeDecoder.parseEntityPacket(
 					queueElement.entity_data!,
@@ -752,16 +757,8 @@ export class ParseSession {
 					queueElement.has_pvs_vis_bits_deprecated ?? 0
 				);
 				if (this.parser) {
-					applyDecodeResult(result, {
-						entities: this.parser.entities,
-						propIdToName: this.parser.propIdToName,
-						directWriteMode: true,
-						enqueue: this.enqueueEvent,
-						onlyGameRules: this.entityMode === EntityMode.ONLY_GAME_RULES
-					});
+					applyDecodeResult(result, this.enqueueEvent);
 				}
-			} else {
-				this.entityParser?.parseEntityPacket(queueElement, this.baselines);
 			}
 		}
 		for (const allocatedElement of allocated) {

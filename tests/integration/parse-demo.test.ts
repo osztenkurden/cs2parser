@@ -28,7 +28,7 @@ describe.skipIf(!demoAvailable)('parse demo (full integration)', () => {
 	});
 
 	test('entities array is populated', () => {
-		const entityCount = reader.entities.filter(Boolean).length;
+		const entityCount = reader.getEntityIds().length;
 		expect(entityCount).toBeGreaterThan(0);
 	});
 

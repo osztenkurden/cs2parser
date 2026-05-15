@@ -1,41 +1,47 @@
 import type { DemoReader } from '../parser/index.js';
 import type { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
-import type { ICCSPlayerController } from '../generated/entityTypes.js';
 import type { PlayerPawn, Vector } from './playerPawn.js';
 import type { Team } from './team.js';
 
 const PLAYER_ENTITY_HANDLE_MISSING = 2047;
 
-type ControllerProps = Partial<ICCSPlayerController>;
-type ControllerKey = keyof ICCSPlayerController;
-
+/**
+ * Player helper. Reads property values via the Rust-resident decoder's getter
+ * API; no longer touches `parser.entities[id].properties`. Each property read
+ * is a single Map.get (for the prop_id) + one FFI call.
+ */
 export class Player {
 	constructor(
 		private _parser: DemoReader,
 		public readonly entityId: number
 	) {}
 
-	get entity() {
-		return this._parser.entities[this.entityId];
+	private _num(name: string): number | undefined {
+		return this._parser.getNumberProp(this.entityId, name);
 	}
-
-	private _prop<K extends ControllerKey>(name: K): ICCSPlayerController[K] | undefined {
-		return (this.entity?.properties as ControllerProps)?.[name];
+	private _str(name: string): string | undefined {
+		return this._parser.getStringProp(this.entityId, name);
+	}
+	private _bool(name: string): boolean | undefined {
+		return this._parser.getBoolProp(this.entityId, name);
+	}
+	private _bigint(name: string): bigint | undefined {
+		return this._parser.getBigIntProp(this.entityId, name);
 	}
 
 	// --- Identity ---
 
 	get name(): string {
-		return (this._prop('CCSPlayerController.m_iszPlayerName') ?? '') as string;
+		return this._str('CCSPlayerController.m_iszPlayerName') ?? '';
 	}
 
 	get steamId(): string {
-		const raw = this._prop('CCSPlayerController.m_steamID');
+		const raw = this._bigint('CCSPlayerController.m_steamID');
 		return raw !== undefined ? String(raw) : '';
 	}
 
 	get isConnected(): boolean {
-		const connected = this._prop('CCSPlayerController.m_iConnected');
+		const connected = this._num('CCSPlayerController.m_iConnected');
 		return connected !== undefined && connected === 0;
 	}
 
@@ -49,7 +55,7 @@ export class Player {
 	// --- Team ---
 
 	get teamNumber(): number {
-		return (this._prop('CCSPlayerController.m_iTeamNum') ?? 0) as number;
+		return this._num('CCSPlayerController.m_iTeamNum') ?? 0;
 	}
 
 	get team(): Team | null {
@@ -60,7 +66,7 @@ export class Player {
 	// --- Pawn Link ---
 
 	get pawnEntityId(): number | null {
-		const handle = this._prop('CCSPlayerController.m_hPlayerPawn') as number | undefined;
+		const handle = this._num('CCSPlayerController.m_hPlayerPawn');
 		if (handle === undefined || (handle & 0x7ff) === PLAYER_ENTITY_HANDLE_MISSING) return null;
 		return handle & 0x7ff;
 	}
@@ -74,7 +80,7 @@ export class Player {
 	// --- Alive State ---
 
 	get isAlive(): boolean {
-		return (this._prop('CCSPlayerController.m_bPawnIsAlive') ?? false) as boolean;
+		return this._bool('CCSPlayerController.m_bPawnIsAlive') ?? false;
 	}
 
 	// --- Shortcuts delegating to pawn ---
@@ -114,153 +120,156 @@ export class Player {
 	// --- Economy ---
 
 	get money(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_InGameMoneyServices.m_iAccount') ?? 0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_InGameMoneyServices.m_iAccount') ?? 0;
 	}
 
 	get totalCashSpent(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_InGameMoneyServices.m_iTotalCashSpent') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_InGameMoneyServices.m_iTotalCashSpent') ?? 0;
 	}
 
 	get cashSpentThisRound(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_InGameMoneyServices.m_iCashSpentThisRound') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_InGameMoneyServices.m_iCashSpentThisRound') ?? 0;
 	}
 
 	// --- Match Totals ---
 
 	get kills(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iKills') ?? 0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iKills') ?? 0;
 	}
 
 	get deaths(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iDeaths') ?? 0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iDeaths') ?? 0;
 	}
 
 	get assists(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iAssists') ?? 0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iAssists') ?? 0;
 	}
 
 	get damage(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iDamage') ?? 0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iDamage') ?? 0;
 	}
 
 	get headshotKills(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iHeadShotKills') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iHeadShotKills') ?? 0;
 	}
 
 	get utilityDamage(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iUtilityDamage') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iUtilityDamage') ?? 0;
 	}
 
 	get enemiesFlashed(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemiesFlashed') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemiesFlashed') ?? 0;
 	}
 
 	get enemy3Ks(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy3Ks') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy3Ks') ?? 0;
 	}
 
 	get enemy4Ks(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy4Ks') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy4Ks') ?? 0;
 	}
 
 	get enemy5Ks(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy5Ks') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy5Ks') ?? 0;
 	}
 
 	get objective(): number {
-		return (this._prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iObjective') ??
-			0) as number;
+		return this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iObjective') ?? 0;
 	}
 
 	// --- Per-Round Stats ---
 
 	get round_kills(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iKills'
-		) ?? 0) as number;
+		return (
+			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iKills') ?? 0
+		);
 	}
 
 	get round_deaths(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDeaths'
-		) ?? 0) as number;
+		return (
+			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDeaths') ?? 0
+		);
 	}
 
 	get round_assists(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iAssists'
-		) ?? 0) as number;
+		return (
+			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iAssists') ??
+			0
+		);
 	}
 
 	get round_damage(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDamage'
-		) ?? 0) as number;
+		return (
+			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDamage') ?? 0
+		);
 	}
 
 	get round_headshotKills(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iHeadShotKills'
-		) ?? 0) as number;
+		return (
+			this._num(
+				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iHeadShotKills'
+			) ?? 0
+		);
 	}
 
 	get round_equipmentValue(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEquipmentValue'
-		) ?? 0) as number;
+		return (
+			this._num(
+				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEquipmentValue'
+			) ?? 0
+		);
 	}
 
 	get round_cashEarned(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iCashEarned'
-		) ?? 0) as number;
+		return (
+			this._num(
+				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iCashEarned'
+			) ?? 0
+		);
 	}
 
 	get round_utilityDamage(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iUtilityDamage'
-		) ?? 0) as number;
+		return (
+			this._num(
+				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iUtilityDamage'
+			) ?? 0
+		);
 	}
 
 	get round_enemiesFlashed(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEnemiesFlashed'
-		) ?? 0) as number;
+		return (
+			this._num(
+				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEnemiesFlashed'
+			) ?? 0
+		);
 	}
 
 	get round_liveTime(): number {
-		return (this._prop(
-			'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iLiveTime'
-		) ?? 0) as number;
+		return (
+			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iLiveTime') ??
+			0
+		);
 	}
 
 	// --- General ---
 
 	get mvps(): number {
-		return (this._prop('CCSPlayerController.m_iMVPs') ?? 0) as number;
+		return this._num('CCSPlayerController.m_iMVPs') ?? 0;
 	}
 
 	get score(): number {
-		return (this._prop('CCSPlayerController.m_iScore') ?? 0) as number;
+		return this._num('CCSPlayerController.m_iScore') ?? 0;
 	}
 
 	get ping(): number {
-		return (this._prop('CCSPlayerController.m_iPing') ?? 0) as number;
+		return this._num('CCSPlayerController.m_iPing') ?? 0;
 	}
 
 	get color(): number {
-		return (this._prop('CCSPlayerController.m_iCompTeammateColor') ?? -1) as number;
+		return this._num('CCSPlayerController.m_iCompTeammateColor') ?? -1;
 	}
 
 	get clanTag(): string {
-		return (this._prop('CCSPlayerController.m_szClan') ?? '') as string;
+		return this._str('CCSPlayerController.m_szClan') ?? '';
 	}
 }

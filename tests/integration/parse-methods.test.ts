@@ -13,14 +13,14 @@ describe.skipIf(!demoAvailable)('parse method consistency (EntityMode.ALL)', () 
 		{
 			const r = new DemoReader();
 			await r.parseDemo(demoPath, { entities: EntityMode.ALL });
-			results.push({ tick: r.currentTick, entities: r.entities.filter(Boolean).length, method: 'path-stream' });
+			results.push({ tick: r.currentTick, entities: r.getEntityIds().length, method: 'path-stream' });
 		}
 
 		// Method 2: path-sync (chunked)
 		{
 			const r = new DemoReader();
 			await r.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
-			results.push({ tick: r.currentTick, entities: r.entities.filter(Boolean).length, method: 'path-sync' });
+			results.push({ tick: r.currentTick, entities: r.getEntityIds().length, method: 'path-sync' });
 		}
 
 		// Method 3: buffer
@@ -28,14 +28,14 @@ describe.skipIf(!demoAvailable)('parse method consistency (EntityMode.ALL)', () 
 			const r = new DemoReader();
 			const buf = fs.readFileSync(demoPath);
 			await r.parseDemo(buf, { entities: EntityMode.ALL });
-			results.push({ tick: r.currentTick, entities: r.entities.filter(Boolean).length, method: 'buffer' });
+			results.push({ tick: r.currentTick, entities: r.getEntityIds().length, method: 'buffer' });
 		}
 
 		// Method 4: stream
 		{
 			const r = new DemoReader();
 			await r.parseDemo(fs.createReadStream(demoPath), { entities: EntityMode.ALL });
-			results.push({ tick: r.currentTick, entities: r.entities.filter(Boolean).length, method: 'stream' });
+			results.push({ tick: r.currentTick, entities: r.getEntityIds().length, method: 'stream' });
 		}
 
 		// All methods must produce the same results

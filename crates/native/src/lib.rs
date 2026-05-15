@@ -1,7 +1,7 @@
 #![deny(clippy::all)]
 #![allow(clippy::new_without_default)]
 
-use napi::bindgen_prelude::{BigInt, Error, Uint8Array};
+use napi::bindgen_prelude::{BigInt, BigInt64Array, Error, Float64Array, Uint8Array};
 use napi_derive::napi;
 use prost::Message;
 
@@ -351,12 +351,21 @@ pub struct ClassInfoMeta {
 
 /// Per-packet result struct returned to JS. Mirror of `entity_parser::DecodeResult`
 /// with napi-friendly types.
+///
+/// 9a/note: numeric pools are typed arrays, not `Vec<T>`. `Vec<f64>` crosses
+/// the FFI boundary as `Array<number>` with per-element boxing; `Float64Array`
+/// transfers a single contiguous buffer (~10x faster on the JS side).
 #[napi(object)]
 pub struct DecodeResultJs {
 	pub ops: Buffer,
 	pub op_count: u32,
-	pub f64_values: Vec<f64>,
-	pub bigint_values: Vec<napi::bindgen_prelude::BigInt>,
+	pub f64_values: Float64Array,
+	/// u64 bits reinterpreted as i64 (BigInt64Array transfers without boxing;
+	/// JS reads them as the same numeric value as `BigInt::from(u64)` would
+	/// produce when the high bit is unset, and as the negative two's-complement
+	/// equivalent otherwise — callers that need the unsigned interpretation
+	/// can use `BigInt.asUintN(64, x)`).
+	pub bigint_values: BigInt64Array,
 	pub strings: Vec<String>,
 	pub blobs: Vec<Buffer>,
 	pub class_names: Vec<String>,
@@ -429,8 +438,8 @@ impl EntityDecoderNative {
 		Ok(DecodeResultJs {
 			ops: Buffer::from(r.ops),
 			op_count: r.op_count,
-			f64_values: r.f64_values,
-			bigint_values: r.bigint_values.into_iter().map(|v| napi::bindgen_prelude::BigInt::from(v as u64)).collect(),
+			f64_values: Float64Array::new(r.f64_values),
+			bigint_values: BigInt64Array::new(r.bigint_values),
 			strings: r.strings,
 			blobs: r.blobs.into_iter().map(Buffer::from).collect(),
 			class_names: r.class_names,
@@ -441,6 +450,136 @@ impl EntityDecoderNative {
 	#[napi]
 	pub fn reset(&mut self) {
 		self.state.reset();
+	}
+
+	// ─── v2 getter API ──────────────────────────────────────────────────────
+	// Stage 1: parallel to the existing DecodeResult emission. Reads come from
+	// the Rust-resident `EntityState.entities` table populated during decode.
+
+	/// Returns `true` if an entity with this id is currently live.
+	#[napi]
+	pub fn has_entity(&self, entity_id: u32) -> bool {
+		self.state.entities.get(entity_id as usize).and_then(|e| e.as_ref()).is_some()
+	}
+
+	#[napi]
+	pub fn get_entity_class_id(&self, entity_id: u32) -> Option<u32> {
+		self.state.entities.get(entity_id as usize).and_then(|e| e.as_ref()).map(|r| r.class_id)
+	}
+
+	#[napi]
+	pub fn get_entity_class_name(&self, entity_id: u32) -> Option<String> {
+		self.state.entities.get(entity_id as usize).and_then(|e| e.as_ref()).map(|r| r.class_name.clone())
+	}
+
+	#[napi]
+	pub fn get_entity_type(&self, entity_id: u32) -> Option<u32> {
+		self.state.entities.get(entity_id as usize).and_then(|e| e.as_ref()).map(|r| r.entity_type as u32)
+	}
+
+	/// List every live entity id.
+	#[napi]
+	pub fn get_entity_ids(&self) -> Vec<u32> {
+		self.state
+			.entities
+			.iter()
+			.enumerate()
+			.filter_map(|(i, r)| r.as_ref().map(|_| i as u32))
+			.collect()
+	}
+
+	/// List live entities whose class_name matches `class_name`. Used by the
+	/// JS `findEntityIdsByClass` getter and `parser.playerControllers` /
+	/// `parser.teams`.
+	#[napi]
+	pub fn find_entity_ids_by_class(&self, class_name: String) -> Vec<u32> {
+		self.state
+			.entities
+			.iter()
+			.enumerate()
+			.filter_map(|(i, r)| match r {
+				Some(rec) if rec.class_name == class_name => Some(i as u32),
+				_ => None,
+			})
+			.collect()
+	}
+
+	// Typed property getters. The JS side caches prop_id by name (built once
+	// from `initClassInfo`'s returned `propIdToName`), so each helper read is
+	// a single HashMap probe + one FFI call.
+
+	#[napi]
+	pub fn get_property_bool(&self, entity_id: u32, prop_id: u32) -> Option<bool> {
+		match self.state.entities.get(entity_id as usize)?.as_ref()?.properties.get(&prop_id)? {
+			entity_parser::Value::Bool(b) => Some(*b),
+			_ => None,
+		}
+	}
+
+	/// Number-typed read. Boolean/i32/u32/f32 widen to f64; vec3/u64/string/blob return None.
+	#[napi]
+	pub fn get_property_number(&self, entity_id: u32, prop_id: u32) -> Option<f64> {
+		use entity_parser::Value::*;
+		match self.state.entities.get(entity_id as usize)?.as_ref()?.properties.get(&prop_id)? {
+			Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+			I32(n) => Some(*n as f64),
+			U32(n) => Some(*n as f64),
+			F32(n) => Some(*n as f64),
+			_ => None,
+		}
+	}
+
+	#[napi]
+	pub fn get_property_string(&self, entity_id: u32, prop_id: u32) -> Option<String> {
+		match self.state.entities.get(entity_id as usize)?.as_ref()?.properties.get(&prop_id)? {
+			entity_parser::Value::String(s) => Some(s.clone()),
+			_ => None,
+		}
+	}
+
+	#[napi]
+	pub fn get_property_vec3(&self, entity_id: u32, prop_id: u32) -> Option<Float64Array> {
+		match self.state.entities.get(entity_id as usize)?.as_ref()?.properties.get(&prop_id)? {
+			entity_parser::Value::Vec3(v) => Some(Float64Array::new(v.to_vec())),
+			_ => None,
+		}
+	}
+
+	#[napi]
+	pub fn get_property_bigint(&self, entity_id: u32, prop_id: u32) -> Option<BigInt> {
+		match self.state.entities.get(entity_id as usize)?.as_ref()?.properties.get(&prop_id)? {
+			entity_parser::Value::U64(u) => Some(BigInt::from(*u)),
+			_ => None,
+		}
+	}
+
+	#[napi]
+	pub fn get_property_blob(&self, entity_id: u32, prop_id: u32) -> Option<Buffer> {
+		match self.state.entities.get(entity_id as usize)?.as_ref()?.properties.get(&prop_id)? {
+			entity_parser::Value::Blob(b) => Some(Buffer::from(b.clone())),
+			_ => None,
+		}
+	}
+
+	/// Returns `true` if the entity has a registered value for `prop_id`. Lets
+	/// JS distinguish "missing" from "default value".
+	#[napi]
+	pub fn has_property(&self, entity_id: u32, prop_id: u32) -> bool {
+		self.state
+			.entities
+			.get(entity_id as usize)
+			.and_then(|e| e.as_ref())
+			.map(|r| r.properties.contains_key(&prop_id))
+			.unwrap_or(false)
+	}
+
+	/// List every prop_id currently set on this entity. JS uses
+	/// `propIdToName` to resolve names, then per-id typed getters for values.
+	/// Used by `parser.getEntity(id)` to build the snapshot object.
+	#[napi]
+	pub fn get_entity_prop_ids(&self, entity_id: u32) -> Option<Vec<u32>> {
+		let ent = self.state.entities.get(entity_id as usize)?.as_ref()?;
+		Some(ent.properties.keys().copied().collect())
 	}
 }
 

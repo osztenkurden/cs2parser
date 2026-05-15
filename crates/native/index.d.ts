@@ -56,12 +56,23 @@ export interface ClassInfoMeta {
 /**
  * Per-packet result struct returned to JS. Mirror of `entity_parser::DecodeResult`
  * with napi-friendly types.
+ *
+ * 9a/note: numeric pools are typed arrays, not `Vec<T>`. `Vec<f64>` crosses
+ * the FFI boundary as `Array<number>` with per-element boxing; `Float64Array`
+ * transfers a single contiguous buffer (~10x faster on the JS side).
  */
 export interface DecodeResultJs {
   ops: Buffer
   opCount: number
-  f64Values: Array<number>
-  bigintValues: Array<bigint>
+  f64Values: Float64Array
+  /**
+   * u64 bits reinterpreted as i64 (BigInt64Array transfers without boxing;
+   * JS reads them as the same numeric value as `BigInt::from(u64)` would
+   * produce when the high bit is unset, and as the negative two's-complement
+   * equivalent otherwise — callers that need the unsigned interpretation
+   * can use `BigInt.asUintN(64, x)`).
+   */
+  bigintValues: BigInt64Array
   strings: Array<string>
   blobs: Array<Buffer>
   classNames: Array<string>
@@ -148,4 +159,35 @@ export declare class EntityDecoderNative {
   parseEntityPacket(entityData: Uint8Array, updatedEntries: number, hasPvsVisBits: number): DecodeResultJs
   /** Reset entity state between parses (JS calls when a new `parseDemo` starts). */
   reset(): void
+  /** Returns `true` if an entity with this id is currently live. */
+  hasEntity(entityId: number): boolean
+  getEntityClassId(entityId: number): number | null
+  getEntityClassName(entityId: number): string | null
+  getEntityType(entityId: number): number | null
+  /** List every live entity id. */
+  getEntityIds(): Array<number>
+  /**
+   * List live entities whose class_name matches `class_name`. Used by the
+   * JS `findEntityIdsByClass` getter and `parser.playerControllers` /
+   * `parser.teams`.
+   */
+  findEntityIdsByClass(className: string): Array<number>
+  getPropertyBool(entityId: number, propId: number): boolean | null
+  /** Number-typed read. Boolean/i32/u32/f32 widen to f64; vec3/u64/string/blob return None. */
+  getPropertyNumber(entityId: number, propId: number): number | null
+  getPropertyString(entityId: number, propId: number): string | null
+  getPropertyVec3(entityId: number, propId: number): Float64Array | null
+  getPropertyBigint(entityId: number, propId: number): bigint | null
+  getPropertyBlob(entityId: number, propId: number): Buffer | null
+  /**
+   * Returns `true` if the entity has a registered value for `prop_id`. Lets
+   * JS distinguish "missing" from "default value".
+   */
+  hasProperty(entityId: number, propId: number): boolean
+  /**
+   * List every prop_id currently set on this entity. JS uses
+   * `propIdToName` to resolve names, then per-id typed getters for values.
+   * Used by `parser.getEntity(id)` to build the snapshot object.
+   */
+  getEntityPropIds(entityId: number): Array<number> | null
 }

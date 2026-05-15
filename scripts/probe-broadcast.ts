@@ -59,7 +59,7 @@ await reader.start();
 const terminus = await reader.run();
 
 console.log(
-	`[probe] done. reason=${terminus.reason} tick=${parser.currentTick} entities=${parser.entities.filter(Boolean).length} events=${eventCount}`
+	`[probe] done. reason=${terminus.reason} tick=${parser.currentTick} entities=${parser.getEntityIds().length} events=${eventCount}`
 );
 if (terminus.reason === 'error') {
 	console.error('[probe] terminal error:', terminus.error);

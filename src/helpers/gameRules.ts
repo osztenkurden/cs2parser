@@ -1,8 +1,4 @@
 import type { DemoReader } from '../parser/index.js';
-import type { ICCSGameRulesProxy } from '../generated/entityTypes.js';
-
-type RulesProps = Partial<ICCSGameRulesProxy>;
-type RulesKey = keyof ICCSGameRulesProxy;
 
 export const WinRoundReason = {
 	INVALID: -1,
@@ -37,40 +33,39 @@ export class GameRules {
 		public readonly entityId: number
 	) {}
 
-	get entity() {
-		return this._parser.entities[this.entityId];
+	private _num(name: string): number | undefined {
+		return this._parser.getNumberProp(this.entityId, name);
 	}
-
-	private _prop<K extends RulesKey>(name: K): ICCSGameRulesProxy[K] | undefined {
-		return (this.entity?.properties as RulesProps)?.[name];
+	private _bool(name: string): boolean | undefined {
+		return this._parser.getBoolProp(this.entityId, name);
 	}
 
 	get isWarmup(): boolean {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_bWarmupPeriod') ?? false) as boolean;
+		return this._bool('CCSGameRulesProxy.CCSGameRules.m_bWarmupPeriod') ?? false;
 	}
 
 	get isFreezePeriod(): boolean {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_bFreezePeriod') ?? false) as boolean;
+		return this._bool('CCSGameRulesProxy.CCSGameRules.m_bFreezePeriod') ?? false;
 	}
 
 	get isGamePaused(): boolean {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_bGamePaused') ?? false) as boolean;
+		return this._bool('CCSGameRulesProxy.CCSGameRules.m_bGamePaused') ?? false;
 	}
 
 	get isTerroristTimeOutActive(): boolean {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_bTerroristTimeOutActive') ?? false) as boolean;
+		return this._bool('CCSGameRulesProxy.CCSGameRules.m_bTerroristTimeOutActive') ?? false;
 	}
 
 	get isCTTimeOutActive(): boolean {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_bCTTimeOutActive') ?? false) as boolean;
+		return this._bool('CCSGameRulesProxy.CCSGameRules.m_bCTTimeOutActive') ?? false;
 	}
 
 	get roundsPlayed(): number {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_totalRoundsPlayed') ?? 0) as number;
+		return this._num('CCSGameRulesProxy.CCSGameRules.m_totalRoundsPlayed') ?? 0;
 	}
 
 	get gamePhase(): number {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_gamePhase') ?? 0) as number;
+		return this._num('CCSGameRulesProxy.CCSGameRules.m_gamePhase') ?? 0;
 	}
 
 	get phase(): string {
@@ -84,18 +79,18 @@ export class GameRules {
 	}
 
 	get roundTime(): number {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_iRoundTime') ?? 0) as number;
+		return this._num('CCSGameRulesProxy.CCSGameRules.m_iRoundTime') ?? 0;
 	}
 
 	get roundStartTime(): number {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_fRoundStartTime') ?? 0) as number;
+		return this._num('CCSGameRulesProxy.CCSGameRules.m_fRoundStartTime') ?? 0;
 	}
 
 	get terroristTimeOutRemaining(): number {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_flTerroristTimeOutRemaining') ?? 0) as number;
+		return this._num('CCSGameRulesProxy.CCSGameRules.m_flTerroristTimeOutRemaining') ?? 0;
 	}
 
 	get ctTimeOutRemaining(): number {
-		return (this._prop('CCSGameRulesProxy.CCSGameRules.m_flCTTimeOutRemaining') ?? 0) as number;
+		return this._num('CCSGameRulesProxy.CCSGameRules.m_flCTTimeOutRemaining') ?? 0;
 	}
 }

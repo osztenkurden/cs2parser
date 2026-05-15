@@ -84,12 +84,19 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 		const gameRules = this._demoReader.gameRules;
 		if (!gameRules) return;
 
-		const entity = gameRules.entity;
-		if (!entity?.properties) return;
+		const roundEndCount = this._demoReader.getNumberProp(
+			gameRules.entityId,
+			'CCSGameRulesProxy.CCSGameRules.m_nRoundEndCount'
+		);
+		const roundStartCount = this._demoReader.getNumberProp(
+			gameRules.entityId,
+			'CCSGameRulesProxy.CCSGameRules.m_nRoundStartCount'
+		);
 
-		const props = entity.properties as any;
-		const roundEndCount = props['CCSGameRulesProxy.CCSGameRules.m_nRoundEndCount'] as number | undefined;
-		const roundStartCount = props['CCSGameRulesProxy.CCSGameRules.m_nRoundStartCount'] as number | undefined;
+		const rulesId = gameRules.entityId;
+		const num = (name: string) => this._demoReader.getNumberProp(rulesId, name);
+		const str = (name: string) => this._demoReader.getStringProp(rulesId, name);
+		const bool = (name: string) => this._demoReader.getBoolProp(rulesId, name);
 
 		// Check round_end first (end of previous round fires before start of new round)
 		if (roundEndCount !== undefined) {
@@ -99,12 +106,12 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 				this._lastRoundEndCount = roundEndCount;
 				const event = {
 					event_name: 'round_end',
-					winner: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundEndWinnerTeam'] ?? 0) as number,
-					reason: (props['CCSGameRulesProxy.CCSGameRules.m_eRoundEndReason'] ?? 0) as WinRoundReason,
-					message: (props['CCSGameRulesProxy.CCSGameRules.m_sRoundEndMessage'] ?? '') as string,
-					legacy: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundEndLegacy'] ?? 0) as number,
-					player_count: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundEndPlayerCount'] ?? 0) as number,
-					nomusic: (props['CCSGameRulesProxy.CCSGameRules.m_bRoundEndNoMusic'] ? 1 : 0) as number
+					winner: num('CCSGameRulesProxy.CCSGameRules.m_iRoundEndWinnerTeam') ?? 0,
+					reason: (num('CCSGameRulesProxy.CCSGameRules.m_eRoundEndReason') ?? 0) as WinRoundReason,
+					message: str('CCSGameRulesProxy.CCSGameRules.m_sRoundEndMessage') ?? '',
+					legacy: num('CCSGameRulesProxy.CCSGameRules.m_iRoundEndLegacy') ?? 0,
+					player_count: num('CCSGameRulesProxy.CCSGameRules.m_iRoundEndPlayerCount') ?? 0,
+					nomusic: bool('CCSGameRulesProxy.CCSGameRules.m_bRoundEndNoMusic') ? 1 : 0
 				} as const;
 				this.emit('round_end', event);
 				this.emit('gameEvent', 'round_end', event);
@@ -119,7 +126,7 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 				this._lastRoundStartCount = roundStartCount;
 				const event = {
 					event_name: 'round_start',
-					timelimit: (props['CCSGameRulesProxy.CCSGameRules.m_iRoundTime'] ?? 0) as number,
+					timelimit: num('CCSGameRulesProxy.CCSGameRules.m_iRoundTime') ?? 0,
 					fraglimit: 0,
 					objective: ''
 				} as const;

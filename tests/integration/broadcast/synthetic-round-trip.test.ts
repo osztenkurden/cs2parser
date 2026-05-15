@@ -112,7 +112,7 @@ describe.skipIf(!demoAvailable)('synthetic broadcast round-trip', () => {
 		baseline.gameEvents.on('round_end', () => baselineEvents.push('round_end'));
 		await baseline.parseDemo(demoPath, { entities: EntityMode.ALL });
 		const baselineTick = baseline.currentTick;
-		const baselineEntities = baseline.entities.filter(Boolean).length;
+		const baselineEntities = baseline.getEntityIds().length;
 
 		// Convert .dem into broadcast wire format
 		const buf = fs.readFileSync(demoPath);
@@ -159,7 +159,7 @@ describe.skipIf(!demoAvailable)('synthetic broadcast round-trip', () => {
 
 		expect(terminus.reason).toBe('stop');
 		expect(broadcastParser.currentTick).toBe(baselineTick);
-		expect(broadcastParser.entities.filter(Boolean).length).toBe(baselineEntities);
+		expect(broadcastParser.getEntityIds().length).toBe(baselineEntities);
 		expect(broadcastEvents).toEqual(baselineEvents);
 		expect(broadcastParser.players.length).toBe(baseline.players.length);
 		expect(broadcastParser.gameRules !== null).toBe(baseline.gameRules !== null);
