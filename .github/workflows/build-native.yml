@@ -98,9 +98,15 @@ jobs:
       # host triple, which is wrong for darwin: `macos-latest` is arm64, so
       # the `x86_64-apple-darwin` leg would otherwise produce an arm64 .node
       # and the artefact glob would fail to match.
+      #
+      # Use `bun x` (not `npx`): bun workspaces hoist `napi` to the workspace
+      # root's `node_modules/.bin/`, and `npx` from `crates/native` doesn't
+      # see it — it falls back to the npm registry and fails with ENOVERSIONS
+      # for the unrelated public `napi` package. `bun x` walks the workspace
+      # tree and finds the hoisted bin.
       - name: Build (host)
         if: ${{ !matrix.settings.docker }}
-        run: cd crates/native && npx napi build --platform --release --target ${{ matrix.settings.target }}
+        run: cd crates/native && bun x napi build --platform --release --target ${{ matrix.settings.target }}
 
       - name: Build (docker)
         if: ${{ matrix.settings.docker }}
