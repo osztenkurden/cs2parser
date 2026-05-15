@@ -1,0 +1,22 @@
+{
+	"name": "cs2parser-native-linux-x64-musl",
+	"version": "2.0.0-alpha.0",
+	"description": "Linux x64 musl native binary for cs2parser-native. Installed automatically as an optional dependency.",
+	"os": [
+		"linux"
+	],
+	"cpu": [
+		"x64"
+	],
+	"libc": [
+		"musl"
+	],
+	"main": "cs2parser-native.linux-x64-musl.node",
+	"files": [
+		"cs2parser-native.linux-x64-musl.node"
+	],
+	"license": "GPL-3.0",
+	"engines": {
+		"node": ">=22.0.0"
+	}
+}

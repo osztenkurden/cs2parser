@@ -1,10 +1,17 @@
 {
 	"name": "cs2parser-native",
-	"version": "0.1.0",
-	"private": true,
-	"description": "Rust hot path for cs2parser. Built and consumed via @napi-rs/cli; not published standalone.",
+	"version": "2.0.0-alpha.0",
+	"description": "Rust native bindings powering cs2parser. Loaded automatically; consumers should depend on `cs2parser`, not this package directly.",
 	"main": "index.js",
 	"types": "index.d.ts",
+	"license": "GPL-3.0",
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"files": [
+		"index.js",
+		"index.d.ts"
+	],
 	"napi": {
 		"name": "cs2parser-native",
 		"triples": {
@@ -22,6 +29,14 @@
 	"scripts": {
 		"build": "napi build --platform --release",
 		"build:debug": "napi build --platform"
+	},
+	"optionalDependencies": {
+		"cs2parser-native-win32-x64-msvc": "2.0.0-alpha.0",
+		"cs2parser-native-linux-x64-gnu": "2.0.0-alpha.0",
+		"cs2parser-native-linux-x64-musl": "2.0.0-alpha.0",
+		"cs2parser-native-linux-arm64-gnu": "2.0.0-alpha.0",
+		"cs2parser-native-darwin-x64": "2.0.0-alpha.0",
+		"cs2parser-native-darwin-arm64": "2.0.0-alpha.0"
 	},
 	"devDependencies": {
 		"@napi-rs/cli": "^2.18.4"

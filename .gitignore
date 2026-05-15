@@ -11,6 +11,10 @@ comparison
 *.dem
 .vscode
 .claude
-# Phase 0+: Rust artefacts + per-platform .node binaries
+# Rust artefacts + per-platform .node binaries
 crates/native/target/
 crates/native/*.node
+crates/native/npm/*/*.node
+# napi-rs CLI generates these at build time — never commit
+crates/native/index.js
+crates/native/index.d.ts

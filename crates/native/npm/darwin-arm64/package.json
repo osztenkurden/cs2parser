@@ -1,0 +1,19 @@
+{
+	"name": "cs2parser-native-darwin-arm64",
+	"version": "2.0.0-alpha.0",
+	"description": "macOS arm64 (Apple Silicon) native binary for cs2parser-native. Installed automatically as an optional dependency.",
+	"os": [
+		"darwin"
+	],
+	"cpu": [
+		"arm64"
+	],
+	"main": "cs2parser-native.darwin-arm64.node",
+	"files": [
+		"cs2parser-native.darwin-arm64.node"
+	],
+	"license": "GPL-3.0",
+	"engines": {
+		"node": ">=22.0.0"
+	}
+}

@@ -1,14 +1,34 @@
 name: Build native
 
-# Builds the per-platform `cs2parser-native` .node binaries.
-# Runs on every push to master + on release tags. Artefacts get downloaded by
-# release.yml when a release is cut.
+# Builds the per-platform `cs2parser-native` .node binaries on every push to
+# master and on PRs that touch the Rust crate / its proto inputs / the build
+# script. Regular code-only PRs skip this matrix entirely — `ci.yml` already
+# validates the linux-x64 build inline.
+#
+# Artefacts uploaded here are NOT consumed by the release flow — see
+# `release.yml` which runs its own matrix at publish time so the artefact ↔
+# release coupling stays inside one workflow.
+#
+# Concurrency: on a PR, every new commit cancels any in-flight matrix for the
+# same branch (saves ~6 × build-minutes per superseded commit). On master
+# pushes we still cancel older runs — only the head-of-master result matters.
+concurrency:
+  group: build-native-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
     branches: [master]
+    paths:
+      - 'crates/native/**'
+      - 'proto/**'
+      - '.github/workflows/build-native.yml'
   pull_request:
     branches: [master]
+    paths:
+      - 'crates/native/**'
+      - 'proto/**'
+      - '.github/workflows/build-native.yml'
   workflow_dispatch:
 
 env:
@@ -27,13 +47,10 @@ jobs:
         settings:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            build: npm run build:native
+            build: bun run build:native
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: |
-              sudo apt-get update -y
-              sudo apt-get install -y gcc-x86-64-linux-gnu
-              npm run build:native
+            build: bun run build:native
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
@@ -44,21 +61,23 @@ jobs:
             build: cd crates/native && npx napi build --platform --release --target aarch64-unknown-linux-gnu
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: npm run build:native
+            build: bun run build:native
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: |
-              rustup target add aarch64-apple-darwin
-              cd crates/native && npx napi build --platform --release --target aarch64-apple-darwin
+            build: bun run build:native -- --target aarch64-apple-darwin
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v6
 
+      - uses: oven-sh/setup-bun@v2
+        if: ${{ !matrix.settings.docker }}
+        with:
+          bun-version: 1.3.14
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
 
       - name: Setup Rust toolchain
         if: ${{ !matrix.settings.docker }}
@@ -73,13 +92,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             crates/native/target
-          key: ${{ matrix.settings.target }}-cargo-${{ hashFiles('crates/native/Cargo.lock') }}
+          key: ${{ matrix.settings.target }}-cargo-${{ hashFiles('crates/native/Cargo.lock', 'crates/native/src/**', 'crates/native/build.rs') }}
           restore-keys: |
             ${{ matrix.settings.target }}-cargo-
 
-      - name: Install dependencies
+      - name: Install deps (host)
         if: ${{ !matrix.settings.docker }}
-        run: npm install --ignore-scripts
+        run: bun install --frozen-lockfile
 
       - name: Build (host)
         if: ${{ !matrix.settings.docker }}

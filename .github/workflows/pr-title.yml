@@ -1,5 +1,9 @@
 name: PR Title
 
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     types: [opened, edited, synchronize]

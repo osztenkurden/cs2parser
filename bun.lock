@@ -6,6 +6,7 @@
       "name": "cs2parser",
       "dependencies": {
         "@bufbuild/protobuf": "^2.10.0",
+        "cs2parser-native": "0.0.0",
         "snappy": "^7.3.3",
       },
       "devDependencies": {
@@ -29,9 +30,17 @@
     },
     "crates/native": {
       "name": "cs2parser-native",
-      "version": "0.1.0",
+      "version": "0.0.0",
       "devDependencies": {
         "@napi-rs/cli": "^2.18.4",
+      },
+      "optionalDependencies": {
+        "cs2parser-native-darwin-arm64": "0.0.0",
+        "cs2parser-native-darwin-x64": "0.0.0",
+        "cs2parser-native-linux-arm64-gnu": "0.0.0",
+        "cs2parser-native-linux-x64-gnu": "0.0.0",
+        "cs2parser-native-linux-x64-musl": "0.0.0",
+        "cs2parser-native-win32-x64-msvc": "0.0.0",
       },
     },
   },

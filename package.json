@@ -12,6 +12,7 @@
 	"homepage": "https://github.com/osztenkurden/cs2parser#readme",
 	"dependencies": {
 		"@bufbuild/protobuf": "^2.10.0",
+		"cs2parser-native": "2.0.0-alpha.0",
 		"snappy": "^7.3.3"
 	},
 	"license": "GPL-3.0",
@@ -49,7 +50,8 @@
 		"generate:protos": "bun scripts/generate-protos.ts",
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-entity-types.ts --snapshot",
 		"benchmark": "bun --expose-gc scripts/benchmark.ts",
-		"benchmark:readme": "bun scripts/benchmark-readme.ts"
+		"benchmark:readme": "bun scripts/benchmark-readme.ts",
+		"sync-versions": "bun scripts/sync-package-versions.ts"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^20.5.0",

@@ -1,0 +1,19 @@
+{
+	"name": "cs2parser-native-win32-x64-msvc",
+	"version": "2.0.0-alpha.0",
+	"description": "Windows x64 native binary for cs2parser-native. Installed automatically as an optional dependency.",
+	"os": [
+		"win32"
+	],
+	"cpu": [
+		"x64"
+	],
+	"main": "cs2parser-native.win32-x64-msvc.node",
+	"files": [
+		"cs2parser-native.win32-x64-msvc.node"
+	],
+	"license": "GPL-3.0",
+	"engines": {
+		"node": ">=22.0.0"
+	}
+}
