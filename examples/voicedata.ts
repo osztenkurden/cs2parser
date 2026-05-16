@@ -11,7 +11,7 @@ const reader = new DemoReader();
 reader.on('svc_VoiceData', console.log);
 reader.on('CS_UM_ServerRankUpdate', console.log);
 reader.on('svc_UserCmds', console.log);
-await reader.parseDemo(demoPath, { svc_VoiceData: true, CS_UM_ServerRankUpdate: true });
+await reader.parseDemo(demoPath, { svc_VoiceData: true });
 const end = process.hrtime.bigint();
 const time = Number(end - start);
 console.log(`Parsed voice data in ${time / 1000000}ms`);
