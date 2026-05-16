@@ -229,8 +229,25 @@ impl FrameLoop {
 			payload_bytes
 		};
 
+		// Order matches the OLD JS readFrame: tickend(prev) + tickstart(new)
+		// are enqueued BEFORE handleFrame runs, so SVCs dispatched from the
+		// new frame's payload (e.g. UM_SayText2 chat) see DemoReader's
+		// `currentTick` already updated to the new tick. We mirror that by
+		// pushing tick ops before `dispatch_svc`. Entity-state visibility for
+		// the tickend listener is unaffected: state lives in Rust and is
+		// advanced globally by dispatch_svc within this same Rust call, so by
+		// the time JS drains ANY op from this frame, entity state is at the
+		// new tick's final values — exactly like v1.8.0 where the queue
+		// flushes at end of handleFrame after parsePacket has run.
+		if tick_changed {
+			if prev_tick != -1 {
+				result.push_tick(TAG_TICKEND, prev_tick);
+			}
+			result.push_tick(TAG_TICKSTART, tick);
+		}
+
 		// Deferred game-event bytes from the packet's SVC stream — emitted
-		// only after the tick events below so the JS gameEvents emitter's
+		// after dispatch_svc completes so the JS gameEvents emitter's
 		// "queue on receipt, fire on next tickend" semantic stays intact.
 		let mut deferred_gameevents: Vec<Vec<u8>> = Vec::new();
 
@@ -286,18 +303,6 @@ impl FrameLoop {
 			_ => {}
 		}
 
-		// Order matches the OLD JS handleFrame flush: tick events first, then
-		// the deferred game-event bytes. JS dispatches → tickend listener
-		// sees the previous tick's gameEventQueue (empty on first crossing,
-		// populated from the previous frame on subsequent ones), then
-		// 'gameevent' fires for this frame's events, which queue for the
-		// NEXT tickend.
-		if tick_changed {
-			if prev_tick != -1 {
-				result.push_tick(TAG_TICKEND, prev_tick);
-			}
-			result.push_tick(TAG_TICKSTART, tick);
-		}
 		for bytes in deferred_gameevents {
 			result.push_blob_event(TAG_GAMEEVENT, bytes);
 		}
