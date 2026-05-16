@@ -48,6 +48,7 @@
 		"generate:entities": "bun scripts/generate-entity-types.ts",
 		"generate:events": "bun scripts/generate-event-types.ts",
 		"generate:protos": "bun scripts/generate-protos.ts",
+		"generate:descriptors": "bun scripts/dump-event-descriptors.ts",
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-entity-types.ts --snapshot",
 		"benchmark": "bun --expose-gc scripts/benchmark.ts",
 		"benchmark:readme": "bun scripts/benchmark-readme.ts",
