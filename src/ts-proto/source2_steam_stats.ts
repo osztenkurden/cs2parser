@@ -27,6 +27,7 @@ export const ESource2PlayStatsFieldType = {
   Source2PlayStats_UTCDateTime: 14,
   Source2PlayStats_SteamIDTrustBucket: 15,
   Source2PlayStats_SteamIDTrustBucketMin: 16,
+  Source2PlayStats_SteamID: 17,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -53,6 +54,7 @@ export namespace ESource2PlayStatsFieldType {
     typeof ESource2PlayStatsFieldType.Source2PlayStats_SteamIDTrustBucket;
   export type Source2PlayStats_SteamIDTrustBucketMin =
     typeof ESource2PlayStatsFieldType.Source2PlayStats_SteamIDTrustBucketMin;
+  export type Source2PlayStats_SteamID = typeof ESource2PlayStatsFieldType.Source2PlayStats_SteamID;
   export type UNRECOGNIZED = typeof ESource2PlayStatsFieldType.UNRECOGNIZED;
 }
 
@@ -109,6 +111,9 @@ export function eSource2PlayStatsFieldTypeFromJSON(object: any): ESource2PlaySta
     case 16:
     case "Source2PlayStats_SteamIDTrustBucketMin":
       return ESource2PlayStatsFieldType.Source2PlayStats_SteamIDTrustBucketMin;
+    case 17:
+    case "Source2PlayStats_SteamID":
+      return ESource2PlayStatsFieldType.Source2PlayStats_SteamID;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -152,6 +157,8 @@ export function eSource2PlayStatsFieldTypeToJSON(object: ESource2PlayStatsFieldT
       return "Source2PlayStats_SteamIDTrustBucket";
     case ESource2PlayStatsFieldType.Source2PlayStats_SteamIDTrustBucketMin:
       return "Source2PlayStats_SteamIDTrustBucketMin";
+    case ESource2PlayStatsFieldType.Source2PlayStats_SteamID:
+      return "Source2PlayStats_SteamID";
     case ESource2PlayStatsFieldType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -303,6 +310,7 @@ export interface CMsgSource2PlayStatsPackedRecordList {
   utcdatetime_vals: number[];
   steamidtrustbucket_vals: string[];
   trustbucket_vals: CMsgSource2PlayStatsPackedRecordList_SteamIDList[];
+  steamid_vals: string[];
 }
 
 export interface CMsgSource2PlayStatsPackedRecordList_FieldDef {
@@ -336,6 +344,15 @@ export interface CSource2Metrics_FetchMapData_Response_MapData {
   name?: string | undefined;
   type?: string | undefined;
   data?: string | undefined;
+}
+
+export interface CUserMessage_UserSentBugBug {
+  command_line?: string | undefined;
+  autoexec_cfg?: string | undefined;
+  system_specs?: CMsgSource2SystemSpecs | undefined;
+  build_id?: number | undefined;
+  osversion?: number | undefined;
+  command_logs?: string | undefined;
 }
 
 function createBaseCMsgSource2SystemSpecs(): CMsgSource2SystemSpecs {
@@ -2835,6 +2852,7 @@ function createBaseCMsgSource2PlayStatsPackedRecordList(): CMsgSource2PlayStatsP
     utcdatetime_vals: [],
     steamidtrustbucket_vals: [],
     trustbucket_vals: [],
+    steamid_vals: [],
   };
 }
 
@@ -2923,6 +2941,11 @@ export const CMsgSource2PlayStatsPackedRecordList: MessageFns<CMsgSource2PlaySta
     for (const v of message.trustbucket_vals) {
       CMsgSource2PlayStatsPackedRecordList_SteamIDList.encode(v!, writer.uint32(154).fork()).join();
     }
+    writer.uint32(162).fork();
+    for (const v of message.steamid_vals) {
+      writer.uint64(v);
+    }
+    writer.join();
     return writer;
   },
 
@@ -3217,6 +3240,24 @@ export const CMsgSource2PlayStatsPackedRecordList: MessageFns<CMsgSource2PlaySta
           );
           continue;
         }
+        case 20: {
+          if (tag === 160) {
+            message.steamid_vals.push(reader.uint64().toString());
+
+            continue;
+          }
+
+          if (tag === 162) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.steamid_vals.push(reader.uint64().toString());
+            }
+
+            continue;
+          }
+
+          break;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3323,6 +3364,11 @@ export const CMsgSource2PlayStatsPackedRecordList: MessageFns<CMsgSource2PlaySta
         : globalThis.Array.isArray(object?.trustbucket_vals)
         ? object.trustbucket_vals.map((e: any) => CMsgSource2PlayStatsPackedRecordList_SteamIDList.fromJSON(e))
         : [],
+      steamid_vals: globalThis.Array.isArray(object?.steamidVals)
+        ? object.steamidVals.map((e: any) => globalThis.String(e))
+        : globalThis.Array.isArray(object?.steamid_vals)
+        ? object.steamid_vals.map((e: any) => globalThis.String(e))
+        : [],
     };
   },
 
@@ -3387,6 +3433,9 @@ export const CMsgSource2PlayStatsPackedRecordList: MessageFns<CMsgSource2PlaySta
         CMsgSource2PlayStatsPackedRecordList_SteamIDList.toJSON(e)
       );
     }
+    if (message.steamid_vals?.length) {
+      obj.steamidVals = message.steamid_vals;
+    }
     return obj;
   },
 
@@ -3420,6 +3469,7 @@ export const CMsgSource2PlayStatsPackedRecordList: MessageFns<CMsgSource2PlaySta
     message.steamidtrustbucket_vals = object.steamidtrustbucket_vals?.map((e) => e) || [];
     message.trustbucket_vals =
       object.trustbucket_vals?.map((e) => CMsgSource2PlayStatsPackedRecordList_SteamIDList.fromPartial(e)) || [];
+    message.steamid_vals = object.steamid_vals?.map((e) => e) || [];
     return message;
   },
 };
@@ -4016,6 +4066,175 @@ export const CSource2Metrics_FetchMapData_Response_MapData: MessageFns<CSource2M
       return message;
     },
   };
+
+function createBaseCUserMessage_UserSentBugBug(): CUserMessage_UserSentBugBug {
+  return {
+    command_line: undefined,
+    autoexec_cfg: undefined,
+    system_specs: undefined,
+    build_id: undefined,
+    osversion: undefined,
+    command_logs: undefined,
+  };
+}
+
+export const CUserMessage_UserSentBugBug: MessageFns<CUserMessage_UserSentBugBug> = {
+  encode(message: CUserMessage_UserSentBugBug, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.command_line !== undefined) {
+      writer.uint32(10).string(message.command_line);
+    }
+    if (message.autoexec_cfg !== undefined) {
+      writer.uint32(18).string(message.autoexec_cfg);
+    }
+    if (message.system_specs !== undefined) {
+      CMsgSource2SystemSpecs.encode(message.system_specs, writer.uint32(26).fork()).join();
+    }
+    if (message.build_id !== undefined) {
+      writer.uint32(32).uint32(message.build_id);
+    }
+    if (message.osversion !== undefined) {
+      writer.uint32(40).int32(message.osversion);
+    }
+    if (message.command_logs !== undefined) {
+      writer.uint32(50).string(message.command_logs);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CUserMessage_UserSentBugBug {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCUserMessage_UserSentBugBug();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.command_line = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.autoexec_cfg = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.system_specs = CMsgSource2SystemSpecs.decode(reader, reader.uint32());
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.build_id = reader.uint32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.osversion = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.command_logs = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CUserMessage_UserSentBugBug {
+    return {
+      command_line: isSet(object.commandLine)
+        ? globalThis.String(object.commandLine)
+        : isSet(object.command_line)
+        ? globalThis.String(object.command_line)
+        : undefined,
+      autoexec_cfg: isSet(object.autoexecCfg)
+        ? globalThis.String(object.autoexecCfg)
+        : isSet(object.autoexec_cfg)
+        ? globalThis.String(object.autoexec_cfg)
+        : undefined,
+      system_specs: isSet(object.systemSpecs)
+        ? CMsgSource2SystemSpecs.fromJSON(object.systemSpecs)
+        : isSet(object.system_specs)
+        ? CMsgSource2SystemSpecs.fromJSON(object.system_specs)
+        : undefined,
+      build_id: isSet(object.buildId)
+        ? globalThis.Number(object.buildId)
+        : isSet(object.build_id)
+        ? globalThis.Number(object.build_id)
+        : undefined,
+      osversion: isSet(object.osversion) ? globalThis.Number(object.osversion) : undefined,
+      command_logs: isSet(object.commandLogs)
+        ? globalThis.String(object.commandLogs)
+        : isSet(object.command_logs)
+        ? globalThis.String(object.command_logs)
+        : undefined,
+    };
+  },
+
+  toJSON(message: CUserMessage_UserSentBugBug): unknown {
+    const obj: any = {};
+    if (message.command_line !== undefined) {
+      obj.commandLine = message.command_line;
+    }
+    if (message.autoexec_cfg !== undefined) {
+      obj.autoexecCfg = message.autoexec_cfg;
+    }
+    if (message.system_specs !== undefined) {
+      obj.systemSpecs = CMsgSource2SystemSpecs.toJSON(message.system_specs);
+    }
+    if (message.build_id !== undefined) {
+      obj.buildId = Math.round(message.build_id);
+    }
+    if (message.osversion !== undefined) {
+      obj.osversion = Math.round(message.osversion);
+    }
+    if (message.command_logs !== undefined) {
+      obj.commandLogs = message.command_logs;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CUserMessage_UserSentBugBug>, I>>(base?: I): CUserMessage_UserSentBugBug {
+    return CUserMessage_UserSentBugBug.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CUserMessage_UserSentBugBug>, I>>(object: I): CUserMessage_UserSentBugBug {
+    const message = createBaseCUserMessage_UserSentBugBug();
+    message.command_line = object.command_line ?? undefined;
+    message.autoexec_cfg = object.autoexec_cfg ?? undefined;
+    message.system_specs = (object.system_specs !== undefined && object.system_specs !== null)
+      ? CMsgSource2SystemSpecs.fromPartial(object.system_specs)
+      : undefined;
+    message.build_id = object.build_id ?? undefined;
+    message.osversion = object.osversion ?? undefined;
+    message.command_logs = object.command_logs ?? undefined;
+    return message;
+  },
+};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

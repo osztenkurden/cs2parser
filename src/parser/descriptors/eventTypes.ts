@@ -50,6 +50,7 @@ export interface IEventPlayerDisconnect {
 	networkid: string;
 	xuid: number;
 	PlayerID: number;
+	ever_fully_connected: boolean;
 }
 
 export interface IEventPlayerInfo {

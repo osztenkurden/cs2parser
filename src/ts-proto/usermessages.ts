@@ -61,6 +61,7 @@ export const EBaseUserMessages = {
   UM_ExtraUserData: 164,
   UM_NotifyResponseFound: 165,
   UM_PlayResponseConditional: 166,
+  UM_UserSentBugBug: 167,
   UM_MAX_BASE: 200,
   UNRECOGNIZED: -1,
 } as const;
@@ -118,6 +119,7 @@ export namespace EBaseUserMessages {
   export type UM_ExtraUserData = typeof EBaseUserMessages.UM_ExtraUserData;
   export type UM_NotifyResponseFound = typeof EBaseUserMessages.UM_NotifyResponseFound;
   export type UM_PlayResponseConditional = typeof EBaseUserMessages.UM_PlayResponseConditional;
+  export type UM_UserSentBugBug = typeof EBaseUserMessages.UM_UserSentBugBug;
   export type UM_MAX_BASE = typeof EBaseUserMessages.UM_MAX_BASE;
   export type UNRECOGNIZED = typeof EBaseUserMessages.UNRECOGNIZED;
 }
@@ -274,6 +276,9 @@ export function eBaseUserMessagesFromJSON(object: any): EBaseUserMessages {
     case 166:
     case "UM_PlayResponseConditional":
       return EBaseUserMessages.UM_PlayResponseConditional;
+    case 167:
+    case "UM_UserSentBugBug":
+      return EBaseUserMessages.UM_UserSentBugBug;
     case 200:
     case "UM_MAX_BASE":
       return EBaseUserMessages.UM_MAX_BASE;
@@ -386,6 +391,8 @@ export function eBaseUserMessagesToJSON(object: EBaseUserMessages): string {
       return "UM_NotifyResponseFound";
     case EBaseUserMessages.UM_PlayResponseConditional:
       return "UM_PlayResponseConditional";
+    case EBaseUserMessages.UM_UserSentBugBug:
+      return "UM_UserSentBugBug";
     case EBaseUserMessages.UM_MAX_BASE:
       return "UM_MAX_BASE";
     case EBaseUserMessages.UNRECOGNIZED:

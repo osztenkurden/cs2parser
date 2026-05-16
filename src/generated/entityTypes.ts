@@ -1,5 +1,6 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: ag2_demo.dem on 2026-04-21
+// Generated from demo: newdemo.dem on 2026-05-16
+// Demo version: network protocol 14161, build 10772, fullpackets 2, valve_demo_2
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -209,6 +210,15 @@ interface _CCSPlayer_ActionTrackingServices {
 	readonly "WeaponPurchaseCount_t.m_nItemDefIndex"?: number;
 }
 
+interface _CCSPlayer_AimPunchServices {
+	readonly "m_predictableBaseAngle"?: [number, number, number];
+	readonly "m_predictableBaseAngleVel"?: [number, number, number];
+	readonly "m_predictableBaseTick"?: number;
+	readonly "m_predictableBaseTickInterpAmount"?: number;
+	readonly "m_unpredictableBaseAngle"?: [number, number, number];
+	readonly "m_unpredictableBaseTick"?: number;
+}
+
 interface _CCSPlayer_BulletServices {
 	readonly "m_totalHitsOnServer"?: number;
 }
@@ -267,6 +277,7 @@ interface _CCSPlayer_MovementServices {
 	readonly "m_bJumpApexPending"?: boolean;
 	readonly "m_bOldJumpPressed"?: boolean;
 	readonly "m_bUseFrictionStashedSpeed"?: boolean;
+	readonly "m_bUsingGroundTopologyOffset"?: boolean;
 	readonly "m_bWasSurfing"?: boolean;
 	readonly "m_flBombPlantViewOffset"?: number;
 	readonly "m_flDuckAmount"?: number;
@@ -287,9 +298,8 @@ interface _CCSPlayer_MovementServices {
 	readonly "m_flMaxspeed"?: number;
 	readonly "m_flStamina"?: number;
 	readonly "m_flUseFrictionStashedSpeedUntilFrac"?: number;
+	readonly "m_flUsingGroundTopologyOffsetTransitionSmoothing"?: number;
 	readonly "m_fStashGrenadeParameterWhen"?: number;
-	readonly "m_gtLastTimeInAir"?: number;
-	readonly "m_gtLastTimeOnStaticWorldGround"?: number;
 	readonly "m_nButtonDownMaskPrev"?: bigint;
 	readonly "m_nGameCodeHasMovedPlayerAfterCommand"?: number;
 	readonly "m_nLadderSurfacePropIndex"?: number;
@@ -832,6 +842,7 @@ interface _CBasePlayerControllerOwn {
 	readonly "m_hPawn"?: number;
 	readonly "m_iConnected"?: number;
 	readonly "m_iDesiredFOV"?: number;
+	readonly "m_iMostConnected"?: number;
 	readonly "m_iszPlayerName"?: string;
 	readonly "m_iTeamNum"?: number;
 	readonly "m_nNextThinkTick"?: number;
@@ -1382,6 +1393,15 @@ interface _CCSPlayer_ActionTrackingServicesOwn {
 	readonly "m_nItemDefIndex"?: number;
 }
 
+interface _CCSPlayer_AimPunchServicesOwn {
+	readonly "m_predictableBaseAngle"?: [number, number, number];
+	readonly "m_predictableBaseAngleVel"?: [number, number, number];
+	readonly "m_predictableBaseTick"?: number;
+	readonly "m_predictableBaseTickInterpAmount"?: number;
+	readonly "m_unpredictableBaseAngle"?: [number, number, number];
+	readonly "m_unpredictableBaseTick"?: number;
+}
+
 interface _CCSPlayer_BulletServicesOwn {
 	readonly "m_totalHitsOnServer"?: number;
 }
@@ -1435,6 +1455,7 @@ interface _CCSPlayer_MovementServicesOwn {
 	readonly "m_bJumpApexPending"?: boolean;
 	readonly "m_bOldJumpPressed"?: boolean;
 	readonly "m_bUseFrictionStashedSpeed"?: boolean;
+	readonly "m_bUsingGroundTopologyOffset"?: boolean;
 	readonly "m_bWasSurfing"?: boolean;
 	readonly "m_flBombPlantViewOffset"?: number;
 	readonly "m_flDuckAmount"?: number;
@@ -1455,9 +1476,8 @@ interface _CCSPlayer_MovementServicesOwn {
 	readonly "m_flMaxspeed"?: number;
 	readonly "m_flStamina"?: number;
 	readonly "m_flUseFrictionStashedSpeedUntilFrac"?: number;
+	readonly "m_flUsingGroundTopologyOffsetTransitionSmoothing"?: number;
 	readonly "m_fStashGrenadeParameterWhen"?: number;
-	readonly "m_gtLastTimeInAir"?: number;
-	readonly "m_gtLastTimeOnStaticWorldGround"?: number;
 	readonly "m_nButtonDownMaskPrev"?: bigint;
 	readonly "m_nGameCodeHasMovedPlayerAfterCommand"?: number;
 	readonly "m_nLadderSurfacePropIndex"?: number;
@@ -1516,6 +1536,7 @@ interface _CCSPlayerControllerOwn {
 	readonly "m_iCompTeammateColor"?: number;
 	readonly "m_iConnected"?: number;
 	readonly "m_iDesiredFOV"?: number;
+	readonly "m_iMostConnected"?: number;
 	readonly "m_iMusicKitID"?: number;
 	readonly "m_iMusicKitMVPs"?: number;
 	readonly "m_iMVPs"?: number;
@@ -1634,10 +1655,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "HDRColorScale"?: number;
 	readonly "lerptime"?: number;
 	readonly "locallightscale"?: number;
-	readonly "m_aimPunchAngle"?: [number, number, number];
-	readonly "m_aimPunchAngleVel"?: [number, number, number];
-	readonly "m_aimPunchTickBase"?: number;
-	readonly "m_aimPunchTickFraction"?: number;
 	readonly "m_angEyeAngles"?: [number, number, number];
 	readonly "m_ArmorValue"?: number;
 	readonly "m_bAnimatedEveryTick"?: boolean;
@@ -3661,6 +3678,8 @@ export type ICCSPlayer_ActionTrackingServices = Prefixed<"CCSPlayer_ActionTracki
 	_CCSPlayer_ActionTrackingServicesOwn
 >;
 
+export type ICCSPlayer_AimPunchServices = Prefixed<"CCSPlayer_AimPunchServices", _CCSPlayer_AimPunchServicesOwn>;
+
 export type ICCSPlayer_BulletServices = Prefixed<"CCSPlayer_BulletServices", _CCSPlayer_BulletServicesOwn>;
 
 export type ICCSPlayer_BuyServices = Prefixed<"CCSPlayer_BuyServices",
@@ -3709,6 +3728,7 @@ export type ICCSPlayerController_InventoryServices = Prefixed<"CCSPlayerControll
 export type ICCSPlayerPawn = Prefixed<"CCSPlayerPawn",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CCSPlayer_ActionTrackingServices", _CCSPlayer_ActionTrackingServices> &
+	Prefixed<"CCSPlayer_AimPunchServices", _CCSPlayer_AimPunchServices> &
 	Prefixed<"CCSPlayer_BulletServices", _CCSPlayer_BulletServices> &
 	Prefixed<"CCSPlayer_BuyServices", _CCSPlayer_BuyServices> &
 	Prefixed<"CCSPlayer_CameraServices", _CCSPlayer_CameraServices> &
@@ -4264,6 +4284,7 @@ export interface EntityTypeMap {
 	CCSGO_TeamSelectCounterTerroristPosition: ICCSGO_TeamSelectCounterTerroristPosition;
 	CCSGO_TeamSelectTerroristPosition: ICCSGO_TeamSelectTerroristPosition;
 	CCSPlayer_ActionTrackingServices: ICCSPlayer_ActionTrackingServices;
+	CCSPlayer_AimPunchServices: ICCSPlayer_AimPunchServices;
 	CCSPlayer_BulletServices: ICCSPlayer_BulletServices;
 	CCSPlayer_BuyServices: ICCSPlayer_BuyServices;
 	CCSPlayer_CameraServices: ICCSPlayer_CameraServices;

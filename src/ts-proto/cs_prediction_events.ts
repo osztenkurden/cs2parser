@@ -6,17 +6,15 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { CMsgQAngle } from "./networkbasetypes.js";
 
 export const protobufPackage = "";
 
-export const ECSPredictionEvents = { CSPE_DamageTag: 1, CSPE_AddAimPunch: 3, UNRECOGNIZED: -1 } as const;
+export const ECSPredictionEvents = { CSPE_DamageTag: 1, UNRECOGNIZED: -1 } as const;
 
 export type ECSPredictionEvents = typeof ECSPredictionEvents[keyof typeof ECSPredictionEvents];
 
 export namespace ECSPredictionEvents {
   export type CSPE_DamageTag = typeof ECSPredictionEvents.CSPE_DamageTag;
-  export type CSPE_AddAimPunch = typeof ECSPredictionEvents.CSPE_AddAimPunch;
   export type UNRECOGNIZED = typeof ECSPredictionEvents.UNRECOGNIZED;
 }
 
@@ -25,9 +23,6 @@ export function eCSPredictionEventsFromJSON(object: any): ECSPredictionEvents {
     case 1:
     case "CSPE_DamageTag":
       return ECSPredictionEvents.CSPE_DamageTag;
-    case 3:
-    case "CSPE_AddAimPunch":
-      return ECSPredictionEvents.CSPE_AddAimPunch;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -39,8 +34,6 @@ export function eCSPredictionEventsToJSON(object: ECSPredictionEvents): string {
   switch (object) {
     case ECSPredictionEvents.CSPE_DamageTag:
       return "CSPE_DamageTag";
-    case ECSPredictionEvents.CSPE_AddAimPunch:
-      return "CSPE_AddAimPunch";
     case ECSPredictionEvents.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -51,10 +44,6 @@ export interface CCSPredictionEvent_DamageTag {
   flinch_mod_small?: number | undefined;
   flinch_mod_large?: number | undefined;
   friendly_fire_damage_reduction_ratio?: number | undefined;
-}
-
-export interface CCSPredictionEvent_AddAimPunch {
-  punch_angle?: CMsgQAngle | undefined;
 }
 
 function createBaseCCSPredictionEvent_DamageTag(): CCSPredictionEvent_DamageTag {
@@ -157,74 +146,6 @@ export const CCSPredictionEvent_DamageTag: MessageFns<CCSPredictionEvent_DamageT
     message.flinch_mod_small = object.flinch_mod_small ?? undefined;
     message.flinch_mod_large = object.flinch_mod_large ?? undefined;
     message.friendly_fire_damage_reduction_ratio = object.friendly_fire_damage_reduction_ratio ?? undefined;
-    return message;
-  },
-};
-
-function createBaseCCSPredictionEvent_AddAimPunch(): CCSPredictionEvent_AddAimPunch {
-  return { punch_angle: undefined };
-}
-
-export const CCSPredictionEvent_AddAimPunch: MessageFns<CCSPredictionEvent_AddAimPunch> = {
-  encode(message: CCSPredictionEvent_AddAimPunch, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.punch_angle !== undefined) {
-      CMsgQAngle.encode(message.punch_angle, writer.uint32(10).fork()).join();
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): CCSPredictionEvent_AddAimPunch {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCCSPredictionEvent_AddAimPunch();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.punch_angle = CMsgQAngle.decode(reader, reader.uint32());
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): CCSPredictionEvent_AddAimPunch {
-    return {
-      punch_angle: isSet(object.punchAngle)
-        ? CMsgQAngle.fromJSON(object.punchAngle)
-        : isSet(object.punch_angle)
-        ? CMsgQAngle.fromJSON(object.punch_angle)
-        : undefined,
-    };
-  },
-
-  toJSON(message: CCSPredictionEvent_AddAimPunch): unknown {
-    const obj: any = {};
-    if (message.punch_angle !== undefined) {
-      obj.punchAngle = CMsgQAngle.toJSON(message.punch_angle);
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<CCSPredictionEvent_AddAimPunch>, I>>(base?: I): CCSPredictionEvent_AddAimPunch {
-    return CCSPredictionEvent_AddAimPunch.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<CCSPredictionEvent_AddAimPunch>, I>>(
-    object: I,
-  ): CCSPredictionEvent_AddAimPunch {
-    const message = createBaseCCSPredictionEvent_AddAimPunch();
-    message.punch_angle = (object.punch_angle !== undefined && object.punch_angle !== null)
-      ? CMsgQAngle.fromPartial(object.punch_angle)
-      : undefined;
     return message;
   },
 };

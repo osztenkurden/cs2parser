@@ -116,6 +116,7 @@ export interface CMsgPlayerBulletHit {
   damage?: number | undefined;
   penetration_count?: number | undefined;
   is_kill?: boolean | undefined;
+  through_smoke?: boolean | undefined;
 }
 
 function createBaseCMsgTEPlayerAnimEvent(): CMsgTEPlayerAnimEvent {
@@ -904,6 +905,7 @@ function createBaseCMsgPlayerBulletHit(): CMsgPlayerBulletHit {
     damage: undefined,
     penetration_count: undefined,
     is_kill: undefined,
+    through_smoke: undefined,
   };
 }
 
@@ -929,6 +931,9 @@ export const CMsgPlayerBulletHit: MessageFns<CMsgPlayerBulletHit> = {
     }
     if (message.is_kill !== undefined) {
       writer.uint32(56).bool(message.is_kill);
+    }
+    if (message.through_smoke !== undefined) {
+      writer.uint32(64).bool(message.through_smoke);
     }
     return writer;
   },
@@ -996,6 +1001,14 @@ export const CMsgPlayerBulletHit: MessageFns<CMsgPlayerBulletHit> = {
           message.is_kill = reader.bool();
           continue;
         }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.through_smoke = reader.bool();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1038,6 +1051,11 @@ export const CMsgPlayerBulletHit: MessageFns<CMsgPlayerBulletHit> = {
         : isSet(object.is_kill)
         ? globalThis.Boolean(object.is_kill)
         : undefined,
+      through_smoke: isSet(object.throughSmoke)
+        ? globalThis.Boolean(object.throughSmoke)
+        : isSet(object.through_smoke)
+        ? globalThis.Boolean(object.through_smoke)
+        : undefined,
     };
   },
 
@@ -1064,6 +1082,9 @@ export const CMsgPlayerBulletHit: MessageFns<CMsgPlayerBulletHit> = {
     if (message.is_kill !== undefined) {
       obj.isKill = message.is_kill;
     }
+    if (message.through_smoke !== undefined) {
+      obj.throughSmoke = message.through_smoke;
+    }
     return obj;
   },
 
@@ -1081,6 +1102,7 @@ export const CMsgPlayerBulletHit: MessageFns<CMsgPlayerBulletHit> = {
     message.damage = object.damage ?? undefined;
     message.penetration_count = object.penetration_count ?? undefined;
     message.is_kill = object.is_kill ?? undefined;
+    message.through_smoke = object.through_smoke ?? undefined;
     return message;
   },
 };

@@ -379,6 +379,7 @@
       "m_bJumpApexPending": "boolean",
       "m_bOldJumpPressed": "boolean",
       "m_bUseFrictionStashedSpeed": "boolean",
+      "m_bUsingGroundTopologyOffset": "boolean",
       "m_bWasSurfing": "boolean",
       "m_flBombPlantViewOffset": "number",
       "m_flDuckAmount": "number",
@@ -399,9 +400,8 @@
       "m_flMaxspeed": "number",
       "m_flStamina": "number",
       "m_flUseFrictionStashedSpeedUntilFrac": "number",
+      "m_flUsingGroundTopologyOffsetTransitionSmoothing": "number",
       "m_fStashGrenadeParameterWhen": "number",
-      "m_gtLastTimeInAir": "number",
-      "m_gtLastTimeOnStaticWorldGround": "number",
       "m_nButtonDownMaskPrev": "bigint",
       "m_nGameCodeHasMovedPlayerAfterCommand": "number",
       "m_nLadderSurfacePropIndex": "number",
@@ -439,6 +439,14 @@
       "m_nItemDefIndex": "number",
       "WeaponPurchaseCount_t.m_nCount": "number",
       "WeaponPurchaseCount_t.m_nItemDefIndex": "number"
+    },
+    "CCSPlayer_AimPunchServices": {
+      "m_predictableBaseAngle": "[number, number, number]",
+      "m_predictableBaseAngleVel": "[number, number, number]",
+      "m_predictableBaseTick": "number",
+      "m_predictableBaseTickInterpAmount": "number",
+      "m_unpredictableBaseAngle": "[number, number, number]",
+      "m_unpredictableBaseTick": "number"
     },
     "CBodyComponentBaseModelEntity": {
       "m_angRotation": "[number, number, number]",
@@ -826,6 +834,7 @@
         "m_hPawn": "number",
         "m_iConnected": "number",
         "m_iDesiredFOV": "number",
+        "m_iMostConnected": "number",
         "m_iszPlayerName": "string",
         "m_iTeamNum": "number",
         "m_nNextThinkTick": "number",
@@ -1701,6 +1710,7 @@
         "m_iCompTeammateColor": "number",
         "m_iConnected": "number",
         "m_iDesiredFOV": "number",
+        "m_iMostConnected": "number",
         "m_iMusicKitID": "number",
         "m_iMusicKitMVPs": "number",
         "m_iMVPs": "number",
@@ -1792,6 +1802,7 @@
         "m_bJumpApexPending": "boolean",
         "m_bOldJumpPressed": "boolean",
         "m_bUseFrictionStashedSpeed": "boolean",
+        "m_bUsingGroundTopologyOffset": "boolean",
         "m_bWasSurfing": "boolean",
         "m_flBombPlantViewOffset": "number",
         "m_flDuckAmount": "number",
@@ -1812,9 +1823,8 @@
         "m_flMaxspeed": "number",
         "m_flStamina": "number",
         "m_flUseFrictionStashedSpeedUntilFrac": "number",
+        "m_flUsingGroundTopologyOffsetTransitionSmoothing": "number",
         "m_fStashGrenadeParameterWhen": "number",
-        "m_gtLastTimeInAir": "number",
-        "m_gtLastTimeOnStaticWorldGround": "number",
         "m_nButtonDownMaskPrev": "bigint",
         "m_nGameCodeHasMovedPlayerAfterCommand": "number",
         "m_nLadderSurfacePropIndex": "number",
@@ -1867,10 +1877,22 @@
         "m_nItemDefIndex": "number"
       }
     },
+    "CCSPlayer_AimPunchServices": {
+      "serializers": [],
+      "ownFields": {
+        "m_predictableBaseAngle": "[number, number, number]",
+        "m_predictableBaseAngleVel": "[number, number, number]",
+        "m_predictableBaseTick": "number",
+        "m_predictableBaseTickInterpAmount": "number",
+        "m_unpredictableBaseAngle": "[number, number, number]",
+        "m_unpredictableBaseTick": "number"
+      }
+    },
     "CCSPlayerPawn": {
       "serializers": [
         "CBodyComponentBaseAnimGraph",
         "CCSPlayer_ActionTrackingServices",
+        "CCSPlayer_AimPunchServices",
         "CCSPlayer_BulletServices",
         "CCSPlayer_BuyServices",
         "CCSPlayer_CameraServices",
@@ -1904,10 +1926,6 @@
         "HDRColorScale": "number",
         "lerptime": "number",
         "locallightscale": "number",
-        "m_aimPunchAngle": "[number, number, number]",
-        "m_aimPunchAngleVel": "[number, number, number]",
-        "m_aimPunchTickBase": "number",
-        "m_aimPunchTickFraction": "number",
         "m_angEyeAngles": "[number, number, number]",
         "m_ArmorValue": "number",
         "m_bAnimatedEveryTick": "boolean",
@@ -9874,5 +9892,11 @@
         "m_weaponMode": "bigint"
       }
     }
+  },
+  "version": {
+    "buildNum": 10772,
+    "fullpacketsVersion": 2,
+    "demoVersionName": "valve_demo_2",
+    "networkProtocol": 14161
   }
 }

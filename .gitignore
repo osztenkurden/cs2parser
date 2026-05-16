@@ -3,6 +3,7 @@ lib
 dist
 replay-generator
 *.tgz
+*.bz2
 tests/fixtures/*.dem
 tests/fixtures/*.bin
 examples/*.actual.txt

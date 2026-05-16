@@ -55,15 +55,40 @@ function decoderToTsType(decoder: Decoder): string {
 	return DECODER_ID_TO_TS[decoder] ?? 'unknown';
 }
 
+type DemoVersionInfo = {
+	/** `CSVCMsg_ServerInfo.protocol` — the network protocol version. */
+	networkProtocol?: number;
+	/** `CDemoFileHeader.build_num` — game build the demo was recorded on. */
+	buildNum?: number;
+	/** `CDemoFileHeader.fullpackets_version` — demo file format version. */
+	fullpacketsVersion?: number;
+	/** `CDemoFileHeader.demo_version_name` — e.g. "valve_demo_2". */
+	demoVersionName?: string;
+};
+
 type SnapshotData = {
 	// serializerName → { fieldName (without serializer prefix) → tsType }
 	serializers: Record<string, Record<string, string>>;
 	entities: Record<string, { serializers: string[]; ownFields: Record<string, string> }>;
+	version?: DemoVersionInfo;
 };
 
-function collectFromDemo(demoPath: string): SnapshotData {
+async function collectFromDemo(demoPath: string): Promise<SnapshotData> {
 	const parser = new DemoReader();
-	parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
+	const version: DemoVersionInfo = {};
+	parser.on('header', h => {
+		version.buildNum = h.build_num;
+		version.fullpacketsVersion = h.fullpackets_version;
+		version.demoVersionName = h.demo_version_name;
+	});
+	parser.on('serverinfo', s => {
+		version.networkProtocol = s.protocol;
+	});
+	// MUST await — `propIdToName` / `propIdToDecoder` are populated lazily by
+	// the v2 Rust decoder on the first chunk feed (see
+	// `DemoReader._maybePopulateClassInfo`). Reading them before the parse
+	// completes (or at least starts) produces an empty snapshot.
+	await parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
 
 	// Shared serializer map: serializerName → { fieldNameWithoutPrefix → tsType }
 	const serializerMap = new Map<string, Map<string, string>>();
@@ -114,7 +139,7 @@ function collectFromDemo(demoPath: string): SnapshotData {
 	}
 
 	// Convert to serializable format
-	const result: SnapshotData = { serializers: {}, entities: {} };
+	const result: SnapshotData = { serializers: {}, entities: {}, version };
 	for (const [name, fields] of serializerMap) {
 		result.serializers[name] = Object.fromEntries([...fields.entries()].sort((a, b) => a[0].localeCompare(b[0])));
 	}
@@ -143,6 +168,15 @@ function generateTypeScript(data: SnapshotData, demoName: string): string {
 	const lines: string[] = [];
 	lines.push('// AUTO-GENERATED - DO NOT EDIT');
 	lines.push(`// Generated from demo: ${demoName} on ${new Date().toISOString().split('T')[0]}`);
+	const v = data.version;
+	if (v) {
+		const parts: string[] = [];
+		if (v.networkProtocol !== undefined) parts.push(`network protocol ${v.networkProtocol}`);
+		if (v.buildNum !== undefined) parts.push(`build ${v.buildNum}`);
+		if (v.fullpacketsVersion !== undefined) parts.push(`fullpackets ${v.fullpacketsVersion}`);
+		if (v.demoVersionName) parts.push(v.demoVersionName);
+		if (parts.length > 0) lines.push(`// Demo version: ${parts.join(', ')}`);
+	}
 	lines.push('');
 
 	// Utility type
@@ -294,7 +328,7 @@ const useSnapshot = args.includes('--snapshot');
 if (demoIdx !== -1 && args[demoIdx + 1]) {
 	const demoPath = args[demoIdx + 1]!;
 	console.log(`Parsing demo: ${demoPath}...`);
-	const data = collectFromDemo(demoPath);
+	const data = await collectFromDemo(demoPath);
 	saveSnapshot(data);
 
 	const output = generateTypeScript(data, path.basename(demoPath));
