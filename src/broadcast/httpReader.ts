@@ -20,7 +20,11 @@ export interface HttpBroadcastOptions extends ParseSettings {
 	fetcher?: BroadcastFetcher;
 	/** Milliseconds to wait between retries on `/full` and `/delta` 404/405. Default 1000. */
 	deltaRetryInterval?: number;
-	/** Minimum milliseconds between successful `/delta` requests. Default 1000. */
+	/**
+	 * Minimum milliseconds between the *starts* of successive `/delta` requests.
+	 * Measured cycle-to-cycle, so fetch/parse latency is absorbed into the
+	 * interval instead of added on top. Default 1000.
+	 */
 	deltaThrottle?: number;
 	/** Max consecutive 404/405 retries on `/delta` before terminating with reason `'timeout'`. Default 10. */
 	maxDeltaRetries?: number;
@@ -88,7 +92,7 @@ export class HttpBroadcastReader {
 	private _running = false;
 	private _terminus: BroadcastTerminus | null = null;
 	private _prefix = '';
-	private _lastDeltaAt = 0;
+	private _lastDeltaStartedAt = 0;
 
 	private readonly _onTickStart = (t: number) => {
 		this._tailTick = t;
@@ -247,12 +251,16 @@ export class HttpBroadcastReader {
 			let fragment = this._fragment + 1;
 
 			while (!this.abortController.signal.aborted) {
-				// Throttle between successful deltas
-				const now = Date.now();
-				const wait = (this.opts.deltaThrottle ?? DEFAULTS.deltaThrottle) - (now - this._lastDeltaAt);
+				// Throttle: keep successive /delta fetches at least `deltaThrottle` ms
+				// apart, anchored on cycle start (not the previous fetch's completion).
+				// Anchoring on completion would add fetch+parse latency on top of the
+				// throttle every cycle, compounding into real-time drift on slow links.
+				const throttle = this.opts.deltaThrottle ?? DEFAULTS.deltaThrottle;
+				const wait = throttle - (Date.now() - this._lastDeltaStartedAt);
 				if (wait > 0) {
 					if (!(await this._sleep(wait))) return this._terminate('cancelled');
 				}
+				this._lastDeltaStartedAt = Date.now();
 
 				this._fragment = fragment;
 				const bytes = await this._fetchWithRetry(
@@ -262,7 +270,6 @@ export class HttpBroadcastReader {
 					this.opts.maxDeltaRetries ?? DEFAULTS.maxDeltaRetries
 				);
 				if (!bytes) return this._terminus!;
-				this._lastDeltaAt = Date.now();
 
 				if (this.abortController.signal.aborted) return this._terminate('cancelled');
 				if (await this._processFragment(bytes, 0, 'delta', fragment)) return this._terminus!;
