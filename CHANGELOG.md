@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/osztenkurden/cs2parser/compare/v1.8.0...v1.9.0) (2026-05-19)
+
+
+### Features
+
+* make helpers have more type-safety, expose entity class helper ([ef63e88](https://github.com/osztenkurden/cs2parser/commit/ef63e8829ef75e9014f859eca4c14c22328b6e8f))
+
 ## [1.8.0](https://github.com/osztenkurden/cs2parser/compare/v1.7.0...v1.8.0) (2026-05-05)
 
 
