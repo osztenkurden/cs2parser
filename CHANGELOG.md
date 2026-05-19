@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/osztenkurden/cs2parser/compare/v1.9.0...v1.9.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* parser drifting on long-poll requests wher parsing broadcasts ([576efa0](https://github.com/osztenkurden/cs2parser/commit/576efa02a30977780a1ca34f519566f476d945ac))
+
 ## [1.9.0](https://github.com/osztenkurden/cs2parser/compare/v1.8.0...v1.9.0) (2026-05-19)
 
 
