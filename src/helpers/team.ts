@@ -1,6 +1,6 @@
 import type { DemoReader } from '../parser/index.js';
-import type { ICCSTeam } from '../generated/entityTypes.js';
 import type { Player } from './player.js';
+import { EntityHelper } from './entityHelper.js';
 
 export const TeamNumber = {
 	Unassigned: 0,
@@ -11,45 +11,33 @@ export const TeamNumber = {
 
 export type TeamNumber = (typeof TeamNumber)[keyof typeof TeamNumber];
 
-type TeamProps = Partial<ICCSTeam>;
-type TeamKey = keyof ICCSTeam;
-
-export class Team {
-	constructor(
-		private _parser: DemoReader,
-		public readonly entityId: number
-	) {}
-
-	get entity() {
-		return this._parser.entities[this.entityId];
-	}
-
-	private _prop<K extends TeamKey>(name: K): ICCSTeam[K] | undefined {
-		return (this.entity?.properties as TeamProps)?.[name];
+export class Team extends EntityHelper<'CCSTeam'> {
+	constructor(parser: DemoReader, entityId: number) {
+		super(parser, entityId);
 	}
 
 	get teamNumber(): TeamNumber {
-		return (this._prop('CCSTeam.m_iTeamNum') ?? TeamNumber.Unassigned) as TeamNumber;
+		return (this.prop('CCSTeam.m_iTeamNum') ?? TeamNumber.Unassigned) as TeamNumber;
 	}
 
 	get teamName(): string {
-		return (this._prop('CCSTeam.m_szTeamname') ?? '') as string;
+		return this.prop('CCSTeam.m_szTeamname') ?? '';
 	}
 
 	get clanName(): string {
-		return (this._prop('CCSTeam.m_szClanTeamname') ?? '') as string;
+		return this.prop('CCSTeam.m_szClanTeamname') ?? '';
 	}
 
 	get score(): number {
-		return (this._prop('CCSTeam.m_iScore') ?? 0) as number;
+		return this.prop('CCSTeam.m_iScore') ?? 0;
 	}
 
 	get scoreFirstHalf(): number {
-		return (this._prop('CCSTeam.m_scoreFirstHalf') ?? 0) as number;
+		return this.prop('CCSTeam.m_scoreFirstHalf') ?? 0;
 	}
 
 	get scoreSecondHalf(): number {
-		return (this._prop('CCSTeam.m_scoreSecondHalf') ?? 0) as number;
+		return this.prop('CCSTeam.m_scoreSecondHalf') ?? 0;
 	}
 
 	get members(): Player[] {

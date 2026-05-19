@@ -252,29 +252,42 @@ function generateTypeScript(data: SnapshotData, demoName: string): string {
 	lines.push('}');
 	lines.push('');
 
-	// TypedEntity
-	lines.push(
-		'type _TypedEntity<K extends keyof EntityTypeMap> = { className: K; classId: number; entityType: number; properties: Partial<EntityTypeMap[K]> };'
-	);
-	lines.push('');
-	lines.push('/** Discriminated union of all known entity types */');
-	lines.push('export type TypedEntity = _TypedEntity<keyof EntityTypeMap> | BaseEntity;');
-	lines.push('');
-
-	// Helper types
+	// Helper types — declared before TypedEntity so it can reference KnownClassName
 	lines.push('/** All known entity class names */');
 	lines.push('export type KnownClassName = keyof EntityTypeMap;');
 	lines.push('');
 	lines.push('/** Get typed properties for a known entity class name */');
-	lines.push('export type EntityProperties<T extends keyof EntityTypeMap> = Partial<EntityTypeMap[T]>;');
+	lines.push('export type EntityProperties<T extends KnownClassName> = Partial<EntityTypeMap[T]>;');
+	lines.push('');
+
+	// TypedEntity — parametric, distributes when K is a union (default: every known class)
+	lines.push('/**');
+	lines.push(' * Typed entity wrapper — narrows to a specific known className.');
+	lines.push(' *');
+	lines.push(' * With no type argument, distributes over every known className, producing a');
+	lines.push(' * discriminated union suitable for narrowing on `entity.className`.');
+	lines.push(' *');
+	lines.push(' * @example');
+	lines.push(" * type Controller = TypedEntity<'CCSPlayerController'>;");
+	lines.push(' * type AnyKnown = TypedEntity; // discriminated union of all known classes');
+	lines.push(' */');
+	lines.push('export type TypedEntity<K extends KnownClassName = KnownClassName> = K extends KnownClassName');
+	lines.push('\t? { className: K; classId: number; entityType: number; properties: Partial<EntityTypeMap[K]> }');
+	lines.push('\t: never;');
+	lines.push('');
+	lines.push('/**');
+	lines.push(' * Any entity slot — a known {@link TypedEntity} when className is in {@link EntityTypeMap},');
+	lines.push(' * or {@link BaseEntity} for classes outside the generated map.');
+	lines.push(' */');
+	lines.push('export type AnyEntity = TypedEntity | BaseEntity;');
 	lines.push('');
 
 	// isEntityClass
-	lines.push('/** Narrow a BaseEntity to a specific typed entity */');
+	lines.push('/** Narrow an entity slot to a specific typed entity */');
 	lines.push('export function isEntityClass<T extends KnownClassName>(');
-	lines.push('\tentity: BaseEntity | undefined,');
+	lines.push('\tentity: AnyEntity | undefined,');
 	lines.push('\tclassName: T');
-	lines.push('): entity is _TypedEntity<T> {');
+	lines.push('): entity is TypedEntity<T> {');
 	lines.push('\treturn entity?.className === className;');
 	lines.push('}');
 	lines.push('');

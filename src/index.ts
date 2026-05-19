@@ -5,10 +5,12 @@ export { Player } from './helpers/player.js';
 export { PlayerPawn, type Vector } from './helpers/playerPawn.js';
 export { Team, TeamNumber } from './helpers/team.js';
 export { GameRules, WinRoundReason } from './helpers/gameRules.js';
+export { EntityHelper } from './helpers/entityHelper.js';
 export { isEntityClass } from './generated/entityTypes.js';
 export type {
 	BaseEntity,
 	TypedEntity,
+	AnyEntity,
 	EntityTypeMap,
 	EntityProperties,
 	KnownClassName

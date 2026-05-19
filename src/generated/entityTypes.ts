@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: ag2_demo.dem on 2026-04-21
+// Generated from demo: snapshot on 2026-05-19
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -4355,21 +4355,36 @@ export interface BaseEntity {
 	properties: Record<string, unknown>;
 }
 
-type _TypedEntity<K extends keyof EntityTypeMap> = { className: K; classId: number; entityType: number; properties: Partial<EntityTypeMap[K]> };
-
-/** Discriminated union of all known entity types */
-export type TypedEntity = _TypedEntity<keyof EntityTypeMap> | BaseEntity;
-
 /** All known entity class names */
 export type KnownClassName = keyof EntityTypeMap;
 
 /** Get typed properties for a known entity class name */
-export type EntityProperties<T extends keyof EntityTypeMap> = Partial<EntityTypeMap[T]>;
+export type EntityProperties<T extends KnownClassName> = Partial<EntityTypeMap[T]>;
 
-/** Narrow a BaseEntity to a specific typed entity */
+/**
+ * Typed entity wrapper — narrows to a specific known className.
+ *
+ * With no type argument, distributes over every known className, producing a
+ * discriminated union suitable for narrowing on `entity.className`.
+ *
+ * @example
+ * type Controller = TypedEntity<'CCSPlayerController'>;
+ * type AnyKnown = TypedEntity; // discriminated union of all known classes
+ */
+export type TypedEntity<K extends KnownClassName = KnownClassName> = K extends KnownClassName
+	? { className: K; classId: number; entityType: number; properties: Partial<EntityTypeMap[K]> }
+	: never;
+
+/**
+ * Any entity slot — a known {@link TypedEntity} when className is in {@link EntityTypeMap},
+ * or {@link BaseEntity} for classes outside the generated map.
+ */
+export type AnyEntity = TypedEntity | BaseEntity;
+
+/** Narrow an entity slot to a specific typed entity */
 export function isEntityClass<T extends KnownClassName>(
-	entity: BaseEntity | undefined,
+	entity: AnyEntity | undefined,
 	className: T
-): entity is _TypedEntity<T> {
+): entity is TypedEntity<T> {
 	return entity?.className === className;
 }

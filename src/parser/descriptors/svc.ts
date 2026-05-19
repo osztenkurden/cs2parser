@@ -1,7 +1,6 @@
 import {
 	CCSUsrMsg_ServerRankRevealAll,
 	CCSUsrMsg_ServerRankUpdate,
-	CCSUsrMsgPreMatchSayText,
 	ECstrike15UserMessages
 } from '../../ts-proto/cstrike15_usermessages.js';
 import {

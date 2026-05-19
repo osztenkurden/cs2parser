@@ -244,7 +244,7 @@ A reference relay implementation is provided in `examples/relay.ts` for local te
 | Member | Type | Description |
 | --- | --- | --- |
 | `header` | `CDemoFileHeader \| null` | Populated after the first `'header'` event |
-| `entities` | `TypedEntity[]` | Sparse array indexed by entity ID. `undefined` slots mean the entity was deleted or never existed |
+| `entities` | `AnyEntity[]` | Sparse array indexed by entity ID. Each slot is a `TypedEntity` for known classes or `BaseEntity` otherwise; `undefined` slots mean the entity was deleted or never existed |
 | `currentTick` | `number` | Tick currently being processed (`-1` before the first frame) |
 | `currentTime` | `number` | `currentTick * tickInterval` — requires `'serverinfo'` to have arrived |
 | `gameEvents` | `GameEvents` | Typed emitter for in-game events (see [Game Events](#game-events)) |
@@ -368,7 +368,7 @@ The `Player` class wraps a `CCSPlayerController` entity. It links to the player'
 | Property | Type | Source |
 | --- | --- | --- |
 | `entityId` | `number` (readonly) | Controller entity index |
-| `entity` | `TypedEntity \| undefined` | Raw controller entity |
+| `entity` | `TypedEntity<'CCSPlayerController'> \| undefined` | Raw controller entity |
 | `name` | `string` | Controller |
 | `steamId` | `string` | Controller (empty if not yet set) |
 | `isConnected` | `boolean` | Controller (`m_iConnected === 0`) |
@@ -447,7 +447,7 @@ The `Player` class wraps a `CCSPlayerController` entity. It links to the player'
 | Property | Type | Description |
 | --- | --- | --- |
 | `entityId` | `number` | Pawn entity index |
-| `entity` | `TypedEntity \| undefined` | Raw pawn entity |
+| `entity` | `TypedEntity<'CCSPlayerPawn'> \| undefined` | Raw pawn entity |
 | `health` / `maxHealth` | `number` | `maxHealth` defaults to `100` |
 | `armor` | `number` | |
 | `lifeState` | `number` | Raw life state flags |
@@ -486,7 +486,7 @@ TeamNumber.CounterTerrorists  // 3
 | Property | Type |
 | --- | --- |
 | `entityId` | `number` |
-| `entity` | `TypedEntity \| undefined` |
+| `entity` | `TypedEntity<'CCSTeam'> \| undefined` |
 | `teamNumber` | `TeamNumber` |
 | `teamName` | `string` |
 | `clanName` | `string` |
@@ -507,7 +507,7 @@ if (rules) {
 | Property | Type | Description |
 | --- | --- | --- |
 | `entityId` | `number` | Proxy entity index |
-| `entity` | `TypedEntity \| undefined` | Raw proxy entity |
+| `entity` | `TypedEntity<'CCSGameRulesProxy'> \| undefined` | Raw proxy entity |
 | `isWarmup` | `boolean` | |
 | `isFreezePeriod` | `boolean` | |
 | `isGamePaused` | `boolean` | |
@@ -593,6 +593,7 @@ All entity classes have generated TypeScript interfaces. Use `getEntity` or `fin
 
 ```ts
 import { isEntityClass } from 'cs2parser';
+import type { TypedEntity, AnyEntity, EntityProperties } from 'cs2parser';
 
 // Get typed properties for a specific entity
 const props = parser.getEntity(88, 'CCSPlayerPawn');
@@ -609,6 +610,44 @@ for (const { entityId, properties } of weapons) {
 const entity = parser.entities[306];
 if (isEntityClass(entity, 'CCSGameRulesProxy')) {
   entity.properties['CCSGameRulesProxy.CCSGameRules.m_bWarmupPeriod']; // typed
+}
+
+// Parametric `TypedEntity<K>` — useful for function signatures and helpers
+function controllerName(e: TypedEntity<'CCSPlayerController'>): string {
+  return e.properties['CCSPlayerController.m_iszPlayerName'] ?? '';
+}
+
+// `EntityProperties<K>` — just the property map (Partial)
+function pawnHp(props: EntityProperties<'CCSPlayerPawn'>) {
+  return props['CCSPlayerPawn.m_iHealth'] ?? 0;
+}
+
+// `AnyEntity` is the slot type in `parser.entities[]` — known typed entities plus
+// `BaseEntity` for any class outside `EntityTypeMap`.
+const slot: AnyEntity | undefined = parser.entities[0];
+```
+
+### Custom helper classes
+
+If you need a helper for an entity class that isn't already wrapped (e.g. a weapon
+or grenade), extend the `EntityHelper<C>` base — you get a typed `entity` getter
+and a `prop` accessor for free:
+
+```ts
+import { DemoReader, EntityHelper } from 'cs2parser';
+
+class C4 extends EntityHelper<'CC4'> {
+  get clipAmmo(): number {
+    return this.prop('CC4.m_iClip1') ?? 0;
+  }
+}
+
+const parser = new DemoReader();
+// ... after parsing
+const c4Entities = parser.findEntities('CC4');
+for (const { entityId } of c4Entities) {
+  const c4 = new C4(parser, entityId);
+  console.log(c4.clipAmmo);
 }
 ```
 

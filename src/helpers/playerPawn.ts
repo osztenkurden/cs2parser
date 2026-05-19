@@ -1,6 +1,6 @@
 import type { DemoReader } from '../parser/index.js';
-import type { ICCSPlayerPawn } from '../generated/entityTypes.js';
 import type { Player } from './player.js';
+import { EntityHelper } from './entityHelper.js';
 
 const CELL_BITS = 9;
 const MAX_COORD = 1 << 14;
@@ -11,30 +11,18 @@ export interface Vector {
 	readonly z: number;
 }
 
-type PawnProps = Partial<ICCSPlayerPawn>;
-type PawnKey = keyof ICCSPlayerPawn;
-
-export class PlayerPawn {
-	constructor(
-		private _parser: DemoReader,
-		public readonly entityId: number
-	) {}
-
-	get entity() {
-		return this._parser.entities[this.entityId];
-	}
-
-	private _prop<K extends PawnKey>(name: K): ICCSPlayerPawn[K] | undefined {
-		return (this.entity?.properties as PawnProps)?.[name];
+export class PlayerPawn extends EntityHelper<'CCSPlayerPawn'> {
+	constructor(parser: DemoReader, entityId: number) {
+		super(parser, entityId);
 	}
 
 	get position(): Vector {
-		const cellX = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellX') ?? 0) as number;
-		const cellY = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellY') ?? 0) as number;
-		const cellZ = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellZ') ?? 0) as number;
-		const vecX = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecX') ?? 0) as number;
-		const vecY = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecY') ?? 0) as number;
-		const vecZ = (this._prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecZ') ?? 0) as number;
+		const cellX = this.prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellX') ?? 0;
+		const cellY = this.prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellY') ?? 0;
+		const cellZ = this.prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellZ') ?? 0;
+		const vecX = this.prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecX') ?? 0;
+		const vecY = this.prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecY') ?? 0;
+		const vecZ = this.prop('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecZ') ?? 0;
 		return {
 			x: cellX * (1 << CELL_BITS) - MAX_COORD + vecX,
 			y: cellY * (1 << CELL_BITS) - MAX_COORD + vecY,
@@ -43,19 +31,19 @@ export class PlayerPawn {
 	}
 
 	get health(): number {
-		return (this._prop('CCSPlayerPawn.m_iHealth') ?? 0) as number;
+		return this.prop('CCSPlayerPawn.m_iHealth') ?? 0;
 	}
 
 	get maxHealth(): number {
-		return (this._prop('CCSPlayerPawn.m_iMaxHealth') ?? 100) as number;
+		return this.prop('CCSPlayerPawn.m_iMaxHealth') ?? 100;
 	}
 
 	get armor(): number {
-		return (this._prop('CCSPlayerPawn.m_ArmorValue') ?? 0) as number;
+		return this.prop('CCSPlayerPawn.m_ArmorValue') ?? 0;
 	}
 
 	get lifeState(): number {
-		return (this._prop('CCSPlayerPawn.m_lifeState') ?? 0) as number;
+		return this.prop('CCSPlayerPawn.m_lifeState') ?? 0;
 	}
 
 	get isAlive(): boolean {
@@ -63,33 +51,33 @@ export class PlayerPawn {
 	}
 
 	get hasDefuser(): boolean {
-		return (this._prop('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasDefuser') ?? false) as boolean;
+		return this.prop('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasDefuser') ?? false;
 	}
 
 	get hasHelmet(): boolean {
-		return (this._prop('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasHelmet') ?? false) as boolean;
+		return this.prop('CCSPlayerPawn.CCSPlayer_ItemServices.m_bHasHelmet') ?? false;
 	}
 
 	get isScoped(): boolean {
-		return (this._prop('CCSPlayerPawn.m_bIsScoped') ?? false) as boolean;
+		return this.prop('CCSPlayerPawn.m_bIsScoped') ?? false;
 	}
 
 	get isWalking(): boolean {
-		return (this._prop('CCSPlayerPawn.m_bIsWalking') ?? false) as boolean;
+		return this.prop('CCSPlayerPawn.m_bIsWalking') ?? false;
 	}
 
 	get isDefusing(): boolean {
-		return (this._prop('CCSPlayerPawn.m_bIsDefusing') ?? false) as boolean;
+		return this.prop('CCSPlayerPawn.m_bIsDefusing') ?? false;
 	}
 
 	get eyeAngles(): { pitch: number; yaw: number } {
-		const raw = this._prop('CCSPlayerPawn.m_angEyeAngles');
+		const raw = this.prop('CCSPlayerPawn.m_angEyeAngles');
 		if (Array.isArray(raw)) return { pitch: raw[0] ?? 0, yaw: raw[1] ?? 0 };
 		return { pitch: 0, yaw: 0 };
 	}
 
 	get flags(): number {
-		return (this._prop('CCSPlayerPawn.m_fFlags') ?? 0) as number;
+		return this.prop('CCSPlayerPawn.m_fFlags') ?? 0;
 	}
 
 	get controller(): Player | undefined {
@@ -97,6 +85,6 @@ export class PlayerPawn {
 	}
 
 	get ownerEntityHandle(): number {
-		return (this._prop('CCSPlayerPawn.m_hOwnerEntity') ?? 0) as number;
+		return this.prop('CCSPlayerPawn.m_hOwnerEntity') ?? 0;
 	}
 }

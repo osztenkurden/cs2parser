@@ -12,7 +12,7 @@ import { Player } from '../helpers/player.js';
 import snappy from 'snappy';
 import { Team } from '../helpers/team.js';
 import { GameRules } from '../helpers/gameRules.js';
-import type { TypedEntity, EntityProperties, KnownClassName, ICCSPlayerController } from '../generated/entityTypes.js';
+import type { AnyEntity, EntityProperties, KnownClassName, ICCSPlayerController } from '../generated/entityTypes.js';
 import { isEntityClass } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
@@ -34,7 +34,7 @@ export class DemoReader extends EventEmitter<{
 	private _hasEnded = false;
 	private _stream: Readable | null = null;
 
-	entities: TypedEntity[];
+	entities: AnyEntity[];
 	private _directWriteMode = false;
 	private tickInterval = NaN;
 	currentTick = -1;
