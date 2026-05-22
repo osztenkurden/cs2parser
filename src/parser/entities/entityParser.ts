@@ -39,13 +39,16 @@ const getEntityType = (name: string) => {
 	return EntityTypeEnum.Normal;
 };
 
-// Reusable result object to avoid allocation per field
-const _fieldResult = { decoder: 0 as any, propId: 0, hasInfo: false };
+// Reusable result object to avoid allocation per field.
+// byteVectorOp: 0 = none, 1 = byte-vector length read, 2 = byte-vector element read.
+const _fieldResult = { decoder: 0 as any, propId: 0, hasInfo: false, byteVectorOp: 0, elementIndex: 0 };
 
 // Combined findField + getPropInfo + getDecoderFromField in one pass
 const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
 	const f = ser.fields[fp.path[0]];
 	if (!f) throw 'Noo field';
+
+	_fieldResult.byteVectorOp = 0;
 
 	// Fast path: depth-0 Value field (most common case)
 	if (fp.last === 0 && f.type === FieldTypeEnum.Value) {
@@ -56,9 +59,12 @@ const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
 		return _fieldResult;
 	}
 
-	// Traverse to leaf field
+	// Traverse to leaf field, keeping the immediate parent so we can recognise
+	// elements of a byte vector (parent is a Vector, leaf is its inner Value).
 	let field = f;
+	let parent: typeof f | null = null;
 	for (let depth = 1; depth <= fp.last; depth++) {
+		parent = field;
 		field = getInnerExt(field!, fp.path[depth]!);
 	}
 
@@ -69,6 +75,11 @@ const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
 		_fieldResult.decoder = v.decoder;
 		_fieldResult.propId = v.prop_id;
 		_fieldResult.hasInfo = true;
+		// A Value reached through a byte Vector is one byte at fp.path[fp.last].
+		if (parent !== null && parent.type === FieldTypeEnum.Vector && (parent.value as any).isByteVector) {
+			_fieldResult.byteVectorOp = 2;
+			_fieldResult.elementIndex = fp.path[fp.last]!;
+		}
 		return _fieldResult;
 	}
 
@@ -79,6 +90,8 @@ const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
 			const v = inner.value as any;
 			_fieldResult.propId = v.prop_id;
 			_fieldResult.hasInfo = true;
+			// Leaf is the vector itself: this read is the element count.
+			if ((field.value as any).isByteVector) _fieldResult.byteVectorOp = 1;
 		} else {
 			_fieldResult.hasInfo = false;
 		}
@@ -154,7 +167,34 @@ export class EntityParser {
 			if (info.hasInfo) {
 				if (entProps) {
 					const name = directPropIdToName![info.propId];
-					if (name !== undefined) entProps[name] = result;
+					if (name !== undefined) {
+						if (info.byteVectorOp === 0) {
+							entProps[name] = result;
+						} else if (info.byteVectorOp === 1) {
+							// Length read: size the backing Uint8Array, preserving any bytes
+							// already decoded (delta updates re-send the count then a subset).
+							const count = result as number;
+							const existing = entProps[name];
+							if (!(existing instanceof Uint8Array) || existing.length !== count) {
+								const arr = new Uint8Array(count);
+								if (existing instanceof Uint8Array)
+									arr.set(existing.subarray(0, Math.min(existing.length, count)));
+								entProps[name] = arr;
+							}
+						} else {
+							// Element read: write one byte, growing the array if it arrived early.
+							let arr = entProps[name] as Uint8Array | undefined;
+							const idx = info.elementIndex;
+							if (!(arr instanceof Uint8Array) || idx >= arr.length) {
+								const len = arr instanceof Uint8Array ? Math.max(arr.length, idx + 1) : idx + 1;
+								const grown = new Uint8Array(len);
+								if (arr instanceof Uint8Array) grown.set(arr);
+								arr = grown;
+								entProps[name] = arr;
+							}
+							arr[idx] = result as number;
+						}
+					}
 				} else if (emitEntityUpdates && classPropIdToName[info.propId] !== undefined) {
 					this.enqueueEvent('entityupdated', { entityId, propId: info.propId, value: result });
 				}

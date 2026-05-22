@@ -134,6 +134,10 @@ const D_AMMO = 19;
 const D_QANGLE_PRES = 20;
 const D_GAME_MODE_RULES = 21;
 const D_BINARY_BLOCK = 22;
+// Marker only — never used to decode a wire value. Stored in propIdToDecoder so the
+// type generator surfaces CNetworkUtlVectorBase<uint8> fields as Uint8Array. The bytes
+// themselves are decoded element-by-element with the Unsigned decoder.
+const D_BYTE_VECTOR = 23;
 
 export type QuantalizedFloatDecoder = { type: typeof D_QUANTALIZED_FLOAT; decoder: number };
 export type Decoder = number | QuantalizedFloatDecoder;
@@ -161,7 +165,8 @@ export const Decoders = {
 	AmmoDecoder: D_AMMO,
 	QanglePresDecoder: D_QANGLE_PRES,
 	GameModeRulesDecoder: D_GAME_MODE_RULES,
-	BinaryBlockDecoder: D_BINARY_BLOCK
+	BinaryBlockDecoder: D_BINARY_BLOCK,
+	ByteVectorDecoder: D_BYTE_VECTOR
 };
 
 const decoderMap: { [K in string]?: Decoder } = {
@@ -254,6 +259,9 @@ type ArrayField = {
 type VectorField = {
 	field_enum: Field;
 	decoder: Decoder;
+	// True for CNetworkUtlVectorBase<uint8> / CUtlVector<uint8>: a vector of raw bytes.
+	// Element field-paths are assembled into a Uint8Array instead of overwriting a scalar.
+	isByteVector: boolean;
 };
 
 type SerializerField = {
@@ -756,7 +764,14 @@ export const constructorFieldHelper = {
 							const result = `${serializerName}.${value.name}`;
 
 							map[currentEntityId.id] = result;
-							if (decoderMap) decoderMap[currentEntityId.id] = value.decoder;
+							if (decoderMap) {
+								// Byte vectors are assembled into a Uint8Array at decode time; record the
+								// marker decoder so generated types reflect that (the per-element decode
+								// still uses value.decoder).
+								decoderMap[currentEntityId.id] = (field.value as VectorField).isByteVector
+									? Decoders.ByteVectorDecoder
+									: value.decoder;
+							}
 							value.prop_id = currentEntityId.id;
 							currentEntityId.id++;
 							break;
@@ -799,9 +814,13 @@ export const constructorFieldHelper = {
 				length: field.fieldType.count ?? 0
 			});
 		} else if (field.category === FieldCategory.Vector) {
+			// A vector whose element is a raw byte (CNetworkUtlVectorBase<uint8> et al.) is
+			// surfaced as a Uint8Array rather than a single overwritten scalar.
+			const isByteVector = !field.serializer_name && field.fieldType.genericType?.baseType === 'uint8';
 			elementField = new Field(FieldTypeEnum.Vector, {
 				field_enum: elementField,
-				decoder: Decoders.UnsignedDecoder
+				decoder: Decoders.UnsignedDecoder,
+				isByteVector
 			});
 		}
 

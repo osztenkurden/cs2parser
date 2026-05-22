@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: snapshot on 2026-05-19
+// Generated from demo: snapshot on 2026-05-22
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -43,7 +43,7 @@ interface _CBodyComponentBaseAnimGraph {
 	readonly "m_nServerGraphInstanceIteration"?: number;
 	readonly "m_nServerSerializationContextIteration"?: number;
 	readonly "m_primaryGraphId"?: number;
-	readonly "m_SerializePoseRecipeAG2Dynamic"?: number;
+	readonly "m_SerializePoseRecipeAG2Dynamic"?: Uint8Array;
 	readonly "m_topology"?: unknown;
 	readonly "m_vecExternalClipIds"?: number;
 	readonly "m_vecExternalGraphIds"?: number;
@@ -311,7 +311,7 @@ interface _CCSPlayer_WeaponServices {
 	readonly "m_hLastWeapon"?: number;
 	readonly "m_hMyWeapons"?: number;
 	readonly "m_iAmmo"?: number;
-	readonly "m_networkAnimTiming"?: number;
+	readonly "m_networkAnimTiming"?: Uint8Array;
 }
 
 interface _CCSPlayerController_ActionTrackingServices {
@@ -1479,7 +1479,7 @@ interface _CCSPlayer_WeaponServicesOwn {
 	readonly "m_hLastWeapon"?: number;
 	readonly "m_hMyWeapons"?: number;
 	readonly "m_iAmmo"?: number;
-	readonly "m_networkAnimTiming"?: number;
+	readonly "m_networkAnimTiming"?: Uint8Array;
 }
 
 interface _CCSPlayerControllerOwn {
@@ -3200,7 +3200,7 @@ interface _CSmokeGrenadeProjectileOwn {
 	readonly "m_vecZ"?: number;
 	readonly "m_vInitialPosition"?: [number, number, number];
 	readonly "m_vInitialVelocity"?: [number, number, number];
-	readonly "m_VoxelFrameData"?: number;
+	readonly "m_VoxelFrameData"?: Uint8Array;
 	readonly "m_vSmokeColor"?: [number, number, number];
 	readonly "m_vSmokeDetonationPos"?: [number, number, number];
 }

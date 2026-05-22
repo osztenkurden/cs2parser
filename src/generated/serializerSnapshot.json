@@ -37,7 +37,7 @@
       "m_nServerGraphInstanceIteration": "number",
       "m_nServerSerializationContextIteration": "number",
       "m_primaryGraphId": "number",
-      "m_SerializePoseRecipeAG2Dynamic": "number",
+      "m_SerializePoseRecipeAG2Dynamic": "Uint8Array",
       "m_topology": "unknown",
       "m_vecExternalClipIds": "number",
       "m_vecExternalGraphIds": "number",
@@ -343,7 +343,7 @@
       "m_hLastWeapon": "number",
       "m_hMyWeapons": "number",
       "m_iAmmo": "number",
-      "m_networkAnimTiming": "number"
+      "m_networkAnimTiming": "Uint8Array"
     },
     "CCSPlayer_ItemServices": {
       "m_bHasDefuser": "boolean",
@@ -1747,7 +1747,7 @@
         "m_hLastWeapon": "number",
         "m_hMyWeapons": "number",
         "m_iAmmo": "number",
-        "m_networkAnimTiming": "number"
+        "m_networkAnimTiming": "Uint8Array"
       }
     },
     "CCSPlayer_ItemServices": {
@@ -4857,7 +4857,7 @@
         "m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
         "m_vInitialVelocity": "[number, number, number]",
-        "m_VoxelFrameData": "number",
+        "m_VoxelFrameData": "Uint8Array",
         "m_vSmokeColor": "[number, number, number]",
         "m_vSmokeDetonationPos": "[number, number, number]"
       }

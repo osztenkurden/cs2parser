@@ -43,7 +43,8 @@ const DECODER_ID_TO_TS: Record<number, string> = {
 	18: 'number', // D_BASE
 	19: 'number', // D_AMMO
 	20: '[number, number, number]', // D_QANGLE_PRES
-	21: 'number' // D_GAME_MODE_RULES
+	21: 'number', // D_GAME_MODE_RULES
+	23: 'Uint8Array' // D_BYTE_VECTOR (CNetworkUtlVectorBase<uint8>)
 };
 
 function decoderToTsType(decoder: Decoder): string {
