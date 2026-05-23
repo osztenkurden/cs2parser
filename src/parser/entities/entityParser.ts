@@ -75,10 +75,20 @@ const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
 		_fieldResult.decoder = v.decoder;
 		_fieldResult.propId = v.prop_id;
 		_fieldResult.hasInfo = true;
-		// A Value reached through a byte Vector is one byte at fp.path[fp.last].
-		if (parent !== null && parent.type === FieldTypeEnum.Vector && (parent.value as any).isByteVector) {
-			_fieldResult.byteVectorOp = 2;
-			_fieldResult.elementIndex = fp.path[fp.last]!;
+		// A Value reached through a Vector or fixed Array is element
+		// fp.path[fp.last] of it. Byte vectors (op 2) assemble into a
+		// Uint8Array; any other element-addressed collection (op 4) assembles
+		// into a plain Array, so e.g. a fixed Vector[] like CInferno's
+		// m_firePositions keeps every element instead of each one overwriting
+		// the same property (which collapsed it to the last-written element).
+		if (parent !== null) {
+			if (parent.type === FieldTypeEnum.Vector) {
+				_fieldResult.byteVectorOp = (parent.value as any).isByteVector ? 2 : 4;
+				_fieldResult.elementIndex = fp.path[fp.last]!;
+			} else if (parent.type === FieldTypeEnum.Array) {
+				_fieldResult.byteVectorOp = 4;
+				_fieldResult.elementIndex = fp.path[fp.last]!;
+			}
 		}
 		return _fieldResult;
 	}
@@ -91,7 +101,8 @@ const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
 			_fieldResult.propId = v.prop_id;
 			_fieldResult.hasInfo = true;
 			// Leaf is the vector itself: this read is the element count.
-			if ((field.value as any).isByteVector) _fieldResult.byteVectorOp = 1;
+			// op 1 sizes a Uint8Array (byte vector), op 3 sizes a plain Array.
+			_fieldResult.byteVectorOp = (field.value as any).isByteVector ? 1 : 3;
 		} else {
 			_fieldResult.hasInfo = false;
 		}
@@ -181,7 +192,7 @@ export class EntityParser {
 									arr.set(existing.subarray(0, Math.min(existing.length, count)));
 								entProps[name] = arr;
 							}
-						} else {
+						} else if (info.byteVectorOp === 2) {
 							// Element read: write one byte, growing the array if it arrived early.
 							let arr = entProps[name] as Uint8Array | undefined;
 							const idx = info.elementIndex;
@@ -193,6 +204,30 @@ export class EntityParser {
 								entProps[name] = arr;
 							}
 							arr[idx] = result as number;
+						} else if (info.byteVectorOp === 3) {
+							// Generic (non-byte) vector length: size a plain Array, keeping
+							// already-decoded elements. Shrinking drops the tail (e.g. a
+							// CInferno's fires burning out); growing leaves holes the element
+							// reads below fill in.
+							const count = result as number;
+							const existing = entProps[name];
+							if (!Array.isArray(existing)) {
+								entProps[name] = new Array(count);
+							} else if (existing.length !== count) {
+								existing.length = count;
+							}
+						} else {
+							// Generic (non-byte) vector element (op 4): store at its index in a
+							// plain Array instead of overwriting one scalar. This is what keeps
+							// every element of a CNetworkUtlVectorBase<Vector> (m_firePositions,
+							// ...) rather than just the last one written.
+							let arr = entProps[name] as unknown[] | undefined;
+							const idx = info.elementIndex;
+							if (!Array.isArray(arr)) {
+								arr = [];
+								entProps[name] = arr;
+							}
+							arr[idx] = result;
 						}
 					}
 				} else if (emitEntityUpdates && classPropIdToName[info.propId] !== undefined) {
