@@ -545,8 +545,10 @@ export class ParseSession {
 				if (this.parser) {
 					this.parser.propIdToName = classInfo.propIdToName;
 					this.parser.propIdToDecoder = classInfo.propIdToDecoder;
+					this.parser.propIdToInfo = classInfo.propIdToInfo;
 					this.entityParser.directEntities = this.parser.entities;
 					this.entityParser.directPropIdToName = classInfo.propIdToName;
+					this.entityParser.directPropIdToInfo = classInfo.propIdToInfo;
 				}
 				break;
 			}

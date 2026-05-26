@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: snapshot on 2026-05-19
+// Generated from demo: ag2_demo.dem on 2026-05-26
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -7,7 +7,6 @@ type Prefixed<P extends string, T> = {
 };
 
 interface _CBodyComponentBaseAnimGraph {
-	readonly "AnimGraph2SerializedPoseRecipeSlot_t.m_topology"?: unknown;
 	readonly "m_angRotation"?: [number, number, number];
 	readonly "m_bClientClothCreationSuppressed"?: boolean;
 	readonly "m_bUseParentRenderBounds"?: boolean;
@@ -32,7 +31,7 @@ interface _CBodyComponentBaseAnimGraph {
 	readonly "m_nAnimationAlgorithm"?: number;
 	readonly "m_nAnimLoopMode"?: number;
 	readonly "m_nAnimStateNoInterpSerialNumber"?: number;
-	readonly "m_nBodyGroupChoices"?: number;
+	readonly "m_nBodyGroupChoices"?: Int32Array;
 	readonly "m_nHitboxSet"?: number;
 	readonly "m_nIdealMotionType"?: number;
 	readonly "m_nOutsideWorld"?: number;
@@ -42,13 +41,13 @@ interface _CBodyComponentBaseAnimGraph {
 	readonly "m_nSerializePoseRecipeVersionAG2"?: number;
 	readonly "m_nServerGraphInstanceIteration"?: number;
 	readonly "m_nServerSerializationContextIteration"?: number;
-	readonly "m_primaryGraphId"?: number;
-	readonly "m_SerializePoseRecipeAG2Dynamic"?: number;
-	readonly "m_topology"?: unknown;
-	readonly "m_vecExternalClipIds"?: number;
-	readonly "m_vecExternalGraphIds"?: number;
-	readonly "m_vecSecondarySkeletons"?: number;
-	readonly "m_vecSecondarySkeletonSlotIDs"?: string;
+	readonly "m_primaryGraphId"?: bigint;
+	readonly "m_SerializePoseRecipeAG2Dynamic"?: Uint8Array;
+	readonly "m_SerializePoseRecipeAG2Slots"?: ReadonlyArray<{ readonly "m_topology"?: Uint8Array }>;
+	readonly "m_vecExternalClipIds"?: BigUint64Array;
+	readonly "m_vecExternalGraphIds"?: BigUint64Array;
+	readonly "m_vecSecondarySkeletons"?: number[];
+	readonly "m_vecSecondarySkeletonSlotIDs"?: string[];
 	readonly "m_vecX"?: number;
 	readonly "m_vecY"?: number;
 	readonly "m_vecZ"?: number;
@@ -72,7 +71,7 @@ interface _CBodyComponentBaseModelEntity {
 	readonly "m_MeshGroupMask"?: bigint;
 	readonly "m_name"?: number;
 	readonly "m_nAnimStateNoInterpSerialNumber"?: number;
-	readonly "m_nBodyGroupChoices"?: number;
+	readonly "m_nBodyGroupChoices"?: Int32Array;
 	readonly "m_nHitboxSet"?: number;
 	readonly "m_nIdealMotionType"?: number;
 	readonly "m_nOutsideWorld"?: number;
@@ -98,8 +97,8 @@ interface _CBodyComponentPoint {
 }
 
 interface _CCSGameRules {
-	readonly "m_arrProhibitedItemIndices"?: number;
-	readonly "m_arrTournamentActiveCasterAccounts"?: number;
+	readonly "m_arrProhibitedItemIndices"?: Uint16Array;
+	readonly "m_arrTournamentActiveCasterAccounts"?: Uint32Array;
 	readonly "m_bAnyHostageReached"?: boolean;
 	readonly "m_bBlockersPresent"?: boolean;
 	readonly "m_bBombDropped"?: boolean;
@@ -135,7 +134,7 @@ interface _CCSGameRules {
 	readonly "m_flCMMItemDropRevealStartTime"?: number;
 	readonly "m_flCTTimeOutRemaining"?: number;
 	readonly "m_flGameStartTime"?: number;
-	readonly "m_flNextRespawnWave"?: number;
+	readonly "m_flNextRespawnWave"?: number[];
 	readonly "m_flRestartRoundTime"?: number;
 	readonly "m_flTerroristTimeOutRemaining"?: number;
 	readonly "m_fMatchStartTime"?: number;
@@ -148,9 +147,9 @@ interface _CCSGameRules {
 	readonly "m_iFirstSecondHalfRound"?: number;
 	readonly "m_iFreezeTime"?: number;
 	readonly "m_iHostagesRemaining"?: number;
-	readonly "m_iMatchStats_PlayersAlive_CT"?: number;
-	readonly "m_iMatchStats_PlayersAlive_T"?: number;
-	readonly "m_iMatchStats_RoundResults"?: number;
+	readonly "m_iMatchStats_PlayersAlive_CT"?: Int32Array;
+	readonly "m_iMatchStats_PlayersAlive_T"?: Int32Array;
+	readonly "m_iMatchStats_RoundResults"?: Int32Array;
 	readonly "m_iNumConsecutiveCTLoses"?: number;
 	readonly "m_iNumConsecutiveTerroristLoses"?: number;
 	readonly "m_iRoundEndFunFactData1"?: number;
@@ -166,11 +165,11 @@ interface _CCSGameRules {
 	readonly "m_iRoundWinStatus"?: number;
 	readonly "m_iSpectatorSlotCount"?: number;
 	readonly "m_MatchDevice"?: number;
-	readonly "m_MinimapVerticalSectionHeights"?: number;
+	readonly "m_MinimapVerticalSectionHeights"?: Float32Array;
 	readonly "m_nCTTeamIntroVariant"?: number;
 	readonly "m_nCTTimeOuts"?: number;
-	readonly "m_nEndMatchMapGroupVoteOptions"?: number;
-	readonly "m_nEndMatchMapGroupVoteTypes"?: number;
+	readonly "m_nEndMatchMapGroupVoteOptions"?: Int32Array;
+	readonly "m_nEndMatchMapGroupVoteTypes"?: Int32Array;
 	readonly "m_nEndMatchMapVoteWinner"?: number;
 	readonly "m_nHalloweenMaskListSeed"?: number;
 	readonly "m_nMatchAbortedEarlyReason"?: number;
@@ -194,7 +193,7 @@ interface _CCSGameRules {
 	readonly "m_szTournamentEventName"?: string;
 	readonly "m_szTournamentEventStage"?: string;
 	readonly "m_szTournamentPredictionsTxt"?: string;
-	readonly "m_TeamRespawnWaveTimes"?: number;
+	readonly "m_TeamRespawnWaveTimes"?: Float32Array;
 	readonly "m_timeUntilNextPhaseStarts"?: number;
 	readonly "m_totalRoundsPlayed"?: number;
 	readonly "m_vMinimapMaxs"?: [number, number, number];
@@ -203,10 +202,7 @@ interface _CCSGameRules {
 
 interface _CCSPlayer_ActionTrackingServices {
 	readonly "m_bIsRescuing"?: boolean;
-	readonly "m_nCount"?: number;
-	readonly "m_nItemDefIndex"?: number;
-	readonly "WeaponPurchaseCount_t.m_nCount"?: number;
-	readonly "WeaponPurchaseCount_t.m_nItemDefIndex"?: number;
+	readonly "m_weaponPurchases"?: ReadonlyArray<{ readonly "m_nCount"?: number; readonly "m_nItemDefIndex"?: number }>;
 }
 
 interface _CCSPlayer_BulletServices {
@@ -214,21 +210,12 @@ interface _CCSPlayer_BulletServices {
 }
 
 interface _CCSPlayer_BuyServices {
-	readonly "m_bPrevHelmet"?: boolean;
-	readonly "m_hItem"?: bigint;
-	readonly "m_nCost"?: number;
-	readonly "m_nPrevArmor"?: number;
-	readonly "m_unDefIdx"?: number;
-	readonly "SellbackPurchaseEntry_t.m_bPrevHelmet"?: boolean;
-	readonly "SellbackPurchaseEntry_t.m_hItem"?: bigint;
-	readonly "SellbackPurchaseEntry_t.m_nCost"?: number;
-	readonly "SellbackPurchaseEntry_t.m_nPrevArmor"?: number;
-	readonly "SellbackPurchaseEntry_t.m_unDefIdx"?: number;
+	readonly "m_vecSellbackPurchaseEntries"?: ReadonlyArray<{ readonly "m_bPrevHelmet"?: boolean; readonly "m_hItem"?: bigint; readonly "m_nCost"?: number; readonly "m_nPrevArmor"?: number; readonly "m_unDefIdx"?: number }>;
 }
 
 interface _CCSPlayer_CameraServices {
 	readonly "localBits"?: number;
-	readonly "localSound"?: [number, number, number];
+	readonly "localSound"?: [number, number, number][];
 	readonly "m_flCsViewPunchAngleTickRatio"?: number;
 	readonly "m_flFOVRate"?: number;
 	readonly "m_flFOVTime"?: number;
@@ -240,7 +227,7 @@ interface _CCSPlayer_CameraServices {
 	readonly "m_iFOV"?: number;
 	readonly "m_iFOVStart"?: number;
 	readonly "m_nCsViewPunchAngleTick"?: number;
-	readonly "m_PostProcessingVolumes"?: number;
+	readonly "m_PostProcessingVolumes"?: number[];
 	readonly "m_vecCsViewPunchAngle"?: [number, number, number];
 	readonly "soundEventHash"?: number;
 	readonly "soundscapeEntityListIndex"?: number;
@@ -258,7 +245,7 @@ interface _CCSPlayer_ItemServices {
 }
 
 interface _CCSPlayer_MovementServices {
-	readonly "m_arrForceSubtickMoveWhen"?: number;
+	readonly "m_arrForceSubtickMoveWhen"?: Float32Array;
 	readonly "m_bDesiresDuck"?: boolean;
 	readonly "m_bDucked"?: boolean;
 	readonly "m_bDucking"?: boolean;
@@ -309,25 +296,12 @@ interface _CCSPlayer_WeaponServices {
 	readonly "m_flNextAttack"?: number;
 	readonly "m_hActiveWeapon"?: number;
 	readonly "m_hLastWeapon"?: number;
-	readonly "m_hMyWeapons"?: number;
-	readonly "m_iAmmo"?: number;
-	readonly "m_networkAnimTiming"?: number;
+	readonly "m_hMyWeapons"?: number[];
+	readonly "m_iAmmo"?: Uint16Array;
+	readonly "m_networkAnimTiming"?: Uint8Array;
 }
 
 interface _CCSPlayerController_ActionTrackingServices {
-	readonly "CSPerRoundStats_t.m_iAssists"?: number;
-	readonly "CSPerRoundStats_t.m_iCashEarned"?: number;
-	readonly "CSPerRoundStats_t.m_iDamage"?: number;
-	readonly "CSPerRoundStats_t.m_iDeaths"?: number;
-	readonly "CSPerRoundStats_t.m_iEnemiesFlashed"?: number;
-	readonly "CSPerRoundStats_t.m_iEquipmentValue"?: number;
-	readonly "CSPerRoundStats_t.m_iHeadShotKills"?: number;
-	readonly "CSPerRoundStats_t.m_iKillReward"?: number;
-	readonly "CSPerRoundStats_t.m_iKills"?: number;
-	readonly "CSPerRoundStats_t.m_iLiveTime"?: number;
-	readonly "CSPerRoundStats_t.m_iMoneySaved"?: number;
-	readonly "CSPerRoundStats_t.m_iObjective"?: number;
-	readonly "CSPerRoundStats_t.m_iUtilityDamage"?: number;
 	readonly "m_flTotalRoundDamageDealt"?: number;
 	readonly "m_iAssists"?: number;
 	readonly "m_iCashEarned"?: number;
@@ -349,38 +323,12 @@ interface _CCSPlayerController_ActionTrackingServices {
 	readonly "m_iNumRoundKillsHeadshots"?: number;
 	readonly "m_iObjective"?: number;
 	readonly "m_iUtilityDamage"?: number;
+	readonly "m_perRoundStats"?: ReadonlyArray<{ readonly "m_iAssists"?: number; readonly "m_iCashEarned"?: number; readonly "m_iDamage"?: number; readonly "m_iDeaths"?: number; readonly "m_iEnemiesFlashed"?: number; readonly "m_iEquipmentValue"?: number; readonly "m_iHeadShotKills"?: number; readonly "m_iKillReward"?: number; readonly "m_iKills"?: number; readonly "m_iLiveTime"?: number; readonly "m_iMoneySaved"?: number; readonly "m_iObjective"?: number; readonly "m_iUtilityDamage"?: number }>;
 }
 
 interface _CCSPlayerController_DamageServices {
-	readonly "CDamageRecord.m_bIsOtherEnemy"?: boolean;
-	readonly "CDamageRecord.m_DamagerXuid"?: bigint;
-	readonly "CDamageRecord.m_flActualHealthRemoved"?: number;
-	readonly "CDamageRecord.m_flDamage"?: number;
-	readonly "CDamageRecord.m_hPlayerControllerDamager"?: number;
-	readonly "CDamageRecord.m_hPlayerControllerRecipient"?: number;
-	readonly "CDamageRecord.m_iLastBulletUpdate"?: number;
-	readonly "CDamageRecord.m_iNumHits"?: number;
-	readonly "CDamageRecord.m_killType"?: number;
-	readonly "CDamageRecord.m_PlayerDamager"?: number;
-	readonly "CDamageRecord.m_PlayerRecipient"?: number;
-	readonly "CDamageRecord.m_RecipientXuid"?: bigint;
-	readonly "CDamageRecord.m_szPlayerDamagerName"?: string;
-	readonly "CDamageRecord.m_szPlayerRecipientName"?: string;
-	readonly "m_bIsOtherEnemy"?: boolean;
-	readonly "m_DamagerXuid"?: bigint;
-	readonly "m_flActualHealthRemoved"?: number;
-	readonly "m_flDamage"?: number;
-	readonly "m_hPlayerControllerDamager"?: number;
-	readonly "m_hPlayerControllerRecipient"?: number;
-	readonly "m_iLastBulletUpdate"?: number;
-	readonly "m_iNumHits"?: number;
-	readonly "m_killType"?: number;
+	readonly "m_DamageList"?: ReadonlyArray<{ readonly "m_bIsOtherEnemy"?: boolean; readonly "m_DamagerXuid"?: bigint; readonly "m_flActualHealthRemoved"?: number; readonly "m_flDamage"?: number; readonly "m_hPlayerControllerDamager"?: number; readonly "m_hPlayerControllerRecipient"?: number; readonly "m_iLastBulletUpdate"?: number; readonly "m_iNumHits"?: number; readonly "m_killType"?: number; readonly "m_PlayerDamager"?: number; readonly "m_PlayerRecipient"?: number; readonly "m_RecipientXuid"?: bigint; readonly "m_szPlayerDamagerName"?: string; readonly "m_szPlayerRecipientName"?: string }>;
 	readonly "m_nSendUpdate"?: number;
-	readonly "m_PlayerDamager"?: number;
-	readonly "m_PlayerRecipient"?: number;
-	readonly "m_RecipientXuid"?: bigint;
-	readonly "m_szPlayerDamagerName"?: string;
-	readonly "m_szPlayerRecipientName"?: string;
 }
 
 interface _CCSPlayerController_InGameMoneyServices {
@@ -396,43 +344,13 @@ interface _CCSPlayerController_InventoryServices {
 	readonly "m_nPersonaDataPublicCommendsTeacher"?: number;
 	readonly "m_nPersonaDataPublicLevel"?: number;
 	readonly "m_nPersonaDataXpTrailLevel"?: number;
-	readonly "m_rank"?: bigint;
+	readonly "m_rank"?: bigint[];
 	readonly "m_unMusicID"?: number;
-	readonly "ServerAuthoritativeWeaponSlot_t.unClass"?: number;
-	readonly "ServerAuthoritativeWeaponSlot_t.unItemDefIdx"?: number;
-	readonly "ServerAuthoritativeWeaponSlot_t.unSlot"?: number;
-	readonly "unClass"?: number;
-	readonly "unItemDefIdx"?: number;
-	readonly "unSlot"?: number;
-}
-
-interface _CDamageRecord {
-	readonly "m_bIsOtherEnemy"?: boolean;
-	readonly "m_DamagerXuid"?: bigint;
-	readonly "m_flActualHealthRemoved"?: number;
-	readonly "m_flDamage"?: number;
-	readonly "m_hPlayerControllerDamager"?: number;
-	readonly "m_hPlayerControllerRecipient"?: number;
-	readonly "m_iLastBulletUpdate"?: number;
-	readonly "m_iNumHits"?: number;
-	readonly "m_killType"?: number;
-	readonly "m_PlayerDamager"?: number;
-	readonly "m_PlayerRecipient"?: number;
-	readonly "m_RecipientXuid"?: bigint;
-	readonly "m_szPlayerDamagerName"?: string;
-	readonly "m_szPlayerRecipientName"?: string;
+	readonly "m_vecServerAuthoritativeWeaponSlots"?: ReadonlyArray<{ readonly "unClass"?: number; readonly "unItemDefIdx"?: number; readonly "unSlot"?: number }>;
 }
 
 interface _CDestructiblePartsComponent {
 	readonly "m_hOwner"?: number;
-}
-
-interface _CEconItemAttribute {
-	readonly "m_bSetBonus"?: boolean;
-	readonly "m_flInitialValue"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
-	readonly "m_iRawValue32"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 }
 
 interface _CEntityIdentity {
@@ -441,67 +359,22 @@ interface _CEntityIdentity {
 
 interface _CPlayer_CameraServices {
 	readonly "localBits"?: number;
-	readonly "localSound"?: [number, number, number];
+	readonly "localSound"?: [number, number, number][];
 	readonly "m_flCsViewPunchAngleTickRatio"?: number;
 	readonly "m_hColorCorrectionCtrl"?: number;
 	readonly "m_hCtrl"?: number;
 	readonly "m_hTonemapController"?: number;
 	readonly "m_hViewEntity"?: number;
 	readonly "m_nCsViewPunchAngleTick"?: number;
-	readonly "m_PostProcessingVolumes"?: number;
+	readonly "m_PostProcessingVolumes"?: number[];
 	readonly "m_vecCsViewPunchAngle"?: [number, number, number];
 	readonly "soundEventHash"?: number;
 	readonly "soundscapeEntityListIndex"?: number;
 	readonly "soundscapeIndex"?: number;
 }
 
-interface _CSPerRoundStats_t {
-	readonly "m_iAssists"?: number;
-	readonly "m_iCashEarned"?: number;
-	readonly "m_iDamage"?: number;
-	readonly "m_iDeaths"?: number;
-	readonly "m_iEnemiesFlashed"?: number;
-	readonly "m_iEquipmentValue"?: number;
-	readonly "m_iHeadShotKills"?: number;
-	readonly "m_iKillReward"?: number;
-	readonly "m_iKills"?: number;
-	readonly "m_iLiveTime"?: number;
-	readonly "m_iMoneySaved"?: number;
-	readonly "m_iObjective"?: number;
-	readonly "m_iUtilityDamage"?: number;
-}
-
-interface _EntityRenderAttribute_t {
-	readonly "m_ID"?: number;
-	readonly "m_Values"?: [number, number, number];
-}
-
-interface _SellbackPurchaseEntry_t {
-	readonly "m_bPrevHelmet"?: boolean;
-	readonly "m_hItem"?: bigint;
-	readonly "m_nCost"?: number;
-	readonly "m_nPrevArmor"?: number;
-	readonly "m_unDefIdx"?: number;
-}
-
-interface _ServerAuthoritativeWeaponSlot_t {
-	readonly "unClass"?: number;
-	readonly "unItemDefIdx"?: number;
-	readonly "unSlot"?: number;
-}
-
-interface _ViewAngleServerChange_t {
-	readonly "nIndex"?: number;
-	readonly "nType"?: number;
-	readonly "qAngle"?: [number, number, number];
-}
-
-interface _WeaponPurchaseCount_t {
-	readonly "m_nCount"?: number;
-	readonly "m_nItemDefIndex"?: number;
-}
-
 interface _CAK47Own {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBurstMode"?: boolean;
@@ -521,9 +394,8 @@ interface _CAK47Own {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -543,7 +415,6 @@ interface _CAK47Own {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -564,11 +435,9 @@ interface _CAK47Own {
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iBurstShotsRemaining"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -580,7 +449,6 @@ interface _CAK47Own {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -614,7 +482,6 @@ interface _CAK47Own {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nRevolverCylinderIdx"?: number;
@@ -624,19 +491,19 @@ interface _CAK47Own {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
@@ -656,7 +523,7 @@ interface _CBaseCSGrenadeProjectileOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_DmgRadius"?: number;
@@ -683,7 +550,6 @@ interface _CBaseCSGrenadeProjectileOwn {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hThrower"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -715,17 +581,17 @@ interface _CBaseCSGrenadeProjectileOwn {
 	readonly "m_nSubclassID"?: number;
 	readonly "m_nSurroundType"?: bigint;
 	readonly "m_nTargetDetailLayer"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecExplodeEffectOrigin"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -748,7 +614,7 @@ interface _CBaseGrenadeOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_DmgRadius"?: number;
@@ -775,7 +641,6 @@ interface _CBaseGrenadeOwn {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hThrower"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -804,16 +669,16 @@ interface _CBaseGrenadeOwn {
 	readonly "m_nSubclassID"?: number;
 	readonly "m_nSurroundType"?: bigint;
 	readonly "m_nTargetDetailLayer"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -873,7 +738,7 @@ interface _CBasePlayerPawnOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_fadeMaxDist"?: number;
@@ -901,10 +766,9 @@ interface _CBasePlayerPawnOwn {
 	readonly "m_hDefaultController"?: number;
 	readonly "m_hEffectEntity"?: number;
 	readonly "m_hGroundEntity"?: number;
-	readonly "m_hMyWearables"?: number;
+	readonly "m_hMyWearables"?: number[];
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iHealth"?: number;
@@ -940,17 +804,18 @@ interface _CBasePlayerPawnOwn {
 	readonly "m_nSurroundType"?: bigint;
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_nWorldGroupID"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_ServerViewAngleChanges"?: ReadonlyArray<{ readonly "nIndex"?: number; readonly "nType"?: number; readonly "qAngle"?: [number, number, number] }>;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecBaseVelocity"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -958,10 +823,7 @@ interface _CBasePlayerPawnOwn {
 	readonly "m_vecZ"?: number;
 	readonly "maxdensity"?: number;
 	readonly "maxdensityLerpTo"?: number;
-	readonly "nIndex"?: number;
-	readonly "nType"?: number;
 	readonly "origin"?: [number, number, number];
-	readonly "qAngle"?: [number, number, number];
 	readonly "scale"?: number;
 	readonly "scattering"?: number;
 	readonly "skyboxFogFactor"?: number;
@@ -971,6 +833,7 @@ interface _CBasePlayerPawnOwn {
 }
 
 interface _CBasePlayerWeaponOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bClientSideRagdoll"?: boolean;
@@ -983,8 +846,7 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_fadeMaxDist"?: number;
@@ -1000,7 +862,6 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
 	readonly "m_flNextPrimaryAttackTickRatio"?: number;
 	readonly "m_flNextSecondaryAttackTickRatio"?: number;
@@ -1012,10 +873,8 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -1024,7 +883,6 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_iItemDefinitionIndex"?: number;
 	readonly "m_iItemIDHigh"?: number;
 	readonly "m_iItemIDLow"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iTeamNum"?: number;
 	readonly "m_MoveCollide"?: bigint;
@@ -1052,7 +910,6 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_nObjectCulling"?: number;
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -1061,24 +918,25 @@ interface _CBasePlayerWeaponOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 }
 
 interface _CC4Own {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBombPlacedAnimation"?: boolean;
@@ -1099,12 +957,11 @@ interface _CC4Own {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
 	readonly "m_bSpotted"?: boolean;
-	readonly "m_bSpottedByMask"?: number;
+	readonly "m_bSpottedByMask"?: Uint32Array;
 	readonly "m_bStartedArming"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -1125,7 +982,6 @@ interface _CC4Own {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -1146,10 +1002,8 @@ interface _CC4Own {
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -1161,7 +1015,6 @@ interface _CC4Own {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -1195,7 +1048,6 @@ interface _CC4Own {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -1204,26 +1056,26 @@ interface _CC4Own {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 }
 
 interface _CCSGameModeRules_ArmsRaceOwn {
-	readonly "m_WeaponSequence"?: string;
+	readonly "m_WeaponSequence"?: string[];
 }
 
 interface _CCSGameModeRules_DeathmatchOwn {
@@ -1233,8 +1085,8 @@ interface _CCSGameModeRules_DeathmatchOwn {
 }
 
 interface _CCSGameRulesOwn {
-	readonly "m_arrProhibitedItemIndices"?: number;
-	readonly "m_arrTournamentActiveCasterAccounts"?: number;
+	readonly "m_arrProhibitedItemIndices"?: Uint16Array;
+	readonly "m_arrTournamentActiveCasterAccounts"?: Uint32Array;
 	readonly "m_bAnyHostageReached"?: boolean;
 	readonly "m_bBlockersPresent"?: boolean;
 	readonly "m_bBombDropped"?: boolean;
@@ -1270,7 +1122,7 @@ interface _CCSGameRulesOwn {
 	readonly "m_flCMMItemDropRevealStartTime"?: number;
 	readonly "m_flCTTimeOutRemaining"?: number;
 	readonly "m_flGameStartTime"?: number;
-	readonly "m_flNextRespawnWave"?: number;
+	readonly "m_flNextRespawnWave"?: number[];
 	readonly "m_flRestartRoundTime"?: number;
 	readonly "m_flTerroristTimeOutRemaining"?: number;
 	readonly "m_fMatchStartTime"?: number;
@@ -1283,9 +1135,9 @@ interface _CCSGameRulesOwn {
 	readonly "m_iFirstSecondHalfRound"?: number;
 	readonly "m_iFreezeTime"?: number;
 	readonly "m_iHostagesRemaining"?: number;
-	readonly "m_iMatchStats_PlayersAlive_CT"?: number;
-	readonly "m_iMatchStats_PlayersAlive_T"?: number;
-	readonly "m_iMatchStats_RoundResults"?: number;
+	readonly "m_iMatchStats_PlayersAlive_CT"?: Int32Array;
+	readonly "m_iMatchStats_PlayersAlive_T"?: Int32Array;
+	readonly "m_iMatchStats_RoundResults"?: Int32Array;
 	readonly "m_iNumConsecutiveCTLoses"?: number;
 	readonly "m_iNumConsecutiveTerroristLoses"?: number;
 	readonly "m_iRoundEndFunFactData1"?: number;
@@ -1301,11 +1153,11 @@ interface _CCSGameRulesOwn {
 	readonly "m_iRoundWinStatus"?: number;
 	readonly "m_iSpectatorSlotCount"?: number;
 	readonly "m_MatchDevice"?: number;
-	readonly "m_MinimapVerticalSectionHeights"?: number;
+	readonly "m_MinimapVerticalSectionHeights"?: Float32Array;
 	readonly "m_nCTTeamIntroVariant"?: number;
 	readonly "m_nCTTimeOuts"?: number;
-	readonly "m_nEndMatchMapGroupVoteOptions"?: number;
-	readonly "m_nEndMatchMapGroupVoteTypes"?: number;
+	readonly "m_nEndMatchMapGroupVoteOptions"?: Int32Array;
+	readonly "m_nEndMatchMapGroupVoteTypes"?: Int32Array;
 	readonly "m_nEndMatchMapVoteWinner"?: number;
 	readonly "m_nHalloweenMaskListSeed"?: number;
 	readonly "m_nMatchAbortedEarlyReason"?: number;
@@ -1329,7 +1181,7 @@ interface _CCSGameRulesOwn {
 	readonly "m_szTournamentEventName"?: string;
 	readonly "m_szTournamentEventStage"?: string;
 	readonly "m_szTournamentPredictionsTxt"?: string;
-	readonly "m_TeamRespawnWaveTimes"?: number;
+	readonly "m_TeamRespawnWaveTimes"?: Float32Array;
 	readonly "m_timeUntilNextPhaseStarts"?: number;
 	readonly "m_totalRoundsPlayed"?: number;
 	readonly "m_vMinimapMaxs"?: [number, number, number];
@@ -1337,29 +1189,26 @@ interface _CCSGameRulesOwn {
 }
 
 interface _CCSGO_TeamIntroCounterTerroristPositionOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bGravityDisabled"?: boolean;
 	readonly "m_bInitialized"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_fEffects"?: number;
 	readonly "m_flAnimTime"?: number;
 	readonly "m_flCreateTime"?: number;
 	readonly "m_flElasticity"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
 	readonly "m_flSimulationTime"?: number;
 	readonly "m_hEffectEntity"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iInventoryPosition"?: number;
 	readonly "m_iItemDefinitionIndex"?: number;
 	readonly "m_iItemIDHigh"?: number;
 	readonly "m_iItemIDLow"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iTeamNum"?: number;
 	readonly "m_MoveCollide"?: bigint;
 	readonly "m_MoveType"?: bigint;
@@ -1367,7 +1216,6 @@ interface _CCSGO_TeamIntroCounterTerroristPositionOwn {
 	readonly "m_nOrdinal"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nRandom"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nSubclassID"?: number;
 	readonly "m_nVariant"?: number;
 	readonly "m_sWeaponName"?: string;
@@ -1378,8 +1226,7 @@ interface _CCSGO_TeamIntroCounterTerroristPositionOwn {
 
 interface _CCSPlayer_ActionTrackingServicesOwn {
 	readonly "m_bIsRescuing"?: boolean;
-	readonly "m_nCount"?: number;
-	readonly "m_nItemDefIndex"?: number;
+	readonly "m_weaponPurchases"?: ReadonlyArray<{ readonly "m_nCount"?: number; readonly "m_nItemDefIndex"?: number }>;
 }
 
 interface _CCSPlayer_BulletServicesOwn {
@@ -1387,16 +1234,12 @@ interface _CCSPlayer_BulletServicesOwn {
 }
 
 interface _CCSPlayer_BuyServicesOwn {
-	readonly "m_bPrevHelmet"?: boolean;
-	readonly "m_hItem"?: bigint;
-	readonly "m_nCost"?: number;
-	readonly "m_nPrevArmor"?: number;
-	readonly "m_unDefIdx"?: number;
+	readonly "m_vecSellbackPurchaseEntries"?: ReadonlyArray<{ readonly "m_bPrevHelmet"?: boolean; readonly "m_hItem"?: bigint; readonly "m_nCost"?: number; readonly "m_nPrevArmor"?: number; readonly "m_unDefIdx"?: number }>;
 }
 
 interface _CCSPlayer_CameraServicesOwn {
 	readonly "localBits"?: number;
-	readonly "localSound"?: [number, number, number];
+	readonly "localSound"?: [number, number, number][];
 	readonly "m_flCsViewPunchAngleTickRatio"?: number;
 	readonly "m_flFOVRate"?: number;
 	readonly "m_flFOVTime"?: number;
@@ -1408,7 +1251,7 @@ interface _CCSPlayer_CameraServicesOwn {
 	readonly "m_iFOV"?: number;
 	readonly "m_iFOVStart"?: number;
 	readonly "m_nCsViewPunchAngleTick"?: number;
-	readonly "m_PostProcessingVolumes"?: number;
+	readonly "m_PostProcessingVolumes"?: number[];
 	readonly "m_vecCsViewPunchAngle"?: [number, number, number];
 	readonly "soundEventHash"?: number;
 	readonly "soundscapeEntityListIndex"?: number;
@@ -1426,7 +1269,7 @@ interface _CCSPlayer_ItemServicesOwn {
 }
 
 interface _CCSPlayer_MovementServicesOwn {
-	readonly "m_arrForceSubtickMoveWhen"?: number;
+	readonly "m_arrForceSubtickMoveWhen"?: Float32Array;
 	readonly "m_bDesiresDuck"?: boolean;
 	readonly "m_bDucked"?: boolean;
 	readonly "m_bDucking"?: boolean;
@@ -1477,9 +1320,9 @@ interface _CCSPlayer_WeaponServicesOwn {
 	readonly "m_flNextAttack"?: number;
 	readonly "m_hActiveWeapon"?: number;
 	readonly "m_hLastWeapon"?: number;
-	readonly "m_hMyWeapons"?: number;
-	readonly "m_iAmmo"?: number;
-	readonly "m_networkAnimTiming"?: number;
+	readonly "m_hMyWeapons"?: number[];
+	readonly "m_iAmmo"?: Uint16Array;
+	readonly "m_networkAnimTiming"?: Uint8Array;
 }
 
 interface _CCSPlayerControllerOwn {
@@ -1539,7 +1382,7 @@ interface _CCSPlayerControllerOwn {
 	readonly "m_nPlayerDominatingMe"?: bigint;
 	readonly "m_nQuestProgressReason"?: bigint;
 	readonly "m_nTickBase"?: number;
-	readonly "m_recentKillQueue"?: number;
+	readonly "m_recentKillQueue"?: Uint8Array;
 	readonly "m_rtActiveMissionPeriod"?: number;
 	readonly "m_steamID"?: bigint;
 	readonly "m_szClan"?: string;
@@ -1575,24 +1418,12 @@ interface _CCSPlayerController_ActionTrackingServicesOwn {
 	readonly "m_iNumRoundKillsHeadshots"?: number;
 	readonly "m_iObjective"?: number;
 	readonly "m_iUtilityDamage"?: number;
+	readonly "m_perRoundStats"?: ReadonlyArray<{ readonly "m_iAssists"?: number; readonly "m_iCashEarned"?: number; readonly "m_iDamage"?: number; readonly "m_iDeaths"?: number; readonly "m_iEnemiesFlashed"?: number; readonly "m_iEquipmentValue"?: number; readonly "m_iHeadShotKills"?: number; readonly "m_iKillReward"?: number; readonly "m_iKills"?: number; readonly "m_iLiveTime"?: number; readonly "m_iMoneySaved"?: number; readonly "m_iObjective"?: number; readonly "m_iUtilityDamage"?: number }>;
 }
 
 interface _CCSPlayerController_DamageServicesOwn {
-	readonly "m_bIsOtherEnemy"?: boolean;
-	readonly "m_DamagerXuid"?: bigint;
-	readonly "m_flActualHealthRemoved"?: number;
-	readonly "m_flDamage"?: number;
-	readonly "m_hPlayerControllerDamager"?: number;
-	readonly "m_hPlayerControllerRecipient"?: number;
-	readonly "m_iLastBulletUpdate"?: number;
-	readonly "m_iNumHits"?: number;
-	readonly "m_killType"?: number;
+	readonly "m_DamageList"?: ReadonlyArray<{ readonly "m_bIsOtherEnemy"?: boolean; readonly "m_DamagerXuid"?: bigint; readonly "m_flActualHealthRemoved"?: number; readonly "m_flDamage"?: number; readonly "m_hPlayerControllerDamager"?: number; readonly "m_hPlayerControllerRecipient"?: number; readonly "m_iLastBulletUpdate"?: number; readonly "m_iNumHits"?: number; readonly "m_killType"?: number; readonly "m_PlayerDamager"?: number; readonly "m_PlayerRecipient"?: number; readonly "m_RecipientXuid"?: bigint; readonly "m_szPlayerDamagerName"?: string; readonly "m_szPlayerRecipientName"?: string }>;
 	readonly "m_nSendUpdate"?: number;
-	readonly "m_PlayerDamager"?: number;
-	readonly "m_PlayerRecipient"?: number;
-	readonly "m_RecipientXuid"?: bigint;
-	readonly "m_szPlayerDamagerName"?: string;
-	readonly "m_szPlayerRecipientName"?: string;
 }
 
 interface _CCSPlayerController_InGameMoneyServicesOwn {
@@ -1608,11 +1439,9 @@ interface _CCSPlayerController_InventoryServicesOwn {
 	readonly "m_nPersonaDataPublicCommendsTeacher"?: number;
 	readonly "m_nPersonaDataPublicLevel"?: number;
 	readonly "m_nPersonaDataXpTrailLevel"?: number;
-	readonly "m_rank"?: bigint;
+	readonly "m_rank"?: bigint[];
 	readonly "m_unMusicID"?: number;
-	readonly "unClass"?: number;
-	readonly "unItemDefIdx"?: number;
-	readonly "unSlot"?: number;
+	readonly "m_vecServerAuthoritativeWeaponSlots"?: ReadonlyArray<{ readonly "unClass"?: number; readonly "unItemDefIdx"?: number; readonly "unSlot"?: number }>;
 }
 
 interface _CCSPlayerPawnOwn {
@@ -1640,6 +1469,7 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_aimPunchTickFraction"?: number;
 	readonly "m_angEyeAngles"?: [number, number, number];
 	readonly "m_ArmorValue"?: number;
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bClientSideRagdoll"?: boolean;
@@ -1670,10 +1500,9 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_bResumeZoom"?: boolean;
 	readonly "m_bRetakesHasDefuseKit"?: boolean;
 	readonly "m_bRetakesMVPLastRound"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSpotted"?: boolean;
-	readonly "m_bSpottedByMask"?: number;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bSpottedByMask"?: Uint32Array;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWaitForNoAttack"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -1698,7 +1527,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
 	readonly "m_flHealthShotBoostExpirationTime"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
 	readonly "m_flNextSprayDecalTime"?: number;
 	readonly "m_flProgressBarStartTime"?: number;
@@ -1720,14 +1548,12 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_hDefaultController"?: number;
 	readonly "m_hEffectEntity"?: number;
 	readonly "m_hGroundEntity"?: number;
-	readonly "m_hMyWearables"?: number;
+	readonly "m_hMyWearables"?: number[];
 	readonly "m_hOriginalController"?: number;
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iBlockingUseActionInProgress"?: bigint;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -1741,7 +1567,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_iMaxHealth"?: number;
 	readonly "m_iPlayerState"?: bigint;
 	readonly "m_iProgressBarDuration"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iRetakesMVPBoostItem"?: number;
 	readonly "m_iRetakesOffering"?: number;
 	readonly "m_iRetakesOfferingCard"?: number;
@@ -1772,7 +1597,6 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nRagdollDamageBone"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -1783,24 +1607,25 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_nWorldGroupID"?: number;
 	readonly "m_qDeathEyeAngles"?: [number, number, number];
 	readonly "m_RetakesMVPBoostExtraUtility"?: number;
+	readonly "m_ServerViewAngleChanges"?: ReadonlyArray<{ readonly "nIndex"?: number; readonly "nType"?: number; readonly "qAngle"?: [number, number, number] }>;
 	readonly "m_szCustomName"?: string;
 	readonly "m_szLastPlaceName"?: string;
 	readonly "m_szRagdollDamageWeaponName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_unCurrentEquipmentValue"?: number;
 	readonly "m_unFreezetimeEndEquipmentValue"?: number;
 	readonly "m_unRoundStartEquipmentValue"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecBaseVelocity"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
-	readonly "m_vecPlayerPatchEconIndices"?: number;
+	readonly "m_vecPlayerPatchEconIndices"?: Uint32Array;
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -1811,10 +1636,7 @@ interface _CCSPlayerPawnOwn {
 	readonly "m_vRagdollServerOrigin"?: [number, number, number];
 	readonly "maxdensity"?: number;
 	readonly "maxdensityLerpTo"?: number;
-	readonly "nIndex"?: number;
-	readonly "nType"?: number;
 	readonly "origin"?: [number, number, number];
-	readonly "qAngle"?: [number, number, number];
 	readonly "scale"?: number;
 	readonly "scattering"?: number;
 	readonly "skyboxFogFactor"?: number;
@@ -1854,7 +1676,7 @@ interface _CCSPlayerPawnBaseOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_fadeMaxDist"?: number;
@@ -1885,11 +1707,10 @@ interface _CCSPlayerPawnBaseOwn {
 	readonly "m_hDefaultController"?: number;
 	readonly "m_hEffectEntity"?: number;
 	readonly "m_hGroundEntity"?: number;
-	readonly "m_hMyWearables"?: number;
+	readonly "m_hMyWearables"?: number[];
 	readonly "m_hOriginalController"?: number;
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iHealth"?: number;
@@ -1927,17 +1748,18 @@ interface _CCSPlayerPawnBaseOwn {
 	readonly "m_nSurroundType"?: bigint;
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_nWorldGroupID"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_ServerViewAngleChanges"?: ReadonlyArray<{ readonly "nIndex"?: number; readonly "nType"?: number; readonly "qAngle"?: [number, number, number] }>;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecBaseVelocity"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -1945,10 +1767,7 @@ interface _CCSPlayerPawnBaseOwn {
 	readonly "m_vecZ"?: number;
 	readonly "maxdensity"?: number;
 	readonly "maxdensityLerpTo"?: number;
-	readonly "nIndex"?: number;
-	readonly "nType"?: number;
 	readonly "origin"?: [number, number, number];
-	readonly "qAngle"?: [number, number, number];
 	readonly "scale"?: number;
 	readonly "scattering"?: number;
 	readonly "skyboxFogFactor"?: number;
@@ -1959,19 +1778,19 @@ interface _CCSPlayerPawnBaseOwn {
 
 interface _CCSPlayerResourceOwn {
 	readonly "m_bEndMatchNextMapAllVoted"?: boolean;
-	readonly "m_bHostageAlive"?: boolean;
+	readonly "m_bHostageAlive"?: boolean[];
 	readonly "m_bombsiteCenterA"?: [number, number, number];
 	readonly "m_bombsiteCenterB"?: [number, number, number];
-	readonly "m_hostageRescueX"?: number;
-	readonly "m_hostageRescueY"?: number;
-	readonly "m_hostageRescueZ"?: number;
-	readonly "m_iHostageEntityIDs"?: bigint;
-	readonly "m_isHostageFollowingSomeone"?: boolean;
+	readonly "m_hostageRescueX"?: Int32Array;
+	readonly "m_hostageRescueY"?: Int32Array;
+	readonly "m_hostageRescueZ"?: Int32Array;
+	readonly "m_iHostageEntityIDs"?: bigint[];
+	readonly "m_isHostageFollowingSomeone"?: boolean[];
 }
 
 interface _CCSTeamOwn {
-	readonly "m_aPawns"?: number;
-	readonly "m_aPlayers"?: number;
+	readonly "m_aPawns"?: number[];
+	readonly "m_aPlayers"?: number[];
 	readonly "m_bSurrendered"?: boolean;
 	readonly "m_iClanID"?: number;
 	readonly "m_iScore"?: number;
@@ -1988,6 +1807,7 @@ interface _CCSTeamOwn {
 }
 
 interface _CCSWeaponBaseShotgunOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBurstMode"?: boolean;
@@ -2006,9 +1826,8 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -2028,7 +1847,6 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -2049,10 +1867,8 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -2064,7 +1880,6 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -2098,7 +1913,6 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -2107,25 +1921,26 @@ interface _CCSWeaponBaseShotgunOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
 }
 
 interface _CDecoyGrenadeOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBurstMode"?: boolean;
@@ -2149,10 +1964,9 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRedraw"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
 	readonly "m_bThrowAnimating"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -2173,7 +1987,6 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -2199,10 +2012,8 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_hSwitchToWeaponAfterThrow"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -2214,7 +2025,6 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -2249,7 +2059,6 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -2258,19 +2067,19 @@ interface _CDecoyGrenadeOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
@@ -2289,7 +2098,7 @@ interface _CDecoyProjectileOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_DmgRadius"?: number;
@@ -2316,7 +2125,6 @@ interface _CDecoyProjectileOwn {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hThrower"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -2349,17 +2157,17 @@ interface _CDecoyProjectileOwn {
 	readonly "m_nSubclassID"?: number;
 	readonly "m_nSurroundType"?: bigint;
 	readonly "m_nTargetDetailLayer"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecExplodeEffectOrigin"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -2503,22 +2311,22 @@ interface _CFogControllerOwn {
 interface _CInfernoOwn {
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bEligibleForScreenHighlight"?: boolean;
-	readonly "m_bFireIsBurning"?: boolean;
+	readonly "m_bFireIsBurning"?: boolean[];
 	readonly "m_bFlashing"?: boolean;
 	readonly "m_bGravityDisabled"?: boolean;
 	readonly "m_bInPostEffectTime"?: boolean;
 	readonly "m_bNoInterpolate"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_BurnNormal"?: [number, number, number];
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_BurnNormal"?: [number, number, number][];
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_fadeMaxDist"?: number;
 	readonly "m_fadeMinDist"?: number;
 	readonly "m_fEffects"?: number;
 	readonly "m_fireCount"?: number;
-	readonly "m_fireParentPositions"?: [number, number, number];
-	readonly "m_firePositions"?: [number, number, number];
+	readonly "m_fireParentPositions"?: [number, number, number][];
+	readonly "m_firePositions"?: [number, number, number][];
 	readonly "m_flAnimTime"?: number;
 	readonly "m_flCapsuleRadius"?: number;
 	readonly "m_flCreateTime"?: number;
@@ -2534,7 +2342,6 @@ interface _CInfernoOwn {
 	readonly "m_glowColorOverride"?: number;
 	readonly "m_hEffectEntity"?: number;
 	readonly "m_hOwnerEntity"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -2568,16 +2375,17 @@ interface _CInfernoOwn {
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 }
 
 interface _CKnifeOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBurstMode"?: boolean;
@@ -2597,9 +2405,8 @@ interface _CKnifeOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -2619,7 +2426,6 @@ interface _CKnifeOwn {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -2640,10 +2446,8 @@ interface _CKnifeOwn {
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -2655,7 +2459,6 @@ interface _CKnifeOwn {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -2689,7 +2492,6 @@ interface _CKnifeOwn {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -2698,19 +2500,19 @@ interface _CKnifeOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
@@ -2731,24 +2533,24 @@ interface _CMapVetoPickControllerOwn {
 	readonly "m_iTeamNum"?: number;
 	readonly "m_MoveCollide"?: bigint;
 	readonly "m_MoveType"?: bigint;
-	readonly "m_nAccountIDs"?: number;
+	readonly "m_nAccountIDs"?: Int32Array;
 	readonly "m_nBloodType"?: number;
 	readonly "m_nCurrentPhase"?: number;
 	readonly "m_nDraftType"?: number;
-	readonly "m_nMapId0"?: number;
-	readonly "m_nMapId1"?: number;
-	readonly "m_nMapId2"?: number;
-	readonly "m_nMapId3"?: number;
-	readonly "m_nMapId4"?: number;
-	readonly "m_nMapId5"?: number;
+	readonly "m_nMapId0"?: Int32Array;
+	readonly "m_nMapId1"?: Int32Array;
+	readonly "m_nMapId2"?: Int32Array;
+	readonly "m_nMapId3"?: Int32Array;
+	readonly "m_nMapId4"?: Int32Array;
+	readonly "m_nMapId5"?: Int32Array;
 	readonly "m_nPhaseDurationTicks"?: number;
 	readonly "m_nPhaseStartTick"?: number;
 	readonly "m_nPlatformType"?: number;
-	readonly "m_nStartingSide0"?: number;
+	readonly "m_nStartingSide0"?: Int32Array;
 	readonly "m_nSubclassID"?: number;
 	readonly "m_nTeamWinningCoinToss"?: number;
-	readonly "m_nTeamWithFirstChoice"?: number;
-	readonly "m_nVoteMapIdsList"?: number;
+	readonly "m_nTeamWithFirstChoice"?: Int32Array;
+	readonly "m_nVoteMapIdsList"?: Int32Array;
 	readonly "m_ubInterpolationFrame"?: number;
 }
 
@@ -2766,7 +2568,7 @@ interface _CMolotovProjectileOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_DmgRadius"?: number;
@@ -2793,7 +2595,6 @@ interface _CMolotovProjectileOwn {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hThrower"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -2825,17 +2626,17 @@ interface _CMolotovProjectileOwn {
 	readonly "m_nSubclassID"?: number;
 	readonly "m_nSurroundType"?: bigint;
 	readonly "m_nTargetDetailLayer"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecExplodeEffectOrigin"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -2846,6 +2647,7 @@ interface _CMolotovProjectileOwn {
 }
 
 interface _CPlantedC4Own {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBeingDefused"?: boolean;
@@ -2863,10 +2665,9 @@ interface _CPlantedC4Own {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSpotted"?: boolean;
-	readonly "m_bSpottedByMask"?: number;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bSpottedByMask"?: Uint32Array;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_fadeMaxDist"?: number;
@@ -2884,7 +2685,6 @@ interface _CPlantedC4Own {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
 	readonly "m_flShadowStrength"?: number;
 	readonly "m_flSimulationTime"?: number;
@@ -2896,8 +2696,6 @@ interface _CPlantedC4Own {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -2906,7 +2704,6 @@ interface _CPlantedC4Own {
 	readonly "m_iItemDefinitionIndex"?: number;
 	readonly "m_iItemIDHigh"?: number;
 	readonly "m_iItemIDLow"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iTeamNum"?: number;
 	readonly "m_MoveCollide"?: bigint;
@@ -2929,7 +2726,6 @@ interface _CPlantedC4Own {
 	readonly "m_nObjectCulling"?: number;
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nSolidType"?: bigint;
@@ -2939,30 +2735,30 @@ interface _CPlantedC4Own {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 }
 
 interface _CPlayer_CameraServicesOwn {
 	readonly "localBits"?: number;
-	readonly "localSound"?: [number, number, number];
+	readonly "localSound"?: [number, number, number][];
 	readonly "m_flCsViewPunchAngleTickRatio"?: number;
 	readonly "m_hColorCorrectionCtrl"?: number;
 	readonly "m_hCtrl"?: number;
 	readonly "m_hTonemapController"?: number;
 	readonly "m_hViewEntity"?: number;
 	readonly "m_nCsViewPunchAngleTick"?: number;
-	readonly "m_PostProcessingVolumes"?: number;
+	readonly "m_PostProcessingVolumes"?: number[];
 	readonly "m_vecCsViewPunchAngle"?: [number, number, number];
 	readonly "soundEventHash"?: number;
 	readonly "soundscapeEntityListIndex"?: number;
@@ -3002,7 +2798,7 @@ interface _CPlayerSprayDecalOwn {
 	readonly "m_bGravityDisabled"?: boolean;
 	readonly "m_bNoInterpolate"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_fadeMaxDist"?: number;
@@ -3024,7 +2820,6 @@ interface _CPlayerSprayDecalOwn {
 	readonly "m_glowColorOverride"?: number;
 	readonly "m_hEffectEntity"?: number;
 	readonly "m_hOwnerEntity"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -3061,11 +2856,10 @@ interface _CPlayerSprayDecalOwn {
 	readonly "m_rtGcTime"?: number;
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
-	readonly "m_ubSignature"?: number;
+	readonly "m_ubSignature"?: Uint8Array;
 	readonly "m_unAccountID"?: number;
 	readonly "m_unTraceID"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecEndPos"?: [number, number, number];
@@ -3073,6 +2867,7 @@ interface _CPlayerSprayDecalOwn {
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
 	readonly "m_vecNormal"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecStart"?: [number, number, number];
@@ -3119,7 +2914,7 @@ interface _CSmokeGrenadeProjectileOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
 	readonly "m_DmgRadius"?: number;
@@ -3146,7 +2941,6 @@ interface _CSmokeGrenadeProjectileOwn {
 	readonly "m_hOwner"?: number;
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hThrower"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iGlowTeam"?: number;
 	readonly "m_iGlowType"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -3182,17 +2976,17 @@ interface _CSmokeGrenadeProjectileOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_nVoxelFrameDataSize"?: number;
 	readonly "m_nVoxelUpdate"?: number;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecExplodeEffectOrigin"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_vecX"?: number;
@@ -3200,14 +2994,14 @@ interface _CSmokeGrenadeProjectileOwn {
 	readonly "m_vecZ"?: number;
 	readonly "m_vInitialPosition"?: [number, number, number];
 	readonly "m_vInitialVelocity"?: [number, number, number];
-	readonly "m_VoxelFrameData"?: number;
+	readonly "m_VoxelFrameData"?: Uint8Array;
 	readonly "m_vSmokeColor"?: [number, number, number];
 	readonly "m_vSmokeDetonationPos"?: [number, number, number];
 }
 
 interface _CTeamOwn {
-	readonly "m_aPawns"?: number;
-	readonly "m_aPlayers"?: number;
+	readonly "m_aPawns"?: number[];
+	readonly "m_aPlayers"?: number[];
 	readonly "m_iScore"?: number;
 	readonly "m_iTeamNum"?: number;
 	readonly "m_szTeamname"?: string;
@@ -3261,11 +3055,12 @@ interface _CVoteControllerOwn {
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPotentialVotes"?: number;
 	readonly "m_nSubclassID"?: number;
-	readonly "m_nVoteOptionCount"?: number;
+	readonly "m_nVoteOptionCount"?: Int32Array;
 	readonly "m_ubInterpolationFrame"?: number;
 }
 
 interface _CWeaponCZ75aOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBurstMode"?: boolean;
@@ -3286,9 +3081,8 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -3308,7 +3102,6 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -3329,11 +3122,9 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iBurstShotsRemaining"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -3345,7 +3136,6 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -3379,7 +3169,6 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nRevolverCylinderIdx"?: number;
@@ -3389,19 +3178,19 @@ interface _CWeaponCZ75aOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
@@ -3409,6 +3198,7 @@ interface _CWeaponCZ75aOwn {
 }
 
 interface _CWeaponTaserOwn {
+	readonly "m_Attributes"?: ReadonlyArray<{ readonly "m_bSetBonus"?: boolean; readonly "m_flInitialValue"?: number; readonly "m_iAttributeDefinitionIndex"?: number; readonly "m_iRawValue32"?: number; readonly "m_nRefundableCurrency"?: number }>;
 	readonly "m_bAnimatedEveryTick"?: boolean;
 	readonly "m_bAnimGraphUpdateEnabled"?: boolean;
 	readonly "m_bBurstMode"?: boolean;
@@ -3428,9 +3218,8 @@ interface _CWeaponTaserOwn {
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
-	readonly "m_bSetBonus"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
-	readonly "m_bvDisabledHitGroups"?: number;
+	readonly "m_bvDisabledHitGroups"?: Uint32Array;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_clrRender"?: number;
 	readonly "m_CollisionGroup"?: number;
@@ -3451,7 +3240,6 @@ interface _CWeaponTaserOwn {
 	readonly "m_flGlowStartTime"?: number;
 	readonly "m_flGlowTime"?: number;
 	readonly "m_flGravityScale"?: number;
-	readonly "m_flInitialValue"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flNavIgnoreUntilTime"?: number;
@@ -3472,11 +3260,9 @@ interface _CWeaponTaserOwn {
 	readonly "m_hOwnerEntity"?: number;
 	readonly "m_hPrevOwner"?: number;
 	readonly "m_iAccountID"?: number;
-	readonly "m_iAttributeDefinitionIndex"?: number;
 	readonly "m_iBurstShotsRemaining"?: number;
 	readonly "m_iClip1"?: number;
 	readonly "m_iClip2"?: number;
-	readonly "m_ID"?: number;
 	readonly "m_iEntityLevel"?: number;
 	readonly "m_iEntityQuality"?: number;
 	readonly "m_iGlowTeam"?: number;
@@ -3488,7 +3274,6 @@ interface _CWeaponTaserOwn {
 	readonly "m_iItemIDLow"?: number;
 	readonly "m_iMostRecentTeamNumber"?: number;
 	readonly "m_iOriginalTeamNumber"?: number;
-	readonly "m_iRawValue32"?: number;
 	readonly "m_iReapplyProvisionParity"?: number;
 	readonly "m_iRecoilIndex"?: number;
 	readonly "m_iTeamNum"?: number;
@@ -3522,7 +3307,6 @@ interface _CWeaponTaserOwn {
 	readonly "m_nOwnerId"?: number;
 	readonly "m_nPlatformType"?: number;
 	readonly "m_nPostponeFireReadyTicks"?: number;
-	readonly "m_nRefundableCurrency"?: number;
 	readonly "m_nRenderFX"?: bigint;
 	readonly "m_nRenderMode"?: bigint;
 	readonly "m_nRevolverCylinderIdx"?: number;
@@ -3532,19 +3316,19 @@ interface _CWeaponTaserOwn {
 	readonly "m_nTargetDetailLayer"?: number;
 	readonly "m_OriginalOwnerXuidHigh"?: number;
 	readonly "m_OriginalOwnerXuidLow"?: number;
-	readonly "m_pReserveAmmo"?: number;
+	readonly "m_pReserveAmmo"?: Int32Array;
 	readonly "m_ProviderType"?: number;
 	readonly "m_szCustomName"?: string;
-	readonly "m_Transforms"?: number;
+	readonly "m_Transforms"?: unknown[];
 	readonly "m_triggerBloat"?: number;
 	readonly "m_ubInterpolationFrame"?: number;
 	readonly "m_usSolidFlags"?: number;
-	readonly "m_Values"?: [number, number, number];
 	readonly "m_vCapsuleCenter1"?: [number, number, number];
 	readonly "m_vCapsuleCenter2"?: [number, number, number];
 	readonly "m_vecForce"?: [number, number, number];
 	readonly "m_vecMaxs"?: [number, number, number];
 	readonly "m_vecMins"?: [number, number, number];
+	readonly "m_vecRenderAttributes"?: ReadonlyArray<{ readonly "m_ID"?: number; readonly "m_Values"?: [number, number, number] }>;
 	readonly "m_vecSpecifiedSurroundingMaxs"?: [number, number, number];
 	readonly "m_vecSpecifiedSurroundingMins"?: [number, number, number];
 	readonly "m_weaponMode"?: bigint;
@@ -3565,9 +3349,7 @@ interface _WeaponPurchaseCount_tOwn {
 export type ICAK47 = Prefixed<"CAK47",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
@@ -3575,7 +3357,6 @@ export type ICBaseCSGrenadeProjectile = Prefixed<"CBaseCSGrenadeProjectile",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CBaseCSGrenadeProjectileOwn
 >;
 
@@ -3583,7 +3364,6 @@ export type ICBaseGrenade = Prefixed<"CBaseGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CBaseGrenadeOwn
 >;
 
@@ -3597,26 +3377,20 @@ export type ICBasePlayerPawn = Prefixed<"CBasePlayerPawn",
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	Prefixed<"CPlayer_CameraServices", _CPlayer_CameraServices> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
-	Prefixed<"ViewAngleServerChange_t", _ViewAngleServerChange_t> &
 	_CBasePlayerPawnOwn
 >;
 
 export type ICBasePlayerWeapon = Prefixed<"CBasePlayerWeapon",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CBasePlayerWeaponOwn
 >;
 
 export type ICC4 = Prefixed<"CC4",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CC4Own
 >;
 
@@ -3630,43 +3404,33 @@ export type ICCSGameRulesProxy = Prefixed<"CCSGameRulesProxy", Prefixed<"CCSGame
 
 export type ICCSGO_TeamIntroCounterTerroristPosition = Prefixed<"CCSGO_TeamIntroCounterTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CCSGO_TeamIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_TeamIntroTerroristPosition = Prefixed<"CCSGO_TeamIntroTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CCSGO_TeamIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_TeamSelectCounterTerroristPosition = Prefixed<"CCSGO_TeamSelectCounterTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CCSGO_TeamIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_TeamSelectTerroristPosition = Prefixed<"CCSGO_TeamSelectTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CCSGO_TeamIntroCounterTerroristPositionOwn
 >;
 
-export type ICCSPlayer_ActionTrackingServices = Prefixed<"CCSPlayer_ActionTrackingServices",
-	Prefixed<"WeaponPurchaseCount_t", _WeaponPurchaseCount_t> &
-	_CCSPlayer_ActionTrackingServicesOwn
->;
+export type ICCSPlayer_ActionTrackingServices = Prefixed<"CCSPlayer_ActionTrackingServices", _CCSPlayer_ActionTrackingServicesOwn>;
 
 export type ICCSPlayer_BulletServices = Prefixed<"CCSPlayer_BulletServices", _CCSPlayer_BulletServicesOwn>;
 
-export type ICCSPlayer_BuyServices = Prefixed<"CCSPlayer_BuyServices",
-	Prefixed<"SellbackPurchaseEntry_t", _SellbackPurchaseEntry_t> &
-	_CCSPlayer_BuyServicesOwn
->;
+export type ICCSPlayer_BuyServices = Prefixed<"CCSPlayer_BuyServices", _CCSPlayer_BuyServicesOwn>;
 
 export type ICCSPlayer_CameraServices = Prefixed<"CCSPlayer_CameraServices", _CCSPlayer_CameraServicesOwn>;
 
@@ -3689,22 +3453,13 @@ export type ICCSPlayerController = Prefixed<"CCSPlayerController",
 	_CCSPlayerControllerOwn
 >;
 
-export type ICCSPlayerController_ActionTrackingServices = Prefixed<"CCSPlayerController_ActionTrackingServices",
-	Prefixed<"CSPerRoundStats_t", _CSPerRoundStats_t> &
-	_CCSPlayerController_ActionTrackingServicesOwn
->;
+export type ICCSPlayerController_ActionTrackingServices = Prefixed<"CCSPlayerController_ActionTrackingServices", _CCSPlayerController_ActionTrackingServicesOwn>;
 
-export type ICCSPlayerController_DamageServices = Prefixed<"CCSPlayerController_DamageServices",
-	Prefixed<"CDamageRecord", _CDamageRecord> &
-	_CCSPlayerController_DamageServicesOwn
->;
+export type ICCSPlayerController_DamageServices = Prefixed<"CCSPlayerController_DamageServices", _CCSPlayerController_DamageServicesOwn>;
 
 export type ICCSPlayerController_InGameMoneyServices = Prefixed<"CCSPlayerController_InGameMoneyServices", _CCSPlayerController_InGameMoneyServicesOwn>;
 
-export type ICCSPlayerController_InventoryServices = Prefixed<"CCSPlayerController_InventoryServices",
-	Prefixed<"ServerAuthoritativeWeaponSlot_t", _ServerAuthoritativeWeaponSlot_t> &
-	_CCSPlayerController_InventoryServicesOwn
->;
+export type ICCSPlayerController_InventoryServices = Prefixed<"CCSPlayerController_InventoryServices", _CCSPlayerController_InventoryServicesOwn>;
 
 export type ICCSPlayerPawn = Prefixed<"CCSPlayerPawn",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
@@ -3718,10 +3473,7 @@ export type ICCSPlayerPawn = Prefixed<"CCSPlayerPawn",
 	Prefixed<"CCSPlayer_PingServices", _CCSPlayer_PingServices> &
 	Prefixed<"CCSPlayer_WeaponServices", _CCSPlayer_WeaponServices> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
-	Prefixed<"ViewAngleServerChange_t", _ViewAngleServerChange_t> &
 	_CCSPlayerPawnOwn
 >;
 
@@ -3731,8 +3483,6 @@ export type ICCSPlayerPawnBase = Prefixed<"CCSPlayerPawnBase",
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	Prefixed<"CPlayer_CameraServices", _CPlayer_CameraServices> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
-	Prefixed<"ViewAngleServerChange_t", _ViewAngleServerChange_t> &
 	_CCSPlayerPawnBaseOwn
 >;
 
@@ -3743,36 +3493,28 @@ export type ICCSTeam = Prefixed<"CCSTeam", _CCSTeamOwn>;
 export type ICCSWeaponBaseGun = Prefixed<"CCSWeaponBaseGun",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICCSWeaponBaseShotgun = Prefixed<"CCSWeaponBaseShotgun",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CCSWeaponBaseShotgunOwn
 >;
 
 export type ICDEagle = Prefixed<"CDEagle",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICDecoyGrenade = Prefixed<"CDecoyGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyGrenadeOwn
 >;
 
@@ -3780,7 +3522,6 @@ export type ICDecoyProjectile = Prefixed<"CDecoyProjectile",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyProjectileOwn
 >;
 
@@ -3801,9 +3542,7 @@ export type ICEnvWindController = Prefixed<"CEnvWindController",
 export type ICFlashbang = Prefixed<"CFlashbang",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyGrenadeOwn
 >;
 
@@ -3811,7 +3550,6 @@ export type ICFlashbangProjectile = Prefixed<"CFlashbangProjectile",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CBaseCSGrenadeProjectileOwn
 >;
 
@@ -3820,9 +3558,7 @@ export type ICFogController = Prefixed<"CFogController", _CFogControllerOwn>;
 export type ICHEGrenade = Prefixed<"CHEGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyGrenadeOwn
 >;
 
@@ -3830,16 +3566,13 @@ export type ICHEGrenadeProjectile = Prefixed<"CHEGrenadeProjectile",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CBaseCSGrenadeProjectileOwn
 >;
 
 export type ICIncendiaryGrenade = Prefixed<"CIncendiaryGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyGrenadeOwn
 >;
 
@@ -3847,16 +3580,13 @@ export type ICInferno = Prefixed<"CInferno",
 	Prefixed<"CBodyComponentBaseModelEntity", _CBodyComponentBaseModelEntity> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CInfernoOwn
 >;
 
 export type ICKnife = Prefixed<"CKnife",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CKnifeOwn
 >;
 
@@ -3869,9 +3599,7 @@ export type ICMapVetoPickController = Prefixed<"CMapVetoPickController",
 export type ICMolotovGrenade = Prefixed<"CMolotovGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyGrenadeOwn
 >;
 
@@ -3879,16 +3607,13 @@ export type ICMolotovProjectile = Prefixed<"CMolotovProjectile",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CMolotovProjectileOwn
 >;
 
 export type ICPlantedC4 = Prefixed<"CPlantedC4",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CPlantedC4Own
 >;
 
@@ -3904,7 +3629,6 @@ export type ICPlayerSprayDecal = Prefixed<"CPlayerSprayDecal",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CPlayerSprayDecalOwn
 >;
 
@@ -3917,9 +3641,7 @@ export type ICPlayerVisibility = Prefixed<"CPlayerVisibility",
 export type ICSmokeGrenade = Prefixed<"CSmokeGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CDecoyGrenadeOwn
 >;
 
@@ -3927,7 +3649,6 @@ export type ICSmokeGrenadeProjectile = Prefixed<"CSmokeGrenadeProjectile",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CSmokeGrenadeProjectileOwn
 >;
 
@@ -3948,297 +3669,231 @@ export type ICVoteController = Prefixed<"CVoteController",
 export type ICWeaponAug = Prefixed<"CWeaponAug",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponAWP = Prefixed<"CWeaponAWP",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponBizon = Prefixed<"CWeaponBizon",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponCZ75a = Prefixed<"CWeaponCZ75a",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CWeaponCZ75aOwn
 >;
 
 export type ICWeaponElite = Prefixed<"CWeaponElite",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponFamas = Prefixed<"CWeaponFamas",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponFiveSeven = Prefixed<"CWeaponFiveSeven",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponG3SG1 = Prefixed<"CWeaponG3SG1",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponGalilAR = Prefixed<"CWeaponGalilAR",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponGlock = Prefixed<"CWeaponGlock",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponHKP2000 = Prefixed<"CWeaponHKP2000",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponM249 = Prefixed<"CWeaponM249",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponM4A1 = Prefixed<"CWeaponM4A1",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponM4A1Silencer = Prefixed<"CWeaponM4A1Silencer",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponMAC10 = Prefixed<"CWeaponMAC10",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponMag7 = Prefixed<"CWeaponMag7",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponMP5SD = Prefixed<"CWeaponMP5SD",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponMP7 = Prefixed<"CWeaponMP7",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponMP9 = Prefixed<"CWeaponMP9",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponNegev = Prefixed<"CWeaponNegev",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponNOVA = Prefixed<"CWeaponNOVA",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CCSWeaponBaseShotgunOwn
 >;
 
 export type ICWeaponP250 = Prefixed<"CWeaponP250",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponP90 = Prefixed<"CWeaponP90",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponRevolver = Prefixed<"CWeaponRevolver",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponSawedoff = Prefixed<"CWeaponSawedoff",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CCSWeaponBaseShotgunOwn
 >;
 
 export type ICWeaponSCAR20 = Prefixed<"CWeaponSCAR20",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponSG556 = Prefixed<"CWeaponSG556",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponSSG08 = Prefixed<"CWeaponSSG08",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponTaser = Prefixed<"CWeaponTaser",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CWeaponTaserOwn
 >;
 
 export type ICWeaponTec9 = Prefixed<"CWeaponTec9",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponUMP45 = Prefixed<"CWeaponUMP45",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponUSPSilencer = Prefixed<"CWeaponUSPSilencer",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CAK47Own
 >;
 
 export type ICWeaponXM1014 = Prefixed<"CWeaponXM1014",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
-	Prefixed<"CEconItemAttribute", _CEconItemAttribute> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	Prefixed<"EntityRenderAttribute_t", _EntityRenderAttribute_t> &
 	_CCSWeaponBaseShotgunOwn
 >;
 

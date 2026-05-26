@@ -6,8 +6,9 @@ import { GameEvents } from './descriptors/gameEventEmitter.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { type Readable } from 'stream';
 import { EntityMode, type EmitQueue, type OutputEvents } from './entities/types.js';
-import type { Decoder } from './entities/constructorFields.js';
+import type { Decoder, PropInfo } from './entities/constructorFields.js';
 import { ParseSession, type ParseSettings } from './entities/parseSession.js';
+import { applyPropUpdate } from './entities/entityParser.js';
 import { Player } from '../helpers/player.js';
 import snappy from 'snappy';
 import { Team } from '../helpers/team.js';
@@ -278,9 +279,17 @@ export class DemoReader extends EventEmitter<{
 
 		this.on('entityupdated', info => {
 			if (this._directWriteMode) return;
-			if (!this.entities[info.entityId]) return;
-			//@ts-expect-error We know what we doin son
-			this.entities[info.entityId]!.properties[this.propIdToName[info.propId]!] = info.value;
+			const ent = this.entities[info.entityId];
+			if (!ent) return;
+			const meta = this.propIdToInfo[info.propId];
+			if (meta === undefined) return;
+			applyPropUpdate(
+				ent.properties as Record<string, unknown>,
+				meta,
+				info.value,
+				info.arrayIndex ?? -1,
+				info.isResize ?? false
+			);
 		});
 
 		this.on('entitydeleted', entityId => {
@@ -397,6 +406,7 @@ export class DemoReader extends EventEmitter<{
 
 	propIdToName: Record<number, string> = {};
 	propIdToDecoder: Record<number, Decoder> = {};
+	propIdToInfo: Record<number, PropInfo> = {};
 
 	private _emitQueue: EmitQueue = queue => {
 		if (this._hasEnded) return;

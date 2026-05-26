@@ -10,6 +10,7 @@ import {
 	type ConstructorField,
 	type Decoder,
 	type Field,
+	type PropInfo,
 	type SerializerN
 } from './constructorFields.js';
 
@@ -98,6 +99,7 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 
 	const propIdToName: Record<number, string> = {};
 	const propIdToDecoder: Record<number, Decoder> = {};
+	const propIdToInfo: Record<number, PropInfo> = {};
 
 	const classById: Class[] = [];
 
@@ -135,7 +137,8 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 				serializerName,
 				propIdToName,
 				currentEntityId,
-				propIdToDecoder
+				propIdToDecoder,
+				propIdToInfo
 			);
 		}
 
@@ -163,7 +166,8 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 	return {
 		classes: classById,
 		propIdToName,
-		propIdToDecoder
+		propIdToDecoder,
+		propIdToInfo
 	};
 };
 

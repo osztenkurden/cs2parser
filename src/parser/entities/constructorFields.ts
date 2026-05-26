@@ -134,6 +134,7 @@ const D_AMMO = 19;
 const D_QANGLE_PRES = 20;
 const D_GAME_MODE_RULES = 21;
 const D_BINARY_BLOCK = 22;
+const D_CTRANSFORM = 23;
 
 export type QuantalizedFloatDecoder = { type: typeof D_QUANTALIZED_FLOAT; decoder: number };
 export type Decoder = number | QuantalizedFloatDecoder;
@@ -161,7 +162,8 @@ export const Decoders = {
 	AmmoDecoder: D_AMMO,
 	QanglePresDecoder: D_QANGLE_PRES,
 	GameModeRulesDecoder: D_GAME_MODE_RULES,
-	BinaryBlockDecoder: D_BINARY_BLOCK
+	BinaryBlockDecoder: D_BINARY_BLOCK,
+	CTransformDecoder: D_CTRANSFORM
 };
 
 const decoderMap: { [K in string]?: Decoder } = {
@@ -187,7 +189,11 @@ const decoderMap: { [K in string]?: Decoder } = {
 	CUtlStringToken: Decoders.UnsignedDecoder,
 	CUtlSymbolLarge: Decoders.StringDecoder,
 	Quaternion: Decoders.NoscaleDecoder,
-	CTransform: Decoders.NoscaleDecoder,
+	// Per demofile-net the wire form is "Vector3 + Quaternion (6 floats)" but is
+	// not actually transmitted by CS2 today. Throw rather than silently miscalibrate.
+	CTransform: Decoders.CTransformDecoder,
+	// ResourceId_t is a 64-bit identifier typedef → decode via UVarInt64 → bigint.
+	ResourceId_t: Decoders.Unsigned64Decoder,
 	HSequence: Decoders.Unsigned64Decoder,
 	AttachmentHandle_t: Decoders.Unsigned64Decoder,
 	CEntityIndex: Decoders.Unsigned64Decoder,
@@ -249,11 +255,61 @@ export type FieldCategory = GetEnumType<typeof FieldCategory>;
 type ArrayField = {
 	field_enum: Field;
 	length: number;
+	varName?: string;
+	elementBaseType?: string;
 };
 
 type VectorField = {
 	field_enum: Field;
 	decoder: Decoder;
+	varName?: string;
+	elementBaseType?: string;
+};
+
+export type TypedArrayCtor =
+	| Uint8ArrayConstructor
+	| Uint16ArrayConstructor
+	| Uint32ArrayConstructor
+	| Int8ArrayConstructor
+	| Int16ArrayConstructor
+	| Int32ArrayConstructor
+	| Float32ArrayConstructor
+	| BigUint64ArrayConstructor
+	| BigInt64ArrayConstructor;
+
+export type TypedArray =
+	| Uint8Array
+	| Uint16Array
+	| Uint32Array
+	| Int8Array
+	| Int16Array
+	| Int32Array
+	| Float32Array
+	| BigUint64Array
+	| BigInt64Array;
+
+const typedArrayCtorMap: Record<string, TypedArrayCtor> = {
+	uint8: Uint8Array,
+	int8: Int8Array,
+	uint16: Uint16Array,
+	int16: Int16Array,
+	uint32: Uint32Array,
+	int32: Int32Array,
+	float32: Float32Array,
+	// 64-bit identifier typedef — wire decode yields bigint via Unsigned64Decoder.
+	ResourceId_t: BigUint64Array
+};
+
+export const getTypedArrayCtor = (baseTypeName: string | undefined): TypedArrayCtor | undefined =>
+	baseTypeName ? typedArrayCtorMap[baseTypeName] : undefined;
+
+export type PropInfo = {
+	name: string;
+	containerKey?: string;
+	subKey?: string;
+	elementCtor?: TypedArrayCtor;
+	fixedLength?: number;
+	elementTsHint?: string;
 };
 
 type SerializerField = {
@@ -568,6 +624,12 @@ export const constructorFieldHelper = {
 				reader.readBytes(out);
 				return out;
 			}
+			case D_CTRANSFORM:
+				// CTransform wire format is Vector3 + Quaternion (~6 floats) but has not
+				// been observed in CS2 demos. demofile-net throws here for the same reason;
+				// mirror that — if a future demo emits the field we'll fail loud rather
+				// than silently desync the bitstream.
+				throw new Error('CTransform decoding is not implemented — wire format unknown (no CS2 demo seen using it)');
 			default:
 				throw Error('unknown decoder');
 		}
@@ -653,8 +715,36 @@ export const constructorFieldHelper = {
 		serializerName: string,
 		map: Record<number, string>,
 		currentEntityId: { id: number },
-		decoderMap?: Record<number, Decoder>
+		decoderMap?: Record<number, Decoder>,
+		propInfoMap?: Record<number, PropInfo>,
+		container?: { key: string }
 	) => {
+		const emitInfo = (
+			id: number,
+			name: string,
+			decoder: Decoder,
+			extras?: {
+				subKey?: string;
+				elementCtor?: TypedArrayCtor;
+				fixedLength?: number;
+				elementTsHint?: string;
+				containerOverride?: string;
+			}
+		) => {
+			map[id] = name;
+			if (decoderMap) decoderMap[id] = decoder;
+			if (propInfoMap) {
+				const info: PropInfo = { name };
+				const ck = extras?.containerOverride ?? container?.key;
+				if (ck !== undefined) info.containerKey = ck;
+				if (extras?.subKey) info.subKey = extras.subKey;
+				if (extras?.elementCtor) info.elementCtor = extras.elementCtor;
+				if (extras?.fixedLength !== undefined) info.fixedLength = extras.fixedLength;
+				if (extras?.elementTsHint) info.elementTsHint = extras.elementTsHint;
+				propInfoMap[id] = info;
+			}
+		};
+
 		for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
 			if (!fields[fieldIndex]) {
 				continue;
@@ -666,8 +756,12 @@ export const constructorFieldHelper = {
 				case FieldTypeEnum.Value: {
 					const value = field.value as ValueField;
 					const result = `${serializerName}.${value.name}`;
-					map[currentEntityId.id] = result;
-					if (decoderMap) decoderMap[currentEntityId.id] = value.decoder;
+					emitInfo(
+						currentEntityId.id,
+						result,
+						value.decoder,
+						container ? { subKey: value.name } : undefined
+					);
 					value.prop_id = currentEntityId.id;
 					currentEntityId.id++;
 					break;
@@ -681,7 +775,9 @@ export const constructorFieldHelper = {
 						result,
 						map,
 						currentEntityId,
-						decoderMap
+						decoderMap,
+						propInfoMap,
+						container
 					);
 					break;
 				}
@@ -695,21 +791,44 @@ export const constructorFieldHelper = {
 						result,
 						map,
 						currentEntityId,
-						decoderMap
+						decoderMap,
+						propInfoMap,
+						container
 					);
 					break;
 				}
 				case FieldTypeEnum.Array: {
 					const value = field.value as ArrayField;
+					const containerName = `${serializerName}.${value.varName ?? getNameExt(value.field_enum)}`;
+					const elementCtor = getTypedArrayCtor(value.elementBaseType);
+					// Nested containers degrade to outermost-only — wire's deeper element
+					// indices can't be addressed with a single arrayIndex slot.
+					const nextContainer = container ?? { key: containerName };
+
 					switch (value.field_enum.type) {
 						case FieldTypeEnum.Value: {
 							const innerValue = value.field_enum.value as ValueField;
-							const result = `${serializerName}.${innerValue.name}`;
-
-							map[currentEntityId.id] = result;
-							if (decoderMap) decoderMap[currentEntityId.id] = innerValue.decoder;
+							emitInfo(currentEntityId.id, containerName, innerValue.decoder, {
+								elementCtor,
+								fixedLength: value.length,
+								elementTsHint: value.elementBaseType,
+								containerOverride: containerName
+							});
 							innerValue.prop_id = currentEntityId.id;
 							currentEntityId.id++;
+							break;
+						}
+						case FieldTypeEnum.Serializer: {
+							const innerSer = value.field_enum.value as SerializerField;
+							constructorFieldHelper.traverseFields(
+								innerSer.serializer.fields,
+								containerName,
+								map,
+								currentEntityId,
+								decoderMap,
+								propInfoMap,
+								nextContainer
+							);
 							break;
 						}
 						default:
@@ -718,46 +837,33 @@ export const constructorFieldHelper = {
 					break;
 				}
 				case FieldTypeEnum.Vector: {
-					const inner = getInnerExt(field, 0);
+					const value = field.value as VectorField;
+					const containerName = `${serializerName}.${value.varName ?? getNameExt(value.field_enum)}`;
+					const elementCtor = getTypedArrayCtor(value.elementBaseType);
+					const nextContainer = container ?? { key: containerName };
 
-					switch (inner.type) {
+					switch (value.field_enum.type) {
 						case FieldTypeEnum.Serializer: {
-							const value = inner.value as SerializerField;
-							for (let idx = 0; idx < value.serializer.fields.length; idx++) {
-								const innerField = value.serializer.fields[idx];
-								if (!innerField) continue;
-
-								switch (innerField.type) {
-									case FieldTypeEnum.Value: {
-										const innerFieldValue = innerField.value as ValueField;
-										const result = `${serializerName}.${innerFieldValue.name}`;
-
-										map[currentEntityId.id] = result;
-										if (decoderMap) decoderMap[currentEntityId.id] = innerFieldValue.decoder;
-										innerFieldValue.prop_id = currentEntityId.id;
-										currentEntityId.id++;
-										break;
-									}
-									default:
-										break;
-								}
-							}
+							const innerSer = value.field_enum.value as SerializerField;
 							constructorFieldHelper.traverseFields(
-								value.serializer.fields,
-								`${serializerName}.${value.serializer.name}`,
+								innerSer.serializer.fields,
+								containerName,
 								map,
 								currentEntityId,
-								decoderMap
+								decoderMap,
+								propInfoMap,
+								nextContainer
 							);
 							break;
 						}
 						case FieldTypeEnum.Value: {
-							const value = inner.value as ValueField;
-							const result = `${serializerName}.${value.name}`;
-
-							map[currentEntityId.id] = result;
-							if (decoderMap) decoderMap[currentEntityId.id] = value.decoder;
-							value.prop_id = currentEntityId.id;
+							const innerValue = value.field_enum.value as ValueField;
+							emitInfo(currentEntityId.id, containerName, innerValue.decoder, {
+								elementCtor,
+								elementTsHint: value.elementBaseType,
+								containerOverride: containerName
+							});
+							innerValue.prop_id = currentEntityId.id;
 							currentEntityId.id++;
 							break;
 						}
@@ -796,12 +902,17 @@ export const constructorFieldHelper = {
 		if (field.category === FieldCategory.Array) {
 			elementField = new Field(FieldTypeEnum.Array, {
 				field_enum: elementField,
-				length: field.fieldType.count ?? 0
+				length: field.fieldType.count ?? 0,
+				varName: field.varName,
+				// For fixed arrays the parsed FieldType keeps the per-element base name in `baseType`.
+				elementBaseType: field.fieldType.baseType
 			});
 		} else if (field.category === FieldCategory.Vector) {
 			elementField = new Field(FieldTypeEnum.Vector, {
 				field_enum: elementField,
-				decoder: Decoders.UnsignedDecoder
+				decoder: Decoders.UnsignedDecoder,
+				varName: field.varName,
+				elementBaseType: field.fieldType.genericType?.baseType
 			});
 		}
 

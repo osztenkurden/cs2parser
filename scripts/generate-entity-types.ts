@@ -43,7 +43,9 @@ const DECODER_ID_TO_TS: Record<number, string> = {
 	18: 'number', // D_BASE
 	19: 'number', // D_AMMO
 	20: '[number, number, number]', // D_QANGLE_PRES
-	21: 'number' // D_GAME_MODE_RULES
+	21: 'number', // D_GAME_MODE_RULES
+	22: 'Uint8Array', // D_BINARY_BLOCK
+	23: 'unknown' // D_CTRANSFORM — throws at decode; value never populated
 };
 
 function decoderToTsType(decoder: Decoder): string {
@@ -61,16 +63,57 @@ function collectFromDemo(demoPath: string): SnapshotData {
 	const parser = new DemoReader();
 	parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
 
+	// Build (fullPath → tsType) entries, collapsing container sub-fields into
+	// `Array<{ ... }>` at the container's key and emitting typed arrays where
+	// a primitive elementCtor was inferred.
+	const containerSubFields = new Map<string, Map<string, string>>();
+	const containerArrays = new Map<string, string>();
+	const scalarFields = new Map<string, string>();
+
+	for (const [propIdStr, fullPath] of Object.entries(parser.propIdToName)) {
+		const propId = Number(propIdStr);
+		const info = parser.propIdToInfo[propId];
+		const decoder = parser.propIdToDecoder[propId];
+		const innerTs = decoder !== undefined ? decoderToTsType(decoder) : 'unknown';
+
+		if (info?.containerKey !== undefined) {
+			if (info.subKey) {
+				let group = containerSubFields.get(info.containerKey);
+				if (!group) {
+					group = new Map();
+					containerSubFields.set(info.containerKey, group);
+				}
+				if (!group.has(info.subKey) || group.get(info.subKey) === 'unknown') {
+					group.set(info.subKey, innerTs);
+				}
+			} else {
+				const ts = info.elementCtor ? info.elementCtor.name : `${innerTs}[]`;
+				if (!containerArrays.has(info.containerKey) || containerArrays.get(info.containerKey) === 'unknown[]') {
+					containerArrays.set(info.containerKey, ts);
+				}
+			}
+		} else {
+			if (!scalarFields.has(fullPath) || scalarFields.get(fullPath) === 'unknown') {
+				scalarFields.set(fullPath, innerTs);
+			}
+		}
+	}
+
+	const finalEntries = new Map<string, string>();
+	for (const [path, ts] of scalarFields) finalEntries.set(path, ts);
+	for (const [containerKey, ts] of containerArrays) finalEntries.set(containerKey, ts);
+	for (const [containerKey, group] of containerSubFields) {
+		const sorted = [...group.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+		const inner = sorted.map(([k, v]) => `readonly ${JSON.stringify(k)}?: ${v}`).join('; ');
+		finalEntries.set(containerKey, `ReadonlyArray<{ ${inner} }>`);
+	}
+
 	// Shared serializer map: serializerName → { fieldNameWithoutPrefix → tsType }
 	const serializerMap = new Map<string, Map<string, string>>();
 	// Per-entity: className → { serializers used, own fields }
 	const entityMap = new Map<string, { serializers: Set<string>; ownFields: Map<string, string> }>();
 
-	for (const [propIdStr, fullPath] of Object.entries(parser.propIdToName)) {
-		const propId = Number(propIdStr);
-		const decoder = parser.propIdToDecoder[propId];
-		const tsType = decoder !== undefined ? decoderToTsType(decoder) : 'unknown';
-
+	for (const [fullPath, tsType] of finalEntries) {
 		const dotIdx = fullPath.indexOf('.');
 		if (dotIdx === -1) continue;
 

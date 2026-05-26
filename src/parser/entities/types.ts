@@ -58,7 +58,15 @@ export interface OutputEvents extends OnDemandEvents {
 	cancel: never;
 	debug: string;
 	entitycreated: [entityId: number, classId: number, entityType: EntityTypeEnum, className: string];
-	entityupdated: { entityId: number; value: any; propId: number };
+	entityupdated: {
+		entityId: number;
+		value: any;
+		propId: number;
+		/** For container fields, the element index being written. Undefined for scalar writes. */
+		arrayIndex?: number;
+		/** True when `value` is the new length of a `CNetworkUtlVectorBase` container. */
+		isResize?: boolean;
+	};
 	entitydeleted: number;
 }
 

@@ -161,76 +161,59 @@ export class Player extends EntityHelper<'CCSPlayerController'> {
 
 	// --- Per-Round Stats ---
 
+	/**
+	 * Server-sent per-round stats array, indexed by round number. Element shape
+	 * mirrors `CSPerRoundStats_t`. Returns an empty array when the field hasn't
+	 * been populated yet.
+	 */
+	get perRoundStats() {
+		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_perRoundStats') ?? [];
+	}
+
+	/** Latest round's stat slot (or undefined while the array is empty). */
+	private _lastRoundStats() {
+		const arr = this.perRoundStats;
+		return arr.length === 0 ? undefined : arr[arr.length - 1];
+	}
+
 	get round_kills(): number {
-		return (
-			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iKills') ?? 0
-		);
+		return this._lastRoundStats()?.m_iKills ?? 0;
 	}
 
 	get round_deaths(): number {
-		return (
-			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDeaths') ?? 0
-		);
+		return this._lastRoundStats()?.m_iDeaths ?? 0;
 	}
 
 	get round_assists(): number {
-		return (
-			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iAssists') ??
-			0
-		);
+		return this._lastRoundStats()?.m_iAssists ?? 0;
 	}
 
 	get round_damage(): number {
-		return (
-			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDamage') ?? 0
-		);
+		return this._lastRoundStats()?.m_iDamage ?? 0;
 	}
 
 	get round_headshotKills(): number {
-		return (
-			this.prop(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iHeadShotKills'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iHeadShotKills ?? 0;
 	}
 
 	get round_equipmentValue(): number {
-		return (
-			this.prop(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEquipmentValue'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iEquipmentValue ?? 0;
 	}
 
 	get round_cashEarned(): number {
-		return (
-			this.prop(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iCashEarned'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iCashEarned ?? 0;
 	}
 
 	get round_utilityDamage(): number {
-		return (
-			this.prop(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iUtilityDamage'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iUtilityDamage ?? 0;
 	}
 
 	get round_enemiesFlashed(): number {
-		return (
-			this.prop(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEnemiesFlashed'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iEnemiesFlashed ?? 0;
 	}
 
 	get round_liveTime(): number {
-		return (
-			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iLiveTime') ??
-			0
-		);
+		return this._lastRoundStats()?.m_iLiveTime ?? 0;
 	}
 
 	// --- General ---
