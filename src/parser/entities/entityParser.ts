@@ -139,12 +139,7 @@ const copyTyped = (dst: TypedArray, src: TypedArray) => {
 	(dst as Uint8Array).set(src as unknown as Uint8Array);
 };
 
-const writeToContainer = (
-	props: Record<string, unknown>,
-	info: PropInfo,
-	arrayIndex: number,
-	value: unknown
-) => {
+const writeToContainer = (props: Record<string, unknown>, info: PropInfo, arrayIndex: number, value: unknown) => {
 	const key = info.containerKey!;
 	let arr = props[key] as unknown[] | TypedArray | undefined;
 	if (arr === undefined) {

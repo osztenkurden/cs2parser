@@ -629,7 +629,9 @@ export const constructorFieldHelper = {
 				// been observed in CS2 demos. demofile-net throws here for the same reason;
 				// mirror that — if a future demo emits the field we'll fail loud rather
 				// than silently desync the bitstream.
-				throw new Error('CTransform decoding is not implemented — wire format unknown (no CS2 demo seen using it)');
+				throw new Error(
+					'CTransform decoding is not implemented — wire format unknown (no CS2 demo seen using it)'
+				);
 			default:
 				throw Error('unknown decoder');
 		}
@@ -756,12 +758,7 @@ export const constructorFieldHelper = {
 				case FieldTypeEnum.Value: {
 					const value = field.value as ValueField;
 					const result = `${serializerName}.${value.name}`;
-					emitInfo(
-						currentEntityId.id,
-						result,
-						value.decoder,
-						container ? { subKey: value.name } : undefined
-					);
+					emitInfo(currentEntityId.id, result, value.decoder, container ? { subKey: value.name } : undefined);
 					value.prop_id = currentEntityId.id;
 					currentEntityId.id++;
 					break;
