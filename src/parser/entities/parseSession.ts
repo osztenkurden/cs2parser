@@ -609,7 +609,14 @@ export class ParseSession {
 			reader.skipBytesBetter(size);
 			return;
 		}
-		this.enqueueEvent(name, decoder.decode(reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size)));
+		// Read into a fresh per-message buffer: the decoded message's `bytes` fields
+		// (e.g. CMsgVoiceAudio.voice_data) are views into this input, and the event is
+		// emitted later from a queue. A shared scratch buffer would be overwritten by the
+		// next message before the user's listener runs. Gated by settings above, so this
+		// only allocates for opt-in message types.
+		const msgContent = new Uint8Array(size);
+		reader.readBytes(msgContent);
+		this.enqueueEvent(name, decoder.decode(msgContent));
 	}
 
 	// === Packet-level parsing ===
@@ -645,7 +652,10 @@ export class ParseSession {
 					break;
 				}
 				case SVC_Messages.svc_ServerInfo: {
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
+					// Fresh buffer: CSVCMsg_ServerInfo retains `bytes` views (game_session_manifest,
+					// game_session_config.data) that must survive past the next message's buffer reuse.
+					const msgContent = new Uint8Array(size);
+					reader.readBytes(msgContent);
 					const serverInfo = command.class.decode(msgContent);
 					this.enqueueEvent('serverinfo', serverInfo);
 					break;
