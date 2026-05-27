@@ -9,3 +9,11 @@ comparison
 *.dem
 .vscode
 .claude
+.re
+# voxel RE comparison dumps (regenerable via scripts/)
+voxel-*.tsv
+# generated smoke dump (demo-specific, regenerable via scripts/dump-smoke-voxels.ts)
+tools/smoke-dump.json
+docs
+tools
+scripts/re

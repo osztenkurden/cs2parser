@@ -251,6 +251,7 @@ A reference relay implementation is provided in `examples/relay.ts` for local te
 | `players` | `CMsgPlayerInfo[]` | Userinfo rows from the string table, sparse-indexed by `userid & 0xff` |
 | `playerControllers` | `Player[]` | All live `CCSPlayerController` entities wrapped as `Player` (requires `EntityMode.ALL`) |
 | `teams` | `Team[]` | All live `CCSTeam` entities (requires `EntityMode.ALL`) |
+| `smokes` | `SmokeHelper[]` | All live `CSmokeGrenadeProjectile` smoke clouds (requires `EntityMode.ALL`) |
 | `gameRules` | `GameRules \| null` | Wrapper around the current `CCSGameRulesProxy` entity |
 
 ### Cancelling a parse
@@ -557,6 +558,28 @@ parser.gameEvents.on('round_end', event => {
 | `CT_SURRENDER` | `18` |
 | `T_PLANTED` | `19` |
 | `CT_REACHED_HOSTAGE` | `20` |
+
+## Smokes
+
+`parser.smokes` returns `SmokeHelper[]` for live `CSmokeGrenadeProjectile` clouds (requires `EntityMode.ALL`); `parser.getSmoke(entityId)` resolves one by entity ID. Each smoke networks a voxel **seed** — the occupancy the game client grows the visible cloud from — which the helper decodes on demand.
+
+```ts
+for (const smoke of parser.smokes) {
+  console.log(smoke.detonationPos); // Vector | null — cloud centre
+  console.log(smoke.voxels);        // Vector[] — seed voxel world positions
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `entityId` | `number` | Projectile entity index |
+| `detonationPos` | `Vector \| null` | World-space cloud centre |
+| `hasVoxelData` | `boolean` | True once the voxel seed has arrived |
+| `voxels` | `Vector[]` | Seed voxels as world positions, computed on demand |
+| `gridVoxels` | `SmokeVoxel[]` | Raw `[0, 32)` grid coords + per-voxel state bytes |
+| `voxelCount` | `number` | Number of seed voxels |
+
+The voxel stream was reverse-engineered from the game client: positions use the verified transform `world = (grid − 16) · 20 + detonationPos` with per-axis signs `[−1, +1, +1]`. Low-level decoders (`decodeSmokeVoxelJournal`, `voxelToWorld`, `mortonEncode3`, …) are also exported for advanced use.
 
 ## Game Events
 

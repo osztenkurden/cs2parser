@@ -17,6 +17,7 @@ import type { AnyEntity, EntityProperties, KnownClassName, ICCSPlayerController 
 import { isEntityClass } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
+import { SmokeHelper } from '../helpers/smoke.js';
 import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
@@ -45,6 +46,7 @@ export class DemoReader extends EventEmitter<{
 	private _playerCache: Map<number, Player> = new Map();
 	private _teamCache: Map<number, Team> = new Map();
 	private _pawnCache: Map<number, PlayerPawn> = new Map();
+	private _smokeCache: Map<number, SmokeHelper> = new Map();
 	private _gameRulesCache: GameRules | null = null;
 	private _accountIdToEntityId: Map<number, number> = new Map();
 
@@ -87,6 +89,27 @@ export class DemoReader extends EventEmitter<{
 			return this._getOrCreate(this._pawnCache, entityId, id => new PlayerPawn(this, id));
 		}
 		return null;
+	}
+
+	/** Get a SmokeHelper by smoke-grenade-projectile entity ID. Requires EntityMode.ALL. */
+	getSmoke(entityId: number): SmokeHelper | null {
+		const e = this.entities[entityId];
+		if (e && e.className === 'CSmokeGrenadeProjectile') {
+			return this._getOrCreate(this._smokeCache, entityId, id => new SmokeHelper(this, id));
+		}
+		return null;
+	}
+
+	/** All currently-active smoke clouds as SmokeHelper objects. Requires EntityMode.ALL. */
+	get smokes(): SmokeHelper[] {
+		const result: SmokeHelper[] = [];
+		for (let i = 0; i < this.entities.length; i++) {
+			const e = this.entities[i];
+			if (e && e.className === 'CSmokeGrenadeProjectile') {
+				result.push(this._getOrCreate(this._smokeCache, i, id => new SmokeHelper(this, id)));
+			}
+		}
+		return result;
 	}
 
 	/** All player controller entities as Player helpers. Requires EntityMode.ALL. */
@@ -300,6 +323,7 @@ export class DemoReader extends EventEmitter<{
 			this._playerCache.delete(entityId);
 			this._teamCache.delete(entityId);
 			this._pawnCache.delete(entityId);
+			this._smokeCache.delete(entityId);
 			if (this._directWriteMode) return;
 			this.entities[entityId] = undefined as any;
 		});
