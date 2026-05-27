@@ -1,5 +1,5 @@
 /**
- * Entity Type Generator
+ * Entity Type Generator script
  * Parses a CS2 demo file and generates TypeScript interfaces for all entity classes.
  *
  * Usage:
