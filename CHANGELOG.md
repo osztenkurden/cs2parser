@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.10.0](https://github.com/osztenkurden/cs2parser/compare/v1.9.1...v1.10.0) (2026-05-27)
+
+
+### Features
+
+* added smoke voxel decoding ([f3e672a](https://github.com/osztenkurden/cs2parser/commit/f3e672a923157df0b849bc307d7a0e6fb9d1ed8d))
+* improved decoding vector types of data ([e8ac92c](https://github.com/osztenkurden/cs2parser/commit/e8ac92ca52e5e6b08251585ceadea3625dc4516f))
+
+
+### Bug Fixes
+
+* svc packet buffers being overwritten ([accb964](https://github.com/osztenkurden/cs2parser/commit/accb964e1ef00cb051d7d5679c34fa6b3bca1ba9))
+
 ## [1.9.1](https://github.com/osztenkurden/cs2parser/compare/v1.9.0...v1.9.1) (2026-05-19)
 
 
