@@ -66,7 +66,7 @@ if (info) {
 }
 ```
 
-Returns `null` if server info cannot be found. Only reads the first 16 KB of the file.
+Returns `null` if server info cannot be found. Reads only the demo's signon section (the setup frames at the start, before gameplay begins) instead of the whole file, so it stays fast and low-memory on demos of any size.
 
 ## parseDemo
 

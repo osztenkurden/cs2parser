@@ -338,60 +338,62 @@ export class DemoReader extends EventEmitter<{
 	}
 
 	static parseServerInfo = (filePath: string) => {
-		const max = fs.statSync(filePath).size;
-		const bufferSize = Math.min(4096 * 8, max - 16);
+		const fileSize = fs.statSync(filePath).size;
 
 		const fd = fs.openSync(filePath, 'r');
 		try {
-			const buffer = Buffer.alloc(bufferSize);
+			// The demo's outer framing is byte-aligned: a 16-byte magic header, then frames of
+			// [uvarint command][uvarint tick][uvarint size][`size` payload bytes]. Walk it straight
+			// off the file descriptor — seeking past frames we don't need and sizing each packet
+			// buffer to its payload — instead of into one fixed window. The signon packet carrying
+			// svc_ServerInfo (and the signon frames before it, e.g. string tables) can be tens of KB
+			// and sit well past any small fixed window, which would truncate them and fail the decode.
+			const headerScratch = Buffer.alloc(16); // three uvarints, each at most 5 bytes
+			const headerReader = new BitBuffer(headerScratch);
 
-			fs.readSync(fd, buffer, 0, bufferSize, 16);
+			let pos = 16; // skip the 16-byte demo magic header
+			let tick = 0xffffffff; // the file header and signon frames all carry tick -1
 
-			const byteBuffer = new BitBuffer(buffer);
+			while (tick === 0xffffffff && pos < fileSize) {
+				// Decode the frame header (command/tick/size) and advance past the bytes it consumed.
+				const available = Math.min(headerScratch.length, fileSize - pos);
+				fs.readSync(fd, headerScratch, 0, available, pos);
+				headerReader.setTo(headerScratch.subarray(0, available));
+				const command = headerReader.ReadUVarInt32();
+				tick = headerReader.ReadUVarInt32();
+				const size = headerReader.ReadUVarInt32();
+				pos += available - headerReader.RemainingBytes;
 
-			const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
-			const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
-
-			if (type !== EDemoCommands.DEM_FileHeader) return null;
-
-			let tick = byteBuffer.ReadUVarInt32(); // TICK
-
-			const size = byteBuffer.ReadUVarInt32();
-
-			byteBuffer.skipBytesBetter(size);
-			const _frameBuffer = Buffer.alloc(32 * 1024);
-			while (tick === 0xffffffff && byteBuffer.RemainingBytes > 0) {
-				const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
-				const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
-				tick = byteBuffer.ReadUVarInt32(); // TICK
-				const size = byteBuffer.ReadUVarInt32();
-
+				const type = command & ~EDemoCommands.DEM_IsCompressed;
 				const decoder = decoders[type as keyof typeof decoders];
 				if (
 					!decoder ||
 					!(decoder.type === EDemoCommands.DEM_Packet || decoder.type === EDemoCommands.DEM_SignonPacket)
 				) {
-					byteBuffer.skipBytesBetter(size);
+					pos += size; // file header / non-packet frame — seek past its body
 					continue;
 				}
 
-				const frameBuffer = byteBuffer.readBytesToSlice(_frameBuffer, size);
+				if (pos + size > fileSize) break;
+				const frameBuffer = Buffer.alloc(size);
+				fs.readSync(fd, frameBuffer, 0, size, pos);
+				pos += size;
 
-				const isCompressed = (EDemoCommandTypeBase & EDemoCommands.DEM_IsCompressed) !== 0;
+				const isCompressed = (command & EDemoCommands.DEM_IsCompressed) !== 0;
 				const bytes = isCompressed ? (snappy.uncompressSync(frameBuffer) as Buffer) : frameBuffer;
 
-				const data = decoder.decode(bytes);
+				const data = decoders[EDemoCommands.DEM_Packet].decode(bytes);
 				if (!data.data) continue;
-				const reader = new BitBuffer(data.data!);
+				const reader = new BitBuffer(data.data);
 				while (reader.RemainingBits > 8) {
 					const cmd = reader.readUbitVar();
-					const size = reader.ReadUVarInt32();
+					const msgSize = reader.ReadUVarInt32();
 					if (cmd !== SVC_Messages.svc_ServerInfo) {
-						reader.skipBytesBetter(size);
+						reader.skipBytesBetter(msgSize);
 						continue;
 					}
-					const serverInfo = Buffer.alloc(size);
-					const slice = reader.readBytesToSlice(serverInfo, size);
+					const serverInfo = Buffer.alloc(msgSize);
+					const slice = reader.readBytesToSlice(serverInfo, msgSize);
 					return messages[SVC_Messages.svc_ServerInfo].class.decode(slice);
 				}
 			}
