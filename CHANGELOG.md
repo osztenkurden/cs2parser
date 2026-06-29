@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/osztenkurden/cs2parser/compare/v1.10.0...v1.10.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* server info failing on newer demos ([84d24b0](https://github.com/osztenkurden/cs2parser/commit/84d24b03e4c67c37782eb95a0e66ce2a8e207de1))
+
 ## [1.10.0](https://github.com/osztenkurden/cs2parser/compare/v1.9.1...v1.10.0) (2026-05-27)
 
 
