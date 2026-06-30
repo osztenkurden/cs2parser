@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.1-alpha.0...cs2parser-v2.0.2-alpha.0) (2026-06-30)
+
+
+### Bug Fixes
+
+* add repository field to native sub-packages for provenance ([7438c17](https://github.com/osztenkurden/cs2parser/commit/7438c1724e30ff33ae6e782f8635424986feca68))
+
 ## [2.0.1-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.0-alpha.0...cs2parser-v2.0.1-alpha.0) (2026-06-30)
 
 
