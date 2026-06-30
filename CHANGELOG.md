@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.0-alpha.0...cs2parser-v2.0.1-alpha.0) (2026-06-30)
+
+
+### Bug Fixes
+
+* resolve repo root cross-platform in sync-package-versions ([7daf917](https://github.com/osztenkurden/cs2parser/commit/7daf9179a38ed077a8348a538734c311f9205f7b))
+
 ## [2.0.0-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v1.8.0...cs2parser-v2.0.0-alpha.0) (2026-06-30)
 
 
