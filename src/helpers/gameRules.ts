@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import { EntityHelper } from './entityHelper.js';
 
 export const WinRoundReason = {
 	INVALID: -1,
@@ -27,19 +27,7 @@ export const WinRoundReason = {
 
 export type WinRoundReason = (typeof WinRoundReason)[keyof typeof WinRoundReason];
 
-export class GameRules {
-	constructor(
-		private _parser: DemoReader,
-		public readonly entityId: number
-	) {}
-
-	private _num(name: string): number | undefined {
-		return this._parser.getNumberProp(this.entityId, name);
-	}
-	private _bool(name: string): boolean | undefined {
-		return this._parser.getBoolProp(this.entityId, name);
-	}
-
+export class GameRules extends EntityHelper<'CCSGameRulesProxy'> {
 	get isWarmup(): boolean {
 		return this._bool('CCSGameRulesProxy.CCSGameRules.m_bWarmupPeriod') ?? false;
 	}

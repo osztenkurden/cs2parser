@@ -19,3 +19,5 @@ crates/native/npm/*/*.node
 # napi-rs CLI generates these at build time — never commit
 crates/native/index.js
 crates/native/index.d.ts
+tools
+scripts/re

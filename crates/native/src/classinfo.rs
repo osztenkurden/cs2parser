@@ -55,6 +55,72 @@ pub enum FieldCategory {
 	Value,
 }
 
+/// Typed-array element kind for primitive container fields. Mirrors the JS
+/// `typedArrayCtorMap` in `constructorFields.ts`. `None` (not in the map) means
+/// the container is a plain JS array of decoded values.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ElementKind {
+	U8,
+	I8,
+	U16,
+	I16,
+	U32,
+	I32,
+	F32,
+	/// `ResourceId_t` — decoded as bigint, surfaced as `BigUint64Array`.
+	U64Big,
+}
+
+impl ElementKind {
+	/// The matching JS typed-array constructor name (for codegen).
+	pub fn ctor_name(self) -> &'static str {
+		match self {
+			ElementKind::U8 => "Uint8Array",
+			ElementKind::I8 => "Int8Array",
+			ElementKind::U16 => "Uint16Array",
+			ElementKind::I16 => "Int16Array",
+			ElementKind::U32 => "Uint32Array",
+			ElementKind::I32 => "Int32Array",
+			ElementKind::F32 => "Float32Array",
+			ElementKind::U64Big => "BigUint64Array",
+		}
+	}
+}
+
+/// 1:1 with the JS `typedArrayCtorMap`.
+fn typed_array_kind(base_type: Option<&str>) -> Option<ElementKind> {
+	Some(match base_type? {
+		"uint8" => ElementKind::U8,
+		"int8" => ElementKind::I8,
+		"uint16" => ElementKind::U16,
+		"int16" => ElementKind::I16,
+		"uint32" => ElementKind::U32,
+		"int32" => ElementKind::I32,
+		"float32" => ElementKind::F32,
+		"ResourceId_t" => ElementKind::U64Big,
+		_ => return None,
+	})
+}
+
+/// Per-prop_id container/scalar metadata, mirror of the JS `PropInfo`
+/// (`constructorFields.ts`). Built during `traverse_fields`.
+#[derive(Clone, Debug, Default)]
+pub struct PropInfo {
+	/// Fully-qualified name. For container element/sub-field props this is the
+	/// container's own path (`serializer.varName`), not the inner value's name.
+	pub name: String,
+	/// Present iff this prop is a container element / resize target / sub-field.
+	pub container_key: Option<String>,
+	/// Present iff vector-of-serializer: the sub-field name within each element.
+	pub sub_key: Option<String>,
+	/// Present iff a primitive container with a typed-array representation.
+	pub element_kind: Option<ElementKind>,
+	/// Present iff a fixed-size `T[N]` array (length N). `None` for dynamic vectors.
+	pub fixed_length: Option<u32>,
+	/// Codegen hint — the element base type name.
+	pub element_ts_hint: Option<String>,
+}
+
 // ─── FieldType (parsed from var_type string) ─────────────────────────────────
 
 #[derive(Clone, Debug)]
@@ -332,8 +398,8 @@ fn find_decoder(field: &ConstructorField, qf_table: &mut Vec<QuantizedFloat>) ->
 pub enum Field {
 	None,
 	Value { decoder: Decoder, name: String, prop_id: u32 },
-	Array { field_enum: Box<Field>, length: u32 },
-	Vector { field_enum: Box<Field>, decoder: Decoder },
+	Array { field_enum: Box<Field>, length: u32, var_name: String, element_base_type: Option<String> },
+	Vector { field_enum: Box<Field>, decoder: Decoder, var_name: String, element_base_type: Option<String> },
 	Serializer { serializer: Box<SerializerN> },
 	Pointer { serializer: Box<SerializerN>, decoder: Decoder },
 }
@@ -373,9 +439,17 @@ fn create_field(field: &ConstructorField, serializers: &HashMap<String, Serializ
 		element_field = Field::Array {
 			field_enum: Box::new(element_field),
 			length: field.field_type.count.unwrap_or(0),
+			var_name: field.var_name.clone(),
+			// For fixed arrays the parsed FieldType keeps the per-element base name in `base_type`.
+			element_base_type: Some(field.field_type.base_type.clone()),
 		};
 	} else if field.category == FieldCategory::Vector {
-		element_field = Field::Vector { field_enum: Box::new(element_field), decoder: Decoder::Unsigned };
+		element_field = Field::Vector {
+			field_enum: Box::new(element_field),
+			decoder: Decoder::Unsigned,
+			var_name: field.var_name.clone(),
+			element_base_type: field.field_type.generic_type.as_ref().map(|g| g.base_type.clone()),
+		};
 	}
 	element_field
 }
@@ -386,12 +460,49 @@ pub struct PropIdState {
 	pub next: u32,
 }
 
+/// Accumulators threaded through `traverse_fields`.
+pub struct TraverseMaps<'a> {
+	pub prop_id_to_name: &'a mut HashMap<u32, String>,
+	pub prop_id_to_decoder: &'a mut HashMap<u32, Decoder>,
+	pub prop_id_to_info: &'a mut HashMap<u32, PropInfo>,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_info(
+	id: u32,
+	name: &str,
+	decoder: Decoder,
+	maps: &mut TraverseMaps,
+	container: Option<&str>,
+	sub_key: Option<&str>,
+	element_kind: Option<ElementKind>,
+	fixed_length: Option<u32>,
+	element_ts_hint: Option<&str>,
+	container_override: Option<&str>,
+) {
+	maps.prop_id_to_name.insert(id, name.to_string());
+	maps.prop_id_to_decoder.insert(id, decoder);
+	let info = PropInfo {
+		name: name.to_string(),
+		container_key: container_override.or(container).map(str::to_string),
+		sub_key: sub_key.map(str::to_string),
+		element_kind,
+		fixed_length,
+		element_ts_hint: element_ts_hint.map(str::to_string),
+	};
+	maps.prop_id_to_info.insert(id, info);
+}
+
+/// 1:1 port of the JS `traverseFields` (post-`e8ac92c`). Assigns sequential
+/// prop_ids and records each field's name / decoder / container metadata.
+/// `container` carries the enclosing container's key when we're inside an
+/// array/vector of serializers (outermost only — nested containers degrade).
 pub fn traverse_fields(
 	fields: &mut [Option<Field>],
 	serializer_name: &str,
-	prop_id_to_name: &mut HashMap<u32, String>,
-	prop_id_to_decoder: &mut HashMap<u32, Decoder>,
+	maps: &mut TraverseMaps,
 	state: &mut PropIdState,
+	container: Option<&str>,
 ) {
 	for field_opt in fields.iter_mut() {
 		let Some(field) = field_opt else {
@@ -400,46 +511,67 @@ pub fn traverse_fields(
 		match field {
 			Field::Value { decoder, name, prop_id } => {
 				let result = format!("{}.{}", serializer_name, name);
-				prop_id_to_name.insert(state.next, result);
-				prop_id_to_decoder.insert(state.next, *decoder);
+				let sub_key = if container.is_some() { Some(name.as_str()) } else { None };
+				emit_info(state.next, &result, *decoder, maps, container, sub_key, None, None, None, None);
 				*prop_id = state.next;
 				state.next += 1;
 			}
 			Field::Serializer { serializer } | Field::Pointer { serializer, .. } => {
 				let inner_name = format!("{}.{}", serializer_name, serializer.name);
-				traverse_fields(&mut serializer.fields, &inner_name, prop_id_to_name, prop_id_to_decoder, state);
+				traverse_fields(&mut serializer.fields, &inner_name, maps, state, container);
 			}
-			Field::Array { field_enum, .. } => {
-				if let Field::Value { decoder, name, prop_id } = field_enum.as_mut() {
-					let result = format!("{}.{}", serializer_name, name);
-					prop_id_to_name.insert(state.next, result);
-					prop_id_to_decoder.insert(state.next, *decoder);
-					*prop_id = state.next;
-					state.next += 1;
+			Field::Array { field_enum, length, var_name, element_base_type } => {
+				let container_name = format!("{}.{}", serializer_name, var_name);
+				let element_kind = typed_array_kind(element_base_type.as_deref());
+				let length = *length;
+				let hint = element_base_type.clone();
+				// Nested containers degrade to outermost-only.
+				let next_container = container.map(str::to_string).unwrap_or_else(|| container_name.clone());
+				match field_enum.as_mut() {
+					Field::Value { decoder, prop_id, .. } => {
+						emit_info(
+							state.next,
+							&container_name,
+							*decoder,
+							maps,
+							container,
+							None,
+							element_kind,
+							Some(length),
+							hint.as_deref(),
+							Some(&container_name),
+						);
+						*prop_id = state.next;
+						state.next += 1;
+					}
+					Field::Serializer { serializer } => {
+						traverse_fields(&mut serializer.fields, &container_name, maps, state, Some(&next_container));
+					}
+					_ => {}
 				}
 			}
-			Field::Vector { field_enum, .. } => {
+			Field::Vector { field_enum, var_name, element_base_type, .. } => {
+				let container_name = format!("{}.{}", serializer_name, var_name);
+				let element_kind = typed_array_kind(element_base_type.as_deref());
+				let hint = element_base_type.clone();
+				let next_container = container.map(str::to_string).unwrap_or_else(|| container_name.clone());
 				match field_enum.as_mut() {
 					Field::Serializer { serializer } => {
-						// First pass: register Value-typed children inline (the JS does this
-						// even though they're shadowed by the recursive call below). Matches
-						// the strict JS prop_id ordering.
-						for inner_opt in serializer.fields.iter_mut() {
-							if let Some(Field::Value { decoder, name, prop_id }) = inner_opt {
-								let result = format!("{}.{}", serializer_name, name);
-								prop_id_to_name.insert(state.next, result);
-								prop_id_to_decoder.insert(state.next, *decoder);
-								*prop_id = state.next;
-								state.next += 1;
-							}
-						}
-						let inner_name = format!("{}.{}", serializer_name, serializer.name);
-						traverse_fields(&mut serializer.fields, &inner_name, prop_id_to_name, prop_id_to_decoder, state);
+						traverse_fields(&mut serializer.fields, &container_name, maps, state, Some(&next_container));
 					}
-					Field::Value { decoder, name, prop_id } => {
-						let result = format!("{}.{}", serializer_name, name);
-						prop_id_to_name.insert(state.next, result);
-						prop_id_to_decoder.insert(state.next, *decoder);
+					Field::Value { decoder, prop_id, .. } => {
+						emit_info(
+							state.next,
+							&container_name,
+							*decoder,
+							maps,
+							container,
+							None,
+							element_kind,
+							None,
+							hint.as_deref(),
+							Some(&container_name),
+						);
 						*prop_id = state.next;
 						state.next += 1;
 					}
@@ -480,6 +612,8 @@ pub struct ClassInfo {
 	pub classes: HashMap<u32, Class>,
 	pub prop_id_to_name: HashMap<u32, String>,
 	pub prop_id_to_decoder: HashMap<u32, Decoder>,
+	/// Per-prop_id container/scalar metadata (mirror of the JS `propIdToInfo`).
+	pub prop_id_to_info: HashMap<u32, PropInfo>,
 	pub qf_table: Vec<QuantizedFloat>,
 	/// classId → true if this class is the game rules proxy. Used by the
 	/// onlyGameRules filter (Phase 6).
@@ -550,6 +684,7 @@ pub fn parse_class_info(
 	let mut serializers_map: HashMap<String, SerializerN> = HashMap::new();
 	let mut prop_id_to_name: HashMap<u32, String> = HashMap::new();
 	let mut prop_id_to_decoder: HashMap<u32, Decoder> = HashMap::new();
+	let mut prop_id_to_info: HashMap<u32, PropInfo> = HashMap::new();
 	let mut state = PropIdState { next: 1000 };
 
 	for ser in &serializer_msg.serializers {
@@ -574,13 +709,12 @@ pub fn parse_class_info(
 		let mut serializer_value = SerializerN { name: ser_name.clone(), fields: fields_for_this };
 
 		if verify_serializer_name(&ser_name) {
-			traverse_fields(
-				&mut serializer_value.fields,
-				&ser_name,
-				&mut prop_id_to_name,
-				&mut prop_id_to_decoder,
-				&mut state,
-			);
+			let mut maps = TraverseMaps {
+				prop_id_to_name: &mut prop_id_to_name,
+				prop_id_to_decoder: &mut prop_id_to_decoder,
+				prop_id_to_info: &mut prop_id_to_info,
+			};
+			traverse_fields(&mut serializer_value.fields, &ser_name, &mut maps, &mut state, None);
 		}
 
 		serializers_map.insert(ser_name.clone(), serializer_value);
@@ -600,5 +734,5 @@ pub fn parse_class_info(
 		}
 	}
 
-	Ok(ClassInfo { classes, prop_id_to_name, prop_id_to_decoder, qf_table, class_is_rules })
+	Ok(ClassInfo { classes, prop_id_to_name, prop_id_to_decoder, prop_id_to_info, qf_table, class_is_rules })
 }

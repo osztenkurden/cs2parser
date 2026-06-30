@@ -395,15 +395,22 @@ impl BitBuffer {
 	}
 
 	pub fn decode_vector_noscale(&mut self) -> [f64; 3] {
+		// Each component is a raw 32-bit float, same wire shape as scalar D_NOSCALE.
+		// (`decode_noscale` returns the uint32 bit pattern without reinterpreting —
+		// used by `read_angle` for fixed-point fractions; not what we want for vec3.)
+		[
+			self.read_float32_le() as f64,
+			self.read_float32_le() as f64,
+			self.read_float32_le() as f64,
+		]
+	}
+
+	pub fn decode_qangle_all3(&mut self) -> [f64; 3] {
 		[
 			self.decode_noscale() as f64,
 			self.decode_noscale() as f64,
 			self.decode_noscale() as f64,
 		]
-	}
-
-	pub fn decode_qangle_all3(&mut self) -> [f64; 3] {
-		self.decode_vector_noscale()
 	}
 
 	pub fn read_angle(&mut self, n: u32) -> f64 {

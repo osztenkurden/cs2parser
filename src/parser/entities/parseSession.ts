@@ -23,6 +23,7 @@ import type { DemoReader } from '../index.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
 import { optionalSvcIds, type optionalSvcMessages } from '../descriptors/svc.js';
 import { native } from '../../native/index.js';
+import type { PropInfoJs } from 'cs2parser-native';
 import { applyDecodeResult } from './applyDecodeResult.js';
 
 // This will allow to optionally parse any message defined in optionalSvcMessages, and will add autocomplete to all options defined there.
@@ -577,6 +578,9 @@ export class ParseSession {
 					const idToDec: Record<number, number> = {};
 					for (const [k, v] of Object.entries(meta.propIdToDecoder)) idToDec[Number(k)] = v;
 					this.parser.propIdToDecoder = idToDec;
+					const idToInfo: Record<number, PropInfoJs> = {};
+					for (const [k, v] of Object.entries(meta.propIdToInfo)) idToInfo[Number(k)] = v;
+					this.parser.propIdToInfo = idToInfo;
 				}
 				this.nativeReady = true;
 
@@ -640,7 +644,14 @@ export class ParseSession {
 			reader.skipBytesBetter(size);
 			return;
 		}
-		this.enqueueEvent(name, decoder.decode(reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size)));
+		// Read into a fresh per-message buffer: the decoded message's `bytes` fields
+		// (e.g. CMsgVoiceAudio.voice_data) are views into this input, and the event is
+		// emitted later from a queue. A shared scratch buffer would be overwritten by the
+		// next message before the user's listener runs. Gated by settings above, so this
+		// only allocates for opt-in message types.
+		const msgContent = new Uint8Array(size);
+		reader.readBytes(msgContent);
+		this.enqueueEvent(name, decoder.decode(msgContent));
 	}
 
 	// === Packet-level parsing ===
@@ -680,7 +691,10 @@ export class ParseSession {
 					break;
 				}
 				case SVC_Messages.svc_ServerInfo: {
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
+					// Fresh buffer: CSVCMsg_ServerInfo retains `bytes` views (game_session_manifest,
+					// game_session_config.data) that must survive past the next message's buffer reuse.
+					const msgContent = new Uint8Array(size);
+					reader.readBytes(msgContent);
 					const serverInfo = command.class.decode(msgContent);
 					this.enqueueEvent('serverinfo', serverInfo);
 					break;

@@ -14,10 +14,12 @@ import { GameRules } from '../helpers/gameRules.js';
 import type { EntityProperties, KnownClassName } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
+import { SmokeHelper } from '../helpers/smoke.js';
 import { SVC_Messages } from '../ts-proto/netmessages.js';
 import { messages } from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
 import { native } from '../native/index.js';
+import type { PropInfoJs } from 'cs2parser-native';
 import { applyChunkResult, type ApplyChunkContext } from './entities/applyDecodeResult.js';
 import { optionalSvcIds } from './descriptors/svc.js';
 
@@ -44,6 +46,7 @@ export class DemoReader extends EventEmitter<{
 	private _playerCache: Map<number, Player> = new Map();
 	private _teamCache: Map<number, Team> = new Map();
 	private _pawnCache: Map<number, PlayerPawn> = new Map();
+	private _smokeCache: Map<number, SmokeHelper> = new Map();
 	private _gameRulesCache: GameRules | null = null;
 	private _accountIdToEntityId: Map<number, number> = new Map();
 
@@ -109,6 +112,21 @@ export class DemoReader extends EventEmitter<{
 	get playerControllers(): Player[] {
 		return this.findEntityIdsByClass('CCSPlayerController').map(id =>
 			this._getOrCreate(this._playerCache, id, eid => new Player(this, eid))
+		);
+	}
+
+	/** Get a SmokeHelper by `CSmokeGrenadeProjectile` entity ID. Requires EntityMode.ALL. */
+	getSmoke(entityId: number): SmokeHelper | null {
+		if (this.getEntityClassName(entityId) === 'CSmokeGrenadeProjectile') {
+			return this._getOrCreate(this._smokeCache, entityId, id => new SmokeHelper(this, id));
+		}
+		return null;
+	}
+
+	/** All live smoke clouds as SmokeHelper objects. Requires EntityMode.ALL. */
+	get smokes(): SmokeHelper[] {
+		return this.findEntityIdsByClass('CSmokeGrenadeProjectile').map(id =>
+			this._getOrCreate(this._smokeCache, id, eid => new SmokeHelper(this, eid))
 		);
 	}
 
@@ -249,6 +267,13 @@ export class DemoReader extends EventEmitter<{
 				continue;
 			}
 		}
+		// Container (vector/array) fields are stored separately, keyed by the
+		// container's full name. Each is built once on the Rust side.
+		const containerKeys = this._native.getEntityContainerKeys(entityId) ?? [];
+		for (const key of containerKeys) {
+			const value = this._native.getPropertyContainer(entityId, key);
+			if (value !== null && value !== undefined) out[key] = value;
+		}
 		return out;
 	}
 
@@ -306,9 +331,33 @@ export class DemoReader extends EventEmitter<{
 		return this._native.getPropertyBlob(entityId, id) ?? undefined;
 	}
 
+	/**
+	 * Read a container (vector/array) field by its fully-qualified name. Returns
+	 * a typed array (`Uint8Array` … `BigUint64Array`) for primitive containers, a
+	 * plain array of decoded values otherwise, or an array of objects for
+	 * vector-of-serializer fields. `undefined` if the field is unset.
+	 *
+	 * The container name is the field's own path (e.g.
+	 * `CSmokeGrenadeProjectile.m_VoxelFrameData`), not an element/sub-field name.
+	 */
+	getArrayProp(entityId: number, name: string): unknown {
+		if (!this._native) return undefined;
+		return this._native.getPropertyContainer(entityId, name) ?? undefined;
+	}
+
 	/** Class name of the live entity at `entityId`, or `undefined`. */
 	getEntityClassName(entityId: number): string | undefined {
 		return this._native?.getEntityClassName(entityId) ?? undefined;
+	}
+
+	/** Class id of the live entity at `entityId`, or `undefined`. */
+	getEntityClassId(entityId: number): number | undefined {
+		return this._native?.getEntityClassId(entityId) ?? undefined;
+	}
+
+	/** Entity-type discriminator (0..5) of the live entity at `entityId`, or `undefined`. */
+	getEntityType(entityId: number): number | undefined {
+		return this._native?.getEntityType(entityId) ?? undefined;
 	}
 
 	/** All live entity ids. Snapshot at call time. */
@@ -354,6 +403,7 @@ export class DemoReader extends EventEmitter<{
 			this._playerCache.delete(entityId);
 			this._teamCache.delete(entityId);
 			this._pawnCache.delete(entityId);
+			this._smokeCache.delete(entityId);
 			if (className === 'CCSGameRulesProxy') {
 				this._gameRulesEntityId = entityId;
 				this._gameRulesCache = null;
@@ -378,6 +428,7 @@ export class DemoReader extends EventEmitter<{
 			this._playerCache.delete(entityId);
 			this._teamCache.delete(entityId);
 			this._pawnCache.delete(entityId);
+			this._smokeCache.delete(entityId);
 		});
 		this.once('header', header => {
 			this.header = header;
@@ -390,60 +441,62 @@ export class DemoReader extends EventEmitter<{
 	}
 
 	static parseServerInfo = (filePath: string) => {
-		const max = fs.statSync(filePath).size;
-		const bufferSize = Math.min(4096 * 8, max - 16);
+		const fileSize = fs.statSync(filePath).size;
 
 		const fd = fs.openSync(filePath, 'r');
 		try {
-			const buffer = Buffer.alloc(bufferSize);
+			// The demo's outer framing is byte-aligned: a 16-byte magic header, then frames of
+			// [uvarint command][uvarint tick][uvarint size][`size` payload bytes]. Walk it straight
+			// off the file descriptor — seeking past frames we don't need and sizing each packet
+			// buffer to its payload — instead of into one fixed window. The signon packet carrying
+			// svc_ServerInfo (and the signon frames before it, e.g. string tables) can be tens of KB
+			// and sit well past any small fixed window, which would truncate them and fail the decode.
+			const headerScratch = Buffer.alloc(16); // three uvarints, each at most 5 bytes
+			const headerReader = new BitBuffer(headerScratch);
 
-			fs.readSync(fd, buffer, 0, bufferSize, 16);
+			let pos = 16; // skip the 16-byte demo magic header
+			let tick = 0xffffffff; // the file header and signon frames all carry tick -1
 
-			const byteBuffer = new BitBuffer(buffer);
+			while (tick === 0xffffffff && pos < fileSize) {
+				// Decode the frame header (command/tick/size) and advance past the bytes it consumed.
+				const available = Math.min(headerScratch.length, fileSize - pos);
+				fs.readSync(fd, headerScratch, 0, available, pos);
+				headerReader.setTo(headerScratch.subarray(0, available));
+				const command = headerReader.ReadUVarInt32();
+				tick = headerReader.ReadUVarInt32();
+				const size = headerReader.ReadUVarInt32();
+				pos += available - headerReader.RemainingBytes;
 
-			const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
-			const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
-
-			if (type !== EDemoCommands.DEM_FileHeader) return null;
-
-			let tick = byteBuffer.ReadUVarInt32(); // TICK
-
-			const size = byteBuffer.ReadUVarInt32();
-
-			byteBuffer.skipBytesBetter(size);
-			const _frameBuffer = Buffer.alloc(32 * 1024);
-			while (tick === 0xffffffff && byteBuffer.RemainingBytes > 0) {
-				const EDemoCommandTypeBase = byteBuffer.ReadUVarInt32();
-				const type = EDemoCommandTypeBase & ~EDemoCommands.DEM_IsCompressed;
-				tick = byteBuffer.ReadUVarInt32(); // TICK
-				const size = byteBuffer.ReadUVarInt32();
-
+				const type = command & ~EDemoCommands.DEM_IsCompressed;
 				const decoder = decoders[type as keyof typeof decoders];
 				if (
 					!decoder ||
 					!(decoder.type === EDemoCommands.DEM_Packet || decoder.type === EDemoCommands.DEM_SignonPacket)
 				) {
-					byteBuffer.skipBytesBetter(size);
+					pos += size; // file header / non-packet frame — seek past its body
 					continue;
 				}
 
-				const frameBuffer = byteBuffer.readBytesToSlice(_frameBuffer, size);
+				if (pos + size > fileSize) break;
+				const frameBuffer = Buffer.alloc(size);
+				fs.readSync(fd, frameBuffer, 0, size, pos);
+				pos += size;
 
-				const isCompressed = (EDemoCommandTypeBase & EDemoCommands.DEM_IsCompressed) !== 0;
+				const isCompressed = (command & EDemoCommands.DEM_IsCompressed) !== 0;
 				const bytes = isCompressed ? (snappy.uncompressSync(frameBuffer) as Buffer) : frameBuffer;
 
-				const data = decoder.decode(bytes);
+				const data = decoders[EDemoCommands.DEM_Packet].decode(bytes);
 				if (!data.data) continue;
-				const reader = new BitBuffer(data.data!);
+				const reader = new BitBuffer(data.data);
 				while (reader.RemainingBits > 8) {
 					const cmd = reader.readUbitVar();
-					const size = reader.ReadUVarInt32();
+					const msgSize = reader.ReadUVarInt32();
 					if (cmd !== SVC_Messages.svc_ServerInfo) {
-						reader.skipBytesBetter(size);
+						reader.skipBytesBetter(msgSize);
 						continue;
 					}
-					const serverInfo = Buffer.alloc(size);
-					const slice = reader.readBytesToSlice(serverInfo, size);
+					const serverInfo = Buffer.alloc(msgSize);
+					const slice = reader.readBytesToSlice(serverInfo, msgSize);
 					return messages[SVC_Messages.svc_ServerInfo].class.decode(slice);
 				}
 			}
@@ -487,6 +540,12 @@ export class DemoReader extends EventEmitter<{
 	 * decoder populates these; the map is exposed for callers that want to
 	 * introspect what wire decoder a given prop uses. */
 	propIdToDecoder: Record<number, number> = {};
+
+	/** Per-prop_id container/scalar metadata mirrored from the Rust decoder.
+	 * Container element / sub-field props carry `containerKey` (+ `subKey` for
+	 * vector-of-serializer, `elementType` for typed primitive arrays). Used by
+	 * `_buildPropertySnapshot`, the entity-type generator, and container reads. */
+	propIdToInfo: Record<number, PropInfoJs> = {};
 
 	private _emitQueue: EmitQueue = queue => {
 		if (this._hasEnded) return;
@@ -594,6 +653,9 @@ export class DemoReader extends EventEmitter<{
 		const idToDec: Record<number, number> = {};
 		for (const [k, v] of Object.entries(meta.propIdToDecoder)) idToDec[Number(k)] = v;
 		this.propIdToDecoder = idToDec as never;
+		const idToInfo: Record<number, PropInfoJs> = {};
+		for (const [k, v] of Object.entries(meta.propIdToInfo)) idToInfo[Number(k)] = v;
+		this.propIdToInfo = idToInfo;
 	}
 
 	/** Non-blocking parse from a pre-loaded Buffer. */

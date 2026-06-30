@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import { EntityHelper } from './entityHelper.js';
 import type { Player } from './player.js';
 
 export const TeamNumber = {
@@ -10,19 +10,7 @@ export const TeamNumber = {
 
 export type TeamNumber = (typeof TeamNumber)[keyof typeof TeamNumber];
 
-export class Team {
-	constructor(
-		private _parser: DemoReader,
-		public readonly entityId: number
-	) {}
-
-	private _num(name: string): number | undefined {
-		return this._parser.getNumberProp(this.entityId, name);
-	}
-	private _str(name: string): string | undefined {
-		return this._parser.getStringProp(this.entityId, name);
-	}
-
+export class Team extends EntityHelper<'CCSTeam'> {
 	get teamNumber(): TeamNumber {
 		return (this._num('CCSTeam.m_iTeamNum') ?? TeamNumber.Unassigned) as TeamNumber;
 	}

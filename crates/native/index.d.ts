@@ -40,6 +40,20 @@ export interface QuantizedFloatJs {
   noScale: boolean
 }
 export declare function getQuantalizedFloat(bitcount: number, flags?: number | undefined | null, lowValue?: number | undefined | null, highValue?: number | undefined | null): QuantizedFloatJs
+/**
+ * Per-prop_id container/scalar metadata mirrored to JS (`propIdToInfo`).
+ * `containerKey`/`subKey`/`elementType`/`fixedLength` are present only for
+ * container element / sub-field props; scalars carry just `name`.
+ */
+export interface PropInfoJs {
+  name: string
+  containerKey?: string
+  subKey?: string
+  /** Typed-array constructor name (e.g. "Uint8Array") for primitive containers. */
+  elementType?: string
+  fixedLength?: number
+  elementTsHint?: string
+}
 export interface ClassInfoMeta {
   /** `Record<number, string>` — prop id → fully-qualified property name. */
   propIdToName: Record<string, string>
@@ -50,6 +64,8 @@ export interface ClassInfoMeta {
    * `src/parser/entities/constructorFields.ts`.
    */
   propIdToDecoder: Record<string, number>
+  /** `Record<number, PropInfoJs>` — prop id → container/scalar metadata. */
+  propIdToInfo: Record<string, PropInfoJs>
   /** Count of classes registered. JS uses this only for logging. */
   classCount: number
 }
@@ -225,4 +241,17 @@ export declare class EntityDecoderNative {
    * Used by `parser.getEntity(id)` to build the snapshot object.
    */
   getEntityPropIds(entityId: number): Array<number> | null
+  /**
+   * Container (vector/array) field keys currently set on this entity. JS reads
+   * each via `get_property_container`. Used to complete `parser.getEntity`.
+   */
+  getEntityContainerKeys(entityId: number): Array<string> | null
+  /**
+   * Read a container field by its fully-qualified `containerKey`. Builds the
+   * matching JS value: a typed array (Uint8Array … BigUint64Array) for
+   * primitive containers, a plain `Array` of decoded values otherwise, or an
+   * `Array` of objects for vector-of-serializer fields. Returns `None` if the
+   * entity / container is unset.
+   */
+  getPropertyContainer(entityId: number, containerKey: string): unknown | null
 }

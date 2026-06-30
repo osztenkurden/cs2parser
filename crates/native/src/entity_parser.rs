@@ -92,15 +92,29 @@ pub enum Value {
 	Blob(Vec<u8>),
 }
 
-/// Live entity record. Properties are keyed by the global `prop_id` assigned
-/// at classInfo build time (matches the JS `propIdToName` / `propIdToDecoder`
-/// indices).
+/// A vector/array entity field reconstructed from per-element wire writes.
+/// Mirrors the JS container storage model (`writeToContainer`/`resizeContainer`
+/// in `entityParser.ts`). Keyed by the container's full name (`containerKey`).
+#[derive(Clone, Debug)]
+pub enum Container {
+	/// Primitive container surfaced as a typed array (`element_kind`), or a plain
+	/// numeric/bigint/string/vec3 array when `element_kind` is `None`. Holes are
+	/// `None`.
+	Scalar { element_kind: Option<crate::classinfo::ElementKind>, data: Vec<Option<Value>> },
+	/// Vector-of-serializer: each element is a struct of sub-field name → value.
+	Struct { data: Vec<Option<std::collections::HashMap<String, Value>>> },
+}
+
+/// Live entity record. Scalar properties are keyed by the global `prop_id`
+/// assigned at classInfo build time. Container (vector/array) fields are keyed
+/// by their fully-qualified `containerKey` name.
 #[derive(Debug)]
 pub struct EntityRecord {
 	pub class_id: u32,
 	pub entity_type: u8,
 	pub class_name: String,
 	pub properties: std::collections::HashMap<u32, Value>,
+	pub containers: std::collections::HashMap<String, Container>,
 }
 
 #[derive(Default)]
@@ -274,32 +288,61 @@ struct FieldInfo {
 	decoder: Decoder,
 	prop_id: u32,
 	has_info: bool,
+	/// Element index when the path entered the outermost container, else -1.
+	array_index: i32,
+	/// True when the path stopped AT a vector field (resize message).
+	is_resize: bool,
 }
 
+/// 1:1 port of the JS `findFieldAndDecode` (post-`e8ac92c`). Walks the field
+/// path, capturing the outermost array/vector element index, and resolves the
+/// leaf to a decoder + prop_id (or detects a vector resize message).
 fn find_field_and_decode(fp: &FieldPath, ser: &SerializerN) -> FieldInfo {
 	let f = ser.fields[fp.path[0] as usize].as_ref().expect("Noo field");
+
+	// Fast path: depth-0 Value field (most common). Must NOT take this for a
+	// depth-0 Vector (that's a resize) or Array.
 	if fp.last == 0 {
 		if let Field::Value { decoder, prop_id, .. } = f {
-			return FieldInfo { decoder: *decoder, prop_id: *prop_id, has_info: true };
+			return FieldInfo { decoder: *decoder, prop_id: *prop_id, has_info: true, array_index: -1, is_resize: false };
 		}
 	}
+
+	// Traverse to leaf, capturing the outermost container element index.
 	let mut field = f;
+	let mut array_index: i32 = -1;
 	for depth in 1..=fp.last as usize {
+		if matches!(field, Field::Vector { .. } | Field::Array { .. }) && array_index == -1 {
+			array_index = fp.path[depth] as i32;
+		}
 		field = get_inner_ext(field, fp.path[depth] as usize);
 	}
+
 	match field {
-		Field::Value { decoder, prop_id, .. } => FieldInfo { decoder: *decoder, prop_id: *prop_id, has_info: true },
+		Field::Value { decoder, prop_id, .. } => {
+			FieldInfo { decoder: *decoder, prop_id: *prop_id, has_info: true, array_index, is_resize: false }
+		}
 		Field::Vector { field_enum, .. } => {
+			// Path stopped AT the vector → resize message (UVarInt32 new length).
+			// prop_id points at the inner element so we know which container to resize.
 			let inner = field_enum.as_ref();
 			if let Field::Value { prop_id, .. } = inner {
-				FieldInfo { decoder: Decoder::Unsigned, prop_id: *prop_id, has_info: true }
+				FieldInfo {
+					decoder: Decoder::Unsigned,
+					prop_id: *prop_id,
+					has_info: true,
+					array_index: -1,
+					is_resize: true,
+				}
 			} else {
-				FieldInfo { decoder: Decoder::Unsigned, prop_id: 0, has_info: false }
+				FieldInfo { decoder: Decoder::Unsigned, prop_id: 0, has_info: false, array_index: -1, is_resize: false }
 			}
 		}
-		Field::Pointer { decoder, .. } => FieldInfo { decoder: *decoder, prop_id: 0, has_info: false },
+		Field::Pointer { decoder, .. } => {
+			FieldInfo { decoder: *decoder, prop_id: 0, has_info: false, array_index: -1, is_resize: false }
+		}
 		Field::Array { .. } | Field::Serializer { .. } | Field::None => {
-			FieldInfo { decoder: Decoder::Unsigned, prop_id: 0, has_info: false }
+			FieldInfo { decoder: Decoder::Unsigned, prop_id: 0, has_info: false, array_index: -1, is_resize: false }
 		}
 	}
 }
@@ -458,6 +501,7 @@ impl EntityState {
 				entity_type: etype,
 				class_name: cls.name.clone(),
 				properties: std::collections::HashMap::new(),
+				containers: std::collections::HashMap::new(),
 			});
 		} else {
 			self.entities[entity_id as usize] = None;
@@ -527,10 +571,89 @@ impl EntityState {
 
 			// v2: write to Rust-resident state only. JS reads via getters
 			// instead of walking a result-side record stream.
+			let pinfo = class_info.prop_id_to_info.get(&info.prop_id);
 			if let Some(ent) = self.entities[entity_id as usize].as_mut() {
-				ent.properties.insert(info.prop_id, value);
+				apply_prop_update(ent, pinfo, info.prop_id, info.array_index, info.is_resize, value);
 			}
 			let _ = result; // suppress unused param
+		}
+	}
+}
+
+/// Value used for the dynamic-vector resize message — the new length.
+fn value_as_len(v: &Value) -> usize {
+	match v {
+		Value::U32(n) => *n as usize,
+		Value::I32(n) => (*n).max(0) as usize,
+		Value::U64(n) => *n as usize,
+		_ => 0,
+	}
+}
+
+/// Apply one decoded field write to an entity record. Dispatches resize /
+/// container-element / scalar exactly like the JS `applyPropUpdate`.
+fn apply_prop_update(
+	ent: &mut EntityRecord,
+	info: Option<&crate::classinfo::PropInfo>,
+	prop_id: u32,
+	array_index: i32,
+	is_resize: bool,
+	value: Value,
+) {
+	match info {
+		Some(pi) if is_resize => {
+			let key = pi.container_key.clone().unwrap_or_else(|| pi.name.clone());
+			resize_container(ent, &key, pi, value_as_len(&value));
+		}
+		Some(pi) if pi.container_key.is_some() && array_index >= 0 => {
+			write_to_container(ent, pi, array_index as usize, value);
+		}
+		_ => {
+			ent.properties.insert(prop_id, value);
+		}
+	}
+}
+
+fn write_to_container(ent: &mut EntityRecord, pi: &crate::classinfo::PropInfo, idx: usize, value: Value) {
+	let key = pi.container_key.as_ref().expect("container write without containerKey");
+	if let Some(sub) = pi.sub_key.as_ref() {
+		let c = ent
+			.containers
+			.entry(key.clone())
+			.or_insert_with(|| Container::Struct { data: Vec::new() });
+		if let Container::Struct { data } = c {
+			if idx >= data.len() {
+				data.resize_with(idx + 1, || None);
+			}
+			let elem = data[idx].get_or_insert_with(std::collections::HashMap::new);
+			elem.insert(sub.clone(), value);
+		}
+	} else {
+		let kind = pi.element_kind;
+		let c = ent
+			.containers
+			.entry(key.clone())
+			.or_insert_with(|| Container::Scalar { element_kind: kind, data: Vec::new() });
+		if let Container::Scalar { data, .. } = c {
+			if idx >= data.len() {
+				data.resize(idx + 1, None);
+			}
+			data[idx] = Some(value);
+		}
+	}
+}
+
+fn resize_container(ent: &mut EntityRecord, key: &str, pi: &crate::classinfo::PropInfo, new_len: usize) {
+	match ent.containers.get_mut(key) {
+		Some(Container::Scalar { data, .. }) => data.resize(new_len, None),
+		Some(Container::Struct { data }) => data.resize_with(new_len, || None),
+		None => {
+			let c = if pi.sub_key.is_some() {
+				Container::Struct { data: (0..new_len).map(|_| None).collect() }
+			} else {
+				Container::Scalar { element_kind: pi.element_kind, data: vec![None; new_len] }
+			};
+			ent.containers.insert(key.to_string(), c);
 		}
 	}
 }

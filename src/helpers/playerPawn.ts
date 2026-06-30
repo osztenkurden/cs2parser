@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import { EntityHelper } from './entityHelper.js';
 import type { Player } from './player.js';
 
 const CELL_BITS = 9;
@@ -15,19 +15,7 @@ export interface Vector {
  * computed from six separate cell/vec props — six FFI calls per position read.
  * For tight loops, callers should cache the result.
  */
-export class PlayerPawn {
-	constructor(
-		private _parser: DemoReader,
-		public readonly entityId: number
-	) {}
-
-	private _num(name: string): number | undefined {
-		return this._parser.getNumberProp(this.entityId, name);
-	}
-	private _bool(name: string): boolean | undefined {
-		return this._parser.getBoolProp(this.entityId, name);
-	}
-
+export class PlayerPawn extends EntityHelper<'CCSPlayerPawn'> {
 	get position(): Vector {
 		const cellX = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellX') ?? 0;
 		const cellY = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellY') ?? 0;
@@ -83,7 +71,7 @@ export class PlayerPawn {
 	}
 
 	get eyeAngles(): { pitch: number; yaw: number } {
-		const raw = this._parser.getVec3Prop(this.entityId, 'CCSPlayerPawn.m_angEyeAngles');
+		const raw = this._vec3('CCSPlayerPawn.m_angEyeAngles');
 		if (raw && raw.length >= 2) return { pitch: raw[0]!, yaw: raw[1]! };
 		return { pitch: 0, yaw: 0 };
 	}

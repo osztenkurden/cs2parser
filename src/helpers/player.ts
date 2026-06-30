@@ -1,5 +1,5 @@
-import type { DemoReader } from '../parser/index.js';
 import type { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
+import { EntityHelper } from './entityHelper.js';
 import type { PlayerPawn, Vector } from './playerPawn.js';
 import type { Team } from './team.js';
 
@@ -10,25 +10,7 @@ const PLAYER_ENTITY_HANDLE_MISSING = 2047;
  * API; no longer touches `parser.entities[id].properties`. Each property read
  * is a single Map.get (for the prop_id) + one FFI call.
  */
-export class Player {
-	constructor(
-		private _parser: DemoReader,
-		public readonly entityId: number
-	) {}
-
-	private _num(name: string): number | undefined {
-		return this._parser.getNumberProp(this.entityId, name);
-	}
-	private _str(name: string): string | undefined {
-		return this._parser.getStringProp(this.entityId, name);
-	}
-	private _bool(name: string): boolean | undefined {
-		return this._parser.getBoolProp(this.entityId, name);
-	}
-	private _bigint(name: string): bigint | undefined {
-		return this._parser.getBigIntProp(this.entityId, name);
-	}
-
+export class Player extends EntityHelper<'CCSPlayerController'> {
 	// --- Identity ---
 
 	get name(): string {
@@ -179,76 +161,63 @@ export class Player {
 
 	// --- Per-Round Stats ---
 
-	get round_kills(): number {
+	/**
+	 * Server-sent per-round stats array, indexed by round number. Element shape
+	 * mirrors `CSPerRoundStats_t`. Returns an empty array when the field hasn't
+	 * been populated yet.
+	 */
+	get perRoundStats(): ReadonlyArray<Record<string, number>> {
 		return (
-			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iKills') ?? 0
+			(this._array('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_perRoundStats') as
+				| ReadonlyArray<Record<string, number>>
+				| undefined) ?? []
 		);
+	}
+
+	/** Latest round's stat slot (or undefined while the array is empty). */
+	private _lastRoundStats(): Record<string, number> | undefined {
+		const arr = this.perRoundStats;
+		return arr.length === 0 ? undefined : arr[arr.length - 1];
+	}
+
+	get round_kills(): number {
+		return this._lastRoundStats()?.m_iKills ?? 0;
 	}
 
 	get round_deaths(): number {
-		return (
-			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDeaths') ?? 0
-		);
+		return this._lastRoundStats()?.m_iDeaths ?? 0;
 	}
 
 	get round_assists(): number {
-		return (
-			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iAssists') ??
-			0
-		);
+		return this._lastRoundStats()?.m_iAssists ?? 0;
 	}
 
 	get round_damage(): number {
-		return (
-			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iDamage') ?? 0
-		);
+		return this._lastRoundStats()?.m_iDamage ?? 0;
 	}
 
 	get round_headshotKills(): number {
-		return (
-			this._num(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iHeadShotKills'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iHeadShotKills ?? 0;
 	}
 
 	get round_equipmentValue(): number {
-		return (
-			this._num(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEquipmentValue'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iEquipmentValue ?? 0;
 	}
 
 	get round_cashEarned(): number {
-		return (
-			this._num(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iCashEarned'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iCashEarned ?? 0;
 	}
 
 	get round_utilityDamage(): number {
-		return (
-			this._num(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iUtilityDamage'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iUtilityDamage ?? 0;
 	}
 
 	get round_enemiesFlashed(): number {
-		return (
-			this._num(
-				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iEnemiesFlashed'
-			) ?? 0
-		);
+		return this._lastRoundStats()?.m_iEnemiesFlashed ?? 0;
 	}
 
 	get round_liveTime(): number {
-		return (
-			this._num('CCSPlayerController.CCSPlayerController_ActionTrackingServices.CSPerRoundStats_t.m_iLiveTime') ??
-			0
-		);
+		return this._lastRoundStats()?.m_iLiveTime ?? 0;
 	}
 
 	// --- General ---

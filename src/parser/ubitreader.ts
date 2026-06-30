@@ -385,8 +385,10 @@ export class BitBuffer {
 		return this.ReadUBits(32);
 	}
 	decodeVectorNoScale() {
-		const val = [this.decode_noscale(), this.decode_noscale(), this.decode_noscale()];
-		return val;
+		// Each component is a raw 32-bit float, same wire shape as scalar D_NOSCALE.
+		// (`decode_noscale` returns the uint32 bit pattern without reinterpreting —
+		// used by readAngle for fixed-point fractions; not what we want for vec3.)
+		return [this.readFloat32LE(), this.readFloat32LE(), this.readFloat32LE()];
 	}
 	decodeQangleAll3() {
 		return [this.decode_noscale(), this.decode_noscale(), this.decode_noscale()];

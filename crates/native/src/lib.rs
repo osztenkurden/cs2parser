@@ -1,7 +1,11 @@
 #![deny(clippy::all)]
 #![allow(clippy::new_without_default)]
 
-use napi::bindgen_prelude::{BigInt, BigInt64Array, Error, Float64Array, Uint8Array};
+use napi::bindgen_prelude::{
+	BigInt, BigInt64Array, BigUint64Array, Error, Float32Array, Float64Array, FromNapiValue, Int16Array, Int32Array,
+	Int8Array, ToNapiValue, Uint16Array, Uint32Array, Uint8Array,
+};
+use napi::{Env, JsUnknown};
 use napi_derive::napi;
 use prost::Message;
 
@@ -339,6 +343,20 @@ pub fn get_quantalized_float_napi(
 // propIdToDecoder maps (Phase 5); baselines, entity state, decode buffers
 // (Phase 6); the result struct-of-arrays (Phase 6).
 
+/// Per-prop_id container/scalar metadata mirrored to JS (`propIdToInfo`).
+/// `containerKey`/`subKey`/`elementType`/`fixedLength` are present only for
+/// container element / sub-field props; scalars carry just `name`.
+#[napi(object)]
+pub struct PropInfoJs {
+	pub name: String,
+	pub container_key: Option<String>,
+	pub sub_key: Option<String>,
+	/// Typed-array constructor name (e.g. "Uint8Array") for primitive containers.
+	pub element_type: Option<String>,
+	pub fixed_length: Option<u32>,
+	pub element_ts_hint: Option<String>,
+}
+
 #[napi(object)]
 pub struct ClassInfoMeta {
 	/// `Record<number, string>` — prop id → fully-qualified property name.
@@ -348,8 +366,25 @@ pub struct ClassInfoMeta {
 	/// The numeric value matches the `Decoders.*` constants in
 	/// `src/parser/entities/constructorFields.ts`.
 	pub prop_id_to_decoder: HashMap<String, i32>,
+	/// `Record<number, PropInfoJs>` — prop id → container/scalar metadata.
+	pub prop_id_to_info: HashMap<String, PropInfoJs>,
 	/// Count of classes registered. JS uses this only for logging.
 	pub class_count: u32,
+}
+
+fn prop_info_to_js(info: &classinfo::PropInfo) -> PropInfoJs {
+	PropInfoJs {
+		name: info.name.clone(),
+		container_key: info.container_key.clone(),
+		sub_key: info.sub_key.clone(),
+		element_type: info.element_kind.map(|k| k.ctor_name().to_string()),
+		fixed_length: info.fixed_length,
+		element_ts_hint: info.element_ts_hint.clone(),
+	}
+}
+
+fn build_prop_id_to_info(ci: &ClassInfo) -> HashMap<String, PropInfoJs> {
+	ci.prop_id_to_info.iter().map(|(k, v)| (k.to_string(), prop_info_to_js(v))).collect()
 }
 
 /// Per-packet result struct returned to JS. Mirror of `entity_parser::DecodeResult`
@@ -446,6 +481,7 @@ impl EntityDecoderNative {
 				.iter()
 				.map(|(k, d)| (k.to_string(), decoder_to_id(*d)))
 				.collect(),
+			prop_id_to_info: build_prop_id_to_info(ci),
 			class_count: ci.classes.len() as u32,
 		})
 	}
@@ -482,6 +518,7 @@ impl EntityDecoderNative {
 				.iter()
 				.map(|(k, d)| (k.to_string(), decoder_to_id(*d)))
 				.collect(),
+			prop_id_to_info: build_prop_id_to_info(&ci),
 			class_count: ci.classes.len() as u32,
 		};
 		self.class_info = Some(ci);
@@ -662,6 +699,132 @@ impl EntityDecoderNative {
 	pub fn get_entity_prop_ids(&self, entity_id: u32) -> Option<Vec<u32>> {
 		let ent = self.state.entities.get(entity_id as usize)?.as_ref()?;
 		Some(ent.properties.keys().copied().collect())
+	}
+
+	/// Container (vector/array) field keys currently set on this entity. JS reads
+	/// each via `get_property_container`. Used to complete `parser.getEntity`.
+	#[napi]
+	pub fn get_entity_container_keys(&self, entity_id: u32) -> Option<Vec<String>> {
+		let ent = self.state.entities.get(entity_id as usize)?.as_ref()?;
+		Some(ent.containers.keys().cloned().collect())
+	}
+
+	/// Read a container field by its fully-qualified `containerKey`. Builds the
+	/// matching JS value: a typed array (Uint8Array … BigUint64Array) for
+	/// primitive containers, a plain `Array` of decoded values otherwise, or an
+	/// `Array` of objects for vector-of-serializer fields. Returns `None` if the
+	/// entity / container is unset.
+	#[napi]
+	pub fn get_property_container(&self, env: Env, entity_id: u32, container_key: String) -> Option<JsUnknown> {
+		let ent = self.state.entities.get(entity_id as usize)?.as_ref()?;
+		let container = ent.containers.get(&container_key)?;
+		container_to_unknown(&env, container).ok()
+	}
+}
+
+// ─── Container → JS value construction ───────────────────────────────────────
+
+fn value_as_f64(v: &entity_parser::Value) -> f64 {
+	use entity_parser::Value::*;
+	match v {
+		Bool(b) => {
+			if *b {
+				1.0
+			} else {
+				0.0
+			}
+		}
+		I32(n) => *n as f64,
+		U32(n) => *n as f64,
+		F32(n) => *n as f64,
+		U64(n) => *n as f64,
+		_ => 0.0,
+	}
+}
+
+fn value_as_u64(v: &entity_parser::Value) -> u64 {
+	use entity_parser::Value::*;
+	match v {
+		Bool(b) => *b as u64,
+		I32(n) => *n as u64,
+		U32(n) => *n as u64,
+		F32(n) => *n as u64,
+		U64(n) => *n,
+		_ => 0,
+	}
+}
+
+/// Build a JS value for one container element (plain-array / struct path).
+fn value_to_unknown(env: &Env, v: &entity_parser::Value) -> napi::Result<JsUnknown> {
+	use entity_parser::Value::*;
+	Ok(match v {
+		Bool(b) => env.get_boolean(*b)?.into_unknown(),
+		I32(n) => env.create_int32(*n)?.into_unknown(),
+		U32(n) => env.create_uint32(*n)?.into_unknown(),
+		F32(n) => env.create_double(*n as f64)?.into_unknown(),
+		U64(n) => env.create_bigint_from_u64(*n)?.into_unknown()?,
+		String(s) => env.create_string(s)?.into_unknown(),
+		Vec3(a) => {
+			let mut arr = env.create_array_with_length(3)?;
+			arr.set_element(0, env.create_double(a[0])?)?;
+			arr.set_element(1, env.create_double(a[1])?)?;
+			arr.set_element(2, env.create_double(a[2])?)?;
+			arr.into_unknown()
+		}
+		Blob(b) => {
+			let ta = Uint8Array::new(b.clone());
+			unsafe { JsUnknown::from_napi_value(env.raw(), Uint8Array::to_napi_value(env.raw(), ta)?)? }
+		}
+	})
+}
+
+fn typed_array_unknown(env: &Env, kind: classinfo::ElementKind, data: &[Option<entity_parser::Value>]) -> napi::Result<JsUnknown> {
+	use classinfo::ElementKind::*;
+	macro_rules! build {
+		($arr:ty, $elem:ty, $conv:expr) => {{
+			let v: Vec<$elem> = data.iter().map(|o| o.as_ref().map($conv).unwrap_or_default()).collect();
+			let ta = <$arr>::new(v);
+			unsafe { JsUnknown::from_napi_value(env.raw(), <$arr>::to_napi_value(env.raw(), ta)?)? }
+		}};
+	}
+	Ok(match kind {
+		U8 => build!(Uint8Array, u8, |v| value_as_u64(v) as u8),
+		I8 => build!(Int8Array, i8, |v| value_as_u64(v) as i8),
+		U16 => build!(Uint16Array, u16, |v| value_as_u64(v) as u16),
+		I16 => build!(Int16Array, i16, |v| value_as_u64(v) as i16),
+		U32 => build!(Uint32Array, u32, |v| value_as_u64(v) as u32),
+		I32 => build!(Int32Array, i32, |v| value_as_f64(v) as i32),
+		F32 => build!(Float32Array, f32, |v| value_as_f64(v) as f32),
+		U64Big => build!(BigUint64Array, u64, |v| value_as_u64(v)),
+	})
+}
+
+fn container_to_unknown(env: &Env, container: &entity_parser::Container) -> napi::Result<JsUnknown> {
+	use entity_parser::Container::*;
+	match container {
+		Scalar { element_kind: Some(kind), data } => typed_array_unknown(env, *kind, data),
+		Scalar { element_kind: None, data } => {
+			let mut arr = env.create_array_with_length(data.len())?;
+			for (i, elem) in data.iter().enumerate() {
+				if let Some(v) = elem {
+					arr.set_element(i as u32, value_to_unknown(env, v)?)?;
+				}
+			}
+			Ok(arr.into_unknown())
+		}
+		Struct { data } => {
+			let mut arr = env.create_array_with_length(data.len())?;
+			for (i, elem) in data.iter().enumerate() {
+				if let Some(map) = elem {
+					let mut obj = env.create_object()?;
+					for (k, v) in map {
+						obj.set_named_property(k, value_to_unknown(env, v)?)?;
+					}
+					arr.set_element(i as u32, obj)?;
+				}
+			}
+			Ok(arr.into_unknown())
+		}
 	}
 }
 
