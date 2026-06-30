@@ -116,47 +116,65 @@ export class Player extends EntityHelper<'CCSPlayerController'> {
 	// --- Match Totals ---
 
 	get kills(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iKills') ?? 0;
+		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iKills') ?? 0;
 	}
 
 	get deaths(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iDeaths') ?? 0;
+		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iDeaths') ?? 0;
 	}
 
 	get assists(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iAssists') ?? 0;
+		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iAssists') ?? 0;
 	}
 
 	get damage(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iDamage') ?? 0;
+		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iDamage') ?? 0;
 	}
 
 	get headshotKills(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iHeadShotKills') ?? 0;
+		return (
+			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iHeadShotKills') ??
+			0
+		);
 	}
 
 	get utilityDamage(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iUtilityDamage') ?? 0;
+		return (
+			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iUtilityDamage') ??
+			0
+		);
 	}
 
 	get enemiesFlashed(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemiesFlashed') ?? 0;
+		return (
+			this.prop(
+				'CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iEnemiesFlashed'
+			) ?? 0
+		);
 	}
 
 	get enemy3Ks(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy3Ks') ?? 0;
+		return (
+			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iEnemy3Ks') ?? 0
+		);
 	}
 
 	get enemy4Ks(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy4Ks') ?? 0;
+		return (
+			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iEnemy4Ks') ?? 0
+		);
 	}
 
 	get enemy5Ks(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iEnemy5Ks') ?? 0;
+		return (
+			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iEnemy5Ks') ?? 0
+		);
 	}
 
 	get objective(): number {
-		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_iObjective') ?? 0;
+		return (
+			this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_matchStats.m_iObjective') ?? 0
+		);
 	}
 
 	// --- Per-Round Stats ---

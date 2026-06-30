@@ -26,6 +26,9 @@ const generateSerializableField = (
 			: null;
 	const encName = field.var_encoder_sym !== undefined ? serializerMessage.symbols.at(field.var_encoder_sym)! : '';
 	const varName = serializerMessage.symbols.at(field.var_name_sym!)!;
+	// CS2 inlines by-value embeds into the parent serializer and drops the embed's serializer
+	// reference, keeping only send_node. Carry it so createField can disambiguate same-type embeds.
+	const sendNode = field.send_node_sym !== undefined ? serializerMessage.symbols.at(field.send_node_sym)! : '';
 
 	const ft = findFieldType(name);
 	const varType = name;
@@ -34,6 +37,7 @@ const generateSerializableField = (
 		fieldEnumType: null,
 		bitcount: field.bit_count ?? 0,
 		varName,
+		sendNode,
 		varType,
 		serializer_name: serName,
 		encoder: encName,

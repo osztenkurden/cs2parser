@@ -877,6 +877,10 @@ export const constructorFieldHelper = {
 
 	createField: (field: ConstructorField, serializers: Record<string, SerializerN>): Field => {
 		let elementField: Field | null = null;
+		// Qualify the field's leaf name with its `send_node` so inlined by-value embeds of the same
+		// type (e.g. m_agentItem/m_glovesItem/m_weaponItem, each a CEconItemView flattened into the
+		// parent) get distinct names instead of colliding. Empty send_node → unqualified (the norm).
+		const qualified = field.sendNode ? `${field.sendNode}.${field.varName}` : field.varName;
 		if (field.serializer_name) {
 			const serializer = serializers[field.serializer_name];
 			if (!serializer) {
@@ -892,7 +896,7 @@ export const constructorFieldHelper = {
 			elementField = new Field(FieldTypeEnum.Value, {
 				decoder: field.decoder,
 				prop_id: 0,
-				name: field.varName
+				name: qualified
 			});
 		}
 
@@ -900,7 +904,7 @@ export const constructorFieldHelper = {
 			elementField = new Field(FieldTypeEnum.Array, {
 				field_enum: elementField,
 				length: field.fieldType.count ?? 0,
-				varName: field.varName,
+				varName: qualified,
 				// For fixed arrays the parsed FieldType keeps the per-element base name in `baseType`.
 				elementBaseType: field.fieldType.baseType
 			});
@@ -908,7 +912,7 @@ export const constructorFieldHelper = {
 			elementField = new Field(FieldTypeEnum.Vector, {
 				field_enum: elementField,
 				decoder: Decoders.UnsignedDecoder,
-				varName: field.varName,
+				varName: qualified,
 				elementBaseType: field.fieldType.genericType?.baseType
 			});
 		}
@@ -919,6 +923,8 @@ export const constructorFieldHelper = {
 
 export type ConstructorField = {
 	varName: string;
+	/** Dot-joined embed path (e.g. `m_agentItem`); '' for normal/recursed/direct fields. */
+	sendNode: string;
 	varType: string;
 	serializer_name: string | null;
 	encoder: string;
