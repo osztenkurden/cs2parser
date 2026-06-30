@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.3-alpha.0...cs2parser-v2.1.0-alpha.0) (2026-06-30)
+
+
+### Features
+
+* backported convars ([c182eb7](https://github.com/osztenkurden/cs2parser/commit/c182eb78470f04bd197124b560d0b655d1ea9749))
+
+
+### Bug Fixes
+
+* desync misread causing 10GB allocations ([16aa693](https://github.com/osztenkurden/cs2parser/commit/16aa69362a76c37c97d42ac3b6d9886ed7b24a91))
+* entity field naming and colisions ([c618970](https://github.com/osztenkurden/cs2parser/commit/c618970d6daa2f2c71e767b6955b13010d4fd296))
+
 ## [2.0.3-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.2-alpha.0...cs2parser-v2.0.3-alpha.0) (2026-06-30)
 
 
