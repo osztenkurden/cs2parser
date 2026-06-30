@@ -1,6 +1,10 @@
 {
 	"name": "cs2parser-native-linux-arm64-gnu",
 	"version": "2.0.0-alpha.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/osztenkurden/cs2parser.git"
+	},
 	"description": "Linux arm64 glibc native binary for cs2parser-native. Installed automatically as an optional dependency.",
 	"os": [
 		"linux"

@@ -1,6 +1,10 @@
 {
 	"name": "cs2parser-native",
 	"version": "2.0.0-alpha.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/osztenkurden/cs2parser.git"
+	},
 	"description": "Rust native bindings powering cs2parser. Loaded automatically; consumers should depend on `cs2parser`, not this package directly.",
 	"main": "index.js",
 	"types": "index.d.ts",

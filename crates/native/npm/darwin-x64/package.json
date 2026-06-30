@@ -1,6 +1,10 @@
 {
 	"name": "cs2parser-native-darwin-x64",
 	"version": "2.0.0-alpha.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/osztenkurden/cs2parser.git"
+	},
 	"description": "macOS x64 native binary for cs2parser-native. Installed automatically as an optional dependency.",
 	"os": [
 		"darwin"
