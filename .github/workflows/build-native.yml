@@ -1,9 +1,9 @@
 name: Build native
 
 # Builds the per-platform `cs2parser-native` .node binaries on every push to
-# master and on PRs that touch the Rust crate / its proto inputs / the build
-# script. Regular code-only PRs skip this matrix entirely — `ci.yml` already
-# validates the linux-x64 build inline.
+# master/rust and on PRs into either that touch the Rust crate / its proto
+# inputs / the build script. Regular code-only PRs skip this matrix entirely —
+# `ci.yml` already validates the linux-x64 build inline.
 #
 # Artefacts uploaded here are NOT consumed by the release flow — see
 # `release.yml` which runs its own matrix at publish time so the artefact ↔
@@ -18,13 +18,13 @@ concurrency:
 
 on:
   push:
-    branches: [master]
+    branches: [master, rust]
     paths:
       - 'crates/native/**'
       - 'proto/**'
       - '.github/workflows/build-native.yml'
   pull_request:
-    branches: [master]
+    branches: [master, rust]
     paths:
       - 'crates/native/**'
       - 'proto/**'

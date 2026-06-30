@@ -1,9 +1,13 @@
 name: Release
 
-# Pipeline:
-#   1. `release-please` watches master for conventional commits. When a release
-#      is "ready", it opens or updates a release PR. Merging that PR creates a
-#      GitHub release + tag + emits `release_created` on the next workflow run.
+# Pipeline (this file lives on the `rust` branch = the 2.x alpha line; `master`
+# runs its own release.yml for the stable line):
+#   1. `release-please` watches the rust branch for conventional commits. When a
+#      release is "ready", it opens or updates a release PR. Merging that PR
+#      creates a GitHub release + tag + emits `release_created` on the next run.
+#      `prerelease: true` in release-please-config.json makes these `-alpha.N`
+#      versions, which the publish job routes to the `alpha` dist-tag (so npm's
+#      `latest` is never moved by an alpha).
 #   2. On `release_created`, the `build` matrix produces per-triple .node
 #      binaries and attaches them to that release as release assets via
 #      `gh release upload`. Release assets (vs CI artefacts) are permanent,
@@ -18,13 +22,12 @@ name: Release
 
 on:
   push:
-    branches: [master]
+    branches: [rust]
 
 # Releases are linear: never run two release pipelines for the same ref
 # concurrently. `cancel-in-progress: false` ensures a release that's already
-# uploading artefacts and publishing to npm can't be killed by the next master
-# push — a partial publish (some triples up, others not) would be ugly to
-# clean up.
+# uploading artefacts and publishing to npm can't be killed by the next push
+# — a partial publish (some triples up, others not) would be ugly to clean up.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -53,7 +56,15 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@v5
         with:
-          release-type: node
+          # Operate on whichever branch triggered the run (rust here), not the
+          # repo default branch. Without this release-please always targets the
+          # default branch and would try to release master on a rust push.
+          target-branch: ${{ github.ref_name }}
+          # No `release-type` input → manifest mode: release-please reads this
+          # branch's release-please-config.json (`prerelease: true`,
+          # `prerelease-type: alpha`) + .release-please-manifest.json. Passing
+          # `release-type` can put it in simple mode and ignore that config,
+          # which would cut a stable 2.0.0 onto the `latest` dist-tag.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
   build:

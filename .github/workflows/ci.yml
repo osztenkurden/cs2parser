@@ -9,7 +9,10 @@ concurrency:
 
 on:
   pull_request:
-    branches: [master]
+    # master = stable line, rust = 2.x alpha line. Both get the same gate, so
+    # the release-please release PR (which edits package.json) is lint/test-
+    # checked before merge on either line.
+    branches: [master, rust]
     paths:
       # Skip docs-only / config-only PRs; perf and parity matter only for code.
       - 'src/**'
