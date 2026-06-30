@@ -384,6 +384,10 @@ fn decode_value(
 			br.read_bytes_into(&mut out);
 			Value::Blob(out)
 		}
+		// Fail loud (matches master) — the wire format is unknown, so we cannot
+		// advance the bitstream correctly. napi converts this panic into a JS
+		// exception that the parse surfaces, rather than silently desyncing.
+		CTransform => panic!("CTransform decoding is not implemented — wire format unknown (no CS2 demo seen using it)"),
 	}
 }
 
@@ -580,11 +584,6 @@ impl EntityState {
 	}
 }
 
-/// Containers never legitimately hold more than a few thousand elements; a
-/// length/index beyond this is a wire desync producing a bogus value. Drop the
-/// write rather than attempt a multi-GB allocation that aborts the process.
-const CONTAINER_SANITY_CAP: usize = 16_000_000;
-
 /// Value used for the dynamic-vector resize message — the new length.
 fn value_as_len(v: &Value) -> usize {
 	match v {
@@ -621,13 +620,6 @@ fn apply_prop_update(
 
 fn write_to_container(ent: &mut EntityRecord, pi: &crate::classinfo::PropInfo, idx: usize, value: Value) {
 	let key = pi.container_key.as_ref().expect("container write without containerKey");
-	if idx >= CONTAINER_SANITY_CAP {
-		eprintln!(
-			"[cs2parser] DROP oversized container write: name={} idx={} sub={:?} kind={:?}",
-			pi.name, idx, pi.sub_key, pi.element_kind
-		);
-		return;
-	}
 	if let Some(sub) = pi.sub_key.as_ref() {
 		let c = ent
 			.containers
@@ -656,13 +648,6 @@ fn write_to_container(ent: &mut EntityRecord, pi: &crate::classinfo::PropInfo, i
 }
 
 fn resize_container(ent: &mut EntityRecord, key: &str, pi: &crate::classinfo::PropInfo, new_len: usize) {
-	if new_len >= CONTAINER_SANITY_CAP {
-		eprintln!(
-			"[cs2parser] DROP oversized container resize: name={} key={} new_len={} sub={:?} kind={:?}",
-			pi.name, key, new_len, pi.sub_key, pi.element_kind
-		);
-		return;
-	}
 	match ent.containers.get_mut(key) {
 		Some(Container::Scalar { data, .. }) => data.resize(new_len, None),
 		Some(Container::Struct { data }) => data.resize_with(new_len, || None),

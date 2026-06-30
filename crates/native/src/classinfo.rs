@@ -43,6 +43,10 @@ pub enum Decoder {
 	VectorNormal,
 	VectorNoScale,
 	VectorFloatCoord,
+	/// CS2 wire format is unverified (Vector3 + Quaternion, ~6 floats) and has never
+	/// been observed in a CS2 demo. Decoding throws (matches master) rather than
+	/// silently reading one float and desyncing the bitstream.
+	CTransform,
 	/// Index into the per-decoder `qf_table`.
 	QuantizedFloat(u32),
 }
@@ -214,7 +218,7 @@ fn lookup_decoder_map(base_type: &str) -> Option<Decoder> {
 		"CUtlStringToken" => Unsigned,
 		"CUtlSymbolLarge" => String,
 		"Quaternion" => NoScale,
-		"CTransform" => NoScale,
+		"CTransform" => CTransform,
 		"HSequence"
 		| "AttachmentHandle_t"
 		| "CEntityIndex"
@@ -257,6 +261,14 @@ fn lookup_decoder_map(base_type: &str) -> Option<Decoder> {
 
 pub struct ConstructorField {
 	pub var_name: String,
+	/// The field's `send_node` (dot-joined embed path, e.g. `m_agentItem` or
+	/// `m_agentItem.m_AttributeList`). CS2's flattened serializer inlines by-value
+	/// embedded structs into the parent, dropping the embed's serializer reference
+	/// but keeping `send_node` so the origin is recoverable. Empty for normal /
+	/// recursed fields. We qualify field names with it so multiple inlined embeds
+	/// of the same type (e.g. m_agentItem/m_glovesItem/m_weaponItem CEconItemView)
+	/// don't collide — matching demofile-net's `{SendNode}.{VarName}` naming.
+	pub send_node: String,
 	pub var_type: String,
 	pub serializer_name: Option<String>,
 	pub encoder: String,
@@ -424,6 +436,16 @@ fn init_pointer_field(serializer: &SerializerN) -> Decoder {
 }
 
 fn create_field(field: &ConstructorField, serializers: &HashMap<String, SerializerN>) -> Field {
+	// Qualify the field's leaf name with its `send_node` so inlined by-value
+	// embeds of the same type (e.g. m_agentItem/m_glovesItem/m_weaponItem, each a
+	// CEconItemView flattened into the parent) get distinct names instead of
+	// colliding on the bare leaf name. Empty send_node → unqualified (the norm).
+	let qualified = if field.send_node.is_empty() {
+		field.var_name.clone()
+	} else {
+		format!("{}.{}", field.send_node, field.var_name)
+	};
+
 	let mut element_field = match field.serializer_name.as_deref() {
 		Some(sname) => {
 			let serializer = serializers
@@ -437,14 +459,14 @@ fn create_field(field: &ConstructorField, serializers: &HashMap<String, Serializ
 				Field::Serializer { serializer: Box::new(serializer) }
 			}
 		}
-		None => Field::Value { decoder: field.decoder, prop_id: 0, name: field.var_name.clone() },
+		None => Field::Value { decoder: field.decoder, prop_id: 0, name: qualified.clone() },
 	};
 
 	if field.category == FieldCategory::Array {
 		element_field = Field::Array {
 			field_enum: Box::new(element_field),
 			length: field.field_type.count.unwrap_or(0),
-			var_name: field.var_name.clone(),
+			var_name: qualified,
 			// For fixed arrays the parsed FieldType keeps the per-element base name in `base_type`.
 			element_base_type: Some(field.field_type.base_type.clone()),
 		};
@@ -452,7 +474,7 @@ fn create_field(field: &ConstructorField, serializers: &HashMap<String, Serializ
 		element_field = Field::Vector {
 			field_enum: Box::new(element_field),
 			decoder: Decoder::Unsigned,
-			var_name: field.var_name.clone(),
+			var_name: qualified,
 			element_base_type: field.field_type.generic_type.as_ref().map(|g| g.base_type.clone()),
 		};
 	}
@@ -644,6 +666,7 @@ fn generate_serializable_field(
 	let serializer_name = field.field_serializer_name_sym.map(sym);
 	let encoder = field.var_encoder_sym.map(sym).unwrap_or_default();
 	let var_name = sym(field.var_name_sym.unwrap_or(0));
+	let send_node = field.send_node_sym.map(sym).unwrap_or_default();
 
 	let ft = find_field_type(&var_type);
 
@@ -651,6 +674,7 @@ fn generate_serializable_field(
 		field_enum_type: None,
 		bitcount: field.bit_count.unwrap_or(0) as u32,
 		var_name,
+		send_node,
 		var_type,
 		serializer_name,
 		encoder,

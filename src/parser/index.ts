@@ -233,7 +233,13 @@ export class DemoReader extends EventEmitter<{
 
 	private _buildPropertySnapshot(entityId: number): Record<string, unknown> {
 		if (!this._native) return {};
-		const propIds = this._native.getEntityPropIds(entityId) ?? [];
+		// `getEntityPropIds` comes back in Rust HashMap order (randomized). Sort
+		// ascending so the snapshot is built deterministically and, for any
+		// same-name prop_ids, the highest prop_id wins — matching `_propIdByName`
+		// (built ascending) so `getEntity(...)[name]` and `getNumberProp(name)`
+		// agree. (Inlined embeds are normally disambiguated by their `send_node`
+		// prefix in classInfo, so genuine name collisions should not occur.)
+		const propIds = (this._native.getEntityPropIds(entityId) ?? []).slice().sort((a, b) => a - b);
 		const out: Record<string, unknown> = {};
 		for (const propId of propIds) {
 			const name = this.propIdToName[propId];

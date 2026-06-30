@@ -859,5 +859,6 @@ fn decoder_to_id(d: classinfo::Decoder) -> i32 {
 		QanglePres => 20,
 		GameModeRules => 21,
 		BinaryBlock => 22,
+		CTransform => 23,
 	}
 }

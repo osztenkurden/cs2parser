@@ -17,12 +17,15 @@ export interface Vector {
  */
 export class PlayerPawn extends EntityHelper<'CCSPlayerPawn'> {
 	get position(): Vector {
-		const cellX = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellX') ?? 0;
-		const cellY = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellY') ?? 0;
-		const cellZ = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_cellZ') ?? 0;
-		const vecX = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecX') ?? 0;
-		const vecY = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecY') ?? 0;
-		const vecZ = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_vecZ') ?? 0;
+		const cellX =
+			this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_skeletonInstance.m_vecOrigin.m_cellX') ?? 0;
+		const cellY =
+			this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_skeletonInstance.m_vecOrigin.m_cellY') ?? 0;
+		const cellZ =
+			this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_skeletonInstance.m_vecOrigin.m_cellZ') ?? 0;
+		const vecX = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_skeletonInstance.m_vecOrigin.m_vecX') ?? 0;
+		const vecY = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_skeletonInstance.m_vecOrigin.m_vecY') ?? 0;
+		const vecZ = this._num('CCSPlayerPawn.CBodyComponentBaseAnimGraph.m_skeletonInstance.m_vecOrigin.m_vecZ') ?? 0;
 		return {
 			x: cellX * (1 << CELL_BITS) - MAX_COORD + vecX,
 			y: cellY * (1 << CELL_BITS) - MAX_COORD + vecY,
