@@ -245,7 +245,12 @@ fn lookup_decoder_map(base_type: &str) -> Option<Decoder> {
 		| "MedalRank_t"
 		| "CSPlayerBlockingUseAction_t"
 		| "MoveMountingAmount_t"
-		| "QuestProgress::Reason" => Unsigned64,
+		| "QuestProgress::Reason"
+		// 64-bit identifier typedef. Must decode via UVarInt64; mapping it to the
+		// 32-bit `Unsigned` default desyncs the bitstream on any populated
+		// `ResourceId_t` vector (e.g. m_vecExternalGraphIds), which then misreads
+		// the vector's resize count as a multi-hundred-million length.
+		| "ResourceId_t" => Unsigned64,
 		_ => return None,
 	})
 }
