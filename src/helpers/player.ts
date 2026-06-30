@@ -170,10 +170,33 @@ export class Player extends EntityHelper<'CCSPlayerController'> {
 		return this.prop('CCSPlayerController.CCSPlayerController_ActionTrackingServices.m_perRoundStats') ?? [];
 	}
 
-	/** Latest round's stat slot (or undefined while the array is empty). */
+	/**
+	 * The in-progress (or most recently played) round's stat slot.
+	 *
+	 * `m_perRoundStats` is a network vector pre-sized to the match's maximum round count and
+	 * zero-filled, so `arr[arr.length - 1]` is almost always a blank trailing slot (which is why
+	 * the round_* getters used to read `0`). The live round is the highest *populated* index, so
+	 * scan from the end for the first non-empty entry.
+	 */
 	private _lastRoundStats() {
 		const arr = this.perRoundStats;
-		return arr.length === 0 ? undefined : arr[arr.length - 1];
+		for (let i = arr.length - 1; i >= 0; i--) {
+			const s = arr[i];
+			if (
+				s &&
+				(s.m_iKills ||
+					s.m_iDeaths ||
+					s.m_iAssists ||
+					s.m_iDamage ||
+					s.m_iEquipmentValue ||
+					s.m_iCashEarned ||
+					s.m_iLiveTime ||
+					s.m_iMoneySaved)
+			) {
+				return s;
+			}
+		}
+		return undefined;
 	}
 
 	get round_kills(): number {
