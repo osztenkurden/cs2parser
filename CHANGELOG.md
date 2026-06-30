@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.0](https://github.com/osztenkurden/cs2parser/compare/v1.10.1...v1.11.0) (2026-06-30)
+
+
+### Features
+
+* enabled set convars ([ae3fd30](https://github.com/osztenkurden/cs2parser/commit/ae3fd3094a0ca661cad8e16842cca6dc803435bd))
+
+
+### Bug Fixes
+
+* entity field names ([b58e45c](https://github.com/osztenkurden/cs2parser/commit/b58e45c1dbc90a50b26c489ef1f30bde9c169755))
+* last round stats ([a767ce3](https://github.com/osztenkurden/cs2parser/commit/a767ce38714d34a9d5e5b577bfaaf23f1a8ba5f4))
+
 ## [1.10.1](https://github.com/osztenkurden/cs2parser/compare/v1.10.0...v1.10.1) (2026-06-29)
 
 
