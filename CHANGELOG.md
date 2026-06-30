@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.2-alpha.0...cs2parser-v2.0.3-alpha.0) (2026-06-30)
+
+
+### Bug Fixes
+
+* retrigger release pipeline ([0b446ae](https://github.com/osztenkurden/cs2parser/commit/0b446aed16566ab8828ee9f34c18d1e263312dec))
+
 ## [2.0.2-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.1-alpha.0...cs2parser-v2.0.2-alpha.0) (2026-06-30)
 
 
