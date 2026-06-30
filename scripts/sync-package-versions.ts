@@ -12,8 +12,13 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const ROOT = path.dirname(new URL(import.meta.url).pathname).replace(/^\//, '').replace(/\\/g, '/') + '/..';
+// `fileURLToPath` resolves the file URL to a real OS path on every platform.
+// (Manually stripping the leading slash off `new URL(...).pathname` only works
+// on Windows `/C:/…` URLs and breaks on Linux `/home/…`, where the slash is
+// part of the absolute path — that produced a relative path + ENOENT in CI.)
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function readJson(file: string) {
 	return JSON.parse(fs.readFileSync(file, 'utf8'));
