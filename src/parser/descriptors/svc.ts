@@ -16,6 +16,7 @@ import {
 	SVC_Messages
 } from '../../ts-proto/netmessages.js';
 import { CUserMessageSayText2, EBaseUserMessages } from '../../ts-proto/usermessages.js';
+import { CNETMsg_SetConVar, NET_Messages } from '../../ts-proto/networkbasetypes.js';
 import type { OptionalMessagesId, RevertKeysAndValues } from '../entities/types.js';
 
 //import ImportedCLCMessages = ;
@@ -34,7 +35,10 @@ export const optionalSvcMessages = {
 	[ECstrike15UserMessages.CS_UM_ServerRankUpdate]: CCSUsrMsg_ServerRankUpdate,
 	[EBaseUserMessages.UM_SayText2]: CUserMessageSayText2,
 	[SVC_Messages.svc_UserCmds]: CSVCMsg_UserCommands,
-	[SVC_Messages.svc_UserMessage]: CSVCMsg_UserMessage
+	[SVC_Messages.svc_UserMessage]: CSVCMsg_UserMessage,
+	// NET-layer message: the server's replicated convars (game_type, game_mode, mp_*, …). Sent in
+	// the signon stream and on change. Opt in with `{ net_SetConVar: true }`; listen on 'net_SetConVar'.
+	[NET_Messages.net_SetConVar]: CNETMsg_SetConVar
 } as const;
 
 type svcIdToName = RevertKeysAndValues<OptionalMessagesId>;
@@ -43,7 +47,8 @@ type OptionalSvcIdToName = { [K in keyof typeof optionalSvcMessages]: svcIdToNam
 export const optionalSvcIds: OptionalSvcIdToName = Object.entries({
 	...SVC_Messages,
 	...ECstrike15UserMessages,
-	...EBaseUserMessages
+	...EBaseUserMessages,
+	...NET_Messages
 }).reduce(
 	(prev, curr) => (curr[1] in optionalSvcMessages ? { ...prev, [curr[1]]: curr[0] } : prev),
 	{} as OptionalSvcIdToName
