@@ -347,9 +347,20 @@ export class Field<const T extends FieldTypeEnum = FieldTypeEnum> {
 		switch (this.type) {
 			case FieldTypeEnum.Value:
 			case FieldTypeEnum.None:
-			case FieldTypeEnum.Array:
-			case FieldTypeEnum.Vector:
 				return new Field(this.type, { ...this.value });
+			case FieldTypeEnum.Array:
+			case FieldTypeEnum.Vector: {
+				// Deep-clone the inner `field_enum`: it holds the element ValueField whose `prop_id`
+				// is assigned per class in traverseFields. A shallow `{ ...this.value }` shares that
+				// inner Field across every class that has this container field (e.g. every weapon's
+				// m_pReserveAmmo), so the last class traversed overwrites the shared prop_id and the
+				// value ends up under the wrong "Class.field" key — a field-naming collision.
+				const value = this.value as ArrayField | VectorField;
+				return new Field(this.type, {
+					...value,
+					field_enum: value.field_enum.clone()
+				} as FieldValue<T>) as Field<T>;
+			}
 			case FieldTypeEnum.Serializer: {
 				const value = this.value as SerializerField;
 				return new Field(FieldTypeEnum['Serializer'], {
