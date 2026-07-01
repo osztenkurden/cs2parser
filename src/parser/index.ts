@@ -11,7 +11,7 @@ import { Player } from '../helpers/player.js';
 import snappy from 'snappy';
 import { Team } from '../helpers/team.js';
 import { GameRules } from '../helpers/gameRules.js';
-import type { EntityProperties, KnownClassName } from '../generated/entityTypes.js';
+import type { EntityProperties, EntityTypeMap, KnownClassName } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
 import { SmokeHelper } from '../helpers/smoke.js';
@@ -28,6 +28,42 @@ const steamIdToAccountId = (steamId: bigint | number): number => {
 	const big = typeof steamId === 'bigint' ? steamId : BigInt(steamId);
 	return Number(big & 0xffffffffn);
 };
+
+/** Fully-qualified property keys of a known entity class (e.g. `"CAK47.m_iClip1"`). */
+export type EntityPropKey<C extends KnownClassName> = Extract<keyof EntityTypeMap[C], string>;
+
+/** Keys of class `C` whose value type is assignable to `V`. */
+export type KeysOfValue<C extends KnownClassName, V> = {
+	[K in keyof EntityTypeMap[C]]-?: NonNullable<EntityTypeMap[C][K]> extends V ? K : never;
+}[keyof EntityTypeMap[C]] &
+	string;
+
+/**
+ * Keys of class `C` whose value is a container (typed array / array / array-of-structs) — i.e. any
+ * field that is *not* one of the scalar value shapes the other getters cover.
+ */
+export type ContainerPropKey<C extends KnownClassName> = {
+	[K in keyof EntityTypeMap[C]]-?: NonNullable<EntityTypeMap[C][K]> extends
+		| number
+		| boolean
+		| string
+		| bigint
+		| readonly [number, number, number]
+		? never
+		: K;
+}[keyof EntityTypeMap[C]] &
+	string;
+
+/**
+ * `name` argument for a scalar getter. `string` with no type argument (any name, back-compatible);
+ * with a class name it narrows to that class's keys whose value type matches `V`. So
+ * `getNumberProp<'CAK47'>` offers only CAK47's number fields, `getStringProp<'CAK47'>` only its
+ * string fields — and e.g. a number field is *not* accepted by `getArrayProp`.
+ */
+export type ValuePropName<C extends KnownClassName, V> = [C] extends [never] ? string : KeysOfValue<C, V>;
+
+/** `name` argument for `getArrayProp`: `string` with no type argument, else `C`'s container keys. */
+export type ArrayPropName<C extends KnownClassName> = [C] extends [never] ? string : ContainerPropKey<C>;
 
 export class DemoReader extends EventEmitter<{
 	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
@@ -301,37 +337,55 @@ export class DemoReader extends EventEmitter<{
 	 * to JS number). Returns `undefined` if the entity / prop is unset, the
 	 * name doesn't resolve, or the stored value isn't number-shaped.
 	 */
-	getNumberProp(entityId: number, name: string): number | undefined {
+	getNumberProp<C extends KnownClassName = never>(
+		entityId: number,
+		name: ValuePropName<C, number>
+	): number | undefined {
 		const id = this._propIdByName.get(name);
 		if (id === undefined || !this._native) return undefined;
 		return this._native.getPropertyNumber(entityId, id) ?? undefined;
 	}
 
-	getStringProp(entityId: number, name: string): string | undefined {
+	getStringProp<C extends KnownClassName = never>(
+		entityId: number,
+		name: ValuePropName<C, string>
+	): string | undefined {
 		const id = this._propIdByName.get(name);
 		if (id === undefined || !this._native) return undefined;
 		return this._native.getPropertyString(entityId, id) ?? undefined;
 	}
 
-	getVec3Prop(entityId: number, name: string): Float64Array | undefined {
+	getVec3Prop<C extends KnownClassName = never>(
+		entityId: number,
+		name: ValuePropName<C, readonly [number, number, number]>
+	): Float64Array | undefined {
 		const id = this._propIdByName.get(name);
 		if (id === undefined || !this._native) return undefined;
 		return this._native.getPropertyVec3(entityId, id) ?? undefined;
 	}
 
-	getBigIntProp(entityId: number, name: string): bigint | undefined {
+	getBigIntProp<C extends KnownClassName = never>(
+		entityId: number,
+		name: ValuePropName<C, bigint>
+	): bigint | undefined {
 		const id = this._propIdByName.get(name);
 		if (id === undefined || !this._native) return undefined;
 		return this._native.getPropertyBigint(entityId, id) ?? undefined;
 	}
 
-	getBoolProp(entityId: number, name: string): boolean | undefined {
+	getBoolProp<C extends KnownClassName = never>(
+		entityId: number,
+		name: ValuePropName<C, boolean>
+	): boolean | undefined {
 		const id = this._propIdByName.get(name);
 		if (id === undefined || !this._native) return undefined;
 		return this._native.getPropertyBool(entityId, id) ?? undefined;
 	}
 
-	getBlobProp(entityId: number, name: string): Uint8Array | undefined {
+	getBlobProp<C extends KnownClassName = never>(
+		entityId: number,
+		name: ValuePropName<C, Uint8Array>
+	): Uint8Array | undefined {
 		const id = this._propIdByName.get(name);
 		if (id === undefined || !this._native) return undefined;
 		return this._native.getPropertyBlob(entityId, id) ?? undefined;
@@ -346,7 +400,7 @@ export class DemoReader extends EventEmitter<{
 	 * The container name is the field's own path (e.g.
 	 * `CSmokeGrenadeProjectile.m_VoxelFrameData`), not an element/sub-field name.
 	 */
-	getArrayProp(entityId: number, name: string): unknown {
+	getArrayProp<C extends KnownClassName = never>(entityId: number, name: ArrayPropName<C>): unknown {
 		if (!this._native) return undefined;
 		return this._native.getPropertyContainer(entityId, name) ?? undefined;
 	}

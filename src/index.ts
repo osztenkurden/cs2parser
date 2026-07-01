@@ -3,6 +3,7 @@
 import './native/index.js';
 
 export { DemoReader } from './parser/index.js';
+export type { EntityPropKey, KeysOfValue, ContainerPropKey, ValuePropName, ArrayPropName } from './parser/index.js';
 export { EntityMode } from './parser/entities/types.js';
 export type { EndReason } from './parser/entities/types.js';
 export { EntityHelper } from './helpers/entityHelper.js';
