@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/osztenkurden/cs2parser/compare/v1.11.0...v1.11.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* deep constructor fields missing proper values resolution ([664fa35](https://github.com/osztenkurden/cs2parser/commit/664fa35db7d14d6b7977acdc7afc74bfdb0e1557))
+
 ## [1.11.0](https://github.com/osztenkurden/cs2parser/compare/v1.10.1...v1.11.0) (2026-06-30)
 
 
