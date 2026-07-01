@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.1.0-alpha.0...cs2parser-v2.2.0-alpha.0) (2026-07-01)
+
+
+### Features
+
+* added typesafety ([55a6ed1](https://github.com/osztenkurden/cs2parser/commit/55a6ed1aef72a9c4bf2cd727ced390abe12aa4a6))
+
 ## [2.1.0-alpha.0](https://github.com/osztenkurden/cs2parser/compare/cs2parser-v2.0.3-alpha.0...cs2parser-v2.1.0-alpha.0) (2026-06-30)
 
 
