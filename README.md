@@ -1,3 +1,8 @@
+![CI](https://img.shields.io/github/actions/workflow/status/osztenkurden/cs2parser/.github/workflows/ci.yml?branch=master)
+![Dependencies](https://img.shields.io/librariesio/github/osztenkurden/cs2parser)
+![Downloads](https://img.shields.io/npm/dm/cs2parser)
+![Version](https://img.shields.io/npm/v/cs2parser)
+
 # cs2parser
 
 A fast, typed CS2 demo parser for Node.js and Bun.
@@ -19,17 +24,17 @@ import { DemoReader, EntityMode } from 'cs2parser';
 const parser = new DemoReader();
 
 parser.gameEvents.on('player_death', event => {
-  const attacker = event.attackerPlayer;
-  const victim = event.player;
-  if (attacker && victim) {
-    console.log(`${attacker.name} killed ${victim.name} with ${event.weapon}`);
-  }
+	const attacker = event.attackerPlayer;
+	const victim = event.player;
+	if (attacker && victim) {
+		console.log(`${attacker.name} killed ${victim.name} with ${event.weapon}`);
+	}
 });
 
 parser.on('end', () => {
-  for (const player of parser.playerControllers) {
-    console.log(player.name, player.kills, player.deaths, player.position);
-  }
+	for (const player of parser.playerControllers) {
+		console.log(player.name, player.kills, player.deaths, player.position);
+	}
 });
 
 await parser.parseDemo(createReadStream('path/to/demo.dem'), { entities: EntityMode.ALL });
@@ -42,11 +47,11 @@ Static method that reads only the demo file header without parsing the full file
 ```ts
 const header = DemoReader.parseHeader('path/to/demo.dem');
 if (header) {
-  console.log(header.map_name);       // e.g. "de_dust2"
-  console.log(header.server_name);    // server name
-  console.log(header.build_num);      // CS2 build number
-  console.log(header.patch_version);  // patch version
-  console.log(header.game);           // undefined on premier
+	console.log(header.map_name); // e.g. "de_dust2"
+	console.log(header.server_name); // server name
+	console.log(header.build_num); // CS2 build number
+	console.log(header.patch_version); // patch version
+	console.log(header.game); // undefined on premier
 }
 ```
 
@@ -59,10 +64,10 @@ Static method that reads server info from the first few packets without parsing 
 ```ts
 const info = DemoReader.parseServerInfo('path/to/demo.dem');
 if (info) {
-  console.log(info.map_name);      // e.g. "de_dust2"
-  console.log(info.server_name);   // server name
-  console.log(info.max_clients);   // max player slots
-  console.log(info.game_dir);      // e.g. "csgo"
+	console.log(info.map_name); // e.g. "de_dust2"
+	console.log(info.server_name); // server name
+	console.log(info.max_clients); // max player slots
+	console.log(info.game_dir); // e.g. "csgo"
 }
 ```
 
@@ -88,28 +93,28 @@ await parser.parseDemo(buffer, { entities: EntityMode.ALL });
 
 ### Entity Modes
 
-| Mode | Entities | Round events | Speed |
-| --- | --- | --- | --- |
-| `EntityMode.NONE` | none | no | fastest |
-| `EntityMode.ONLY_GAME_RULES` | game rules only | yes | ~20% faster than ALL |
-| `EntityMode.ALL` | all | yes | full parsing |
+| Mode                         | Entities        | Round events | Speed                |
+| ---------------------------- | --------------- | ------------ | -------------------- |
+| `EntityMode.NONE`            | none            | no           | fastest              |
+| `EntityMode.ONLY_GAME_RULES` | game rules only | yes          | ~20% faster than ALL |
+| `EntityMode.ALL`             | all             | yes          | full parsing         |
 
 `ONLY_GAME_RULES` parses the entity bitstream but only stores `CCSGameRulesProxy` properties. This enables synthetic `round_start`/`round_end` events without populating the full entities array.
 
-| Input | Returns | Memory |
-| --- | --- | --- |
-| `string` path | `Promise<void>` | low |
-| `string` path + `stream: false` | `Promise<void>` | low |
-| `Readable` stream | `Promise<void>` | low |
-| `Buffer` | `Promise<void>` | high |
+| Input                           | Returns         | Memory |
+| ------------------------------- | --------------- | ------ |
+| `string` path                   | `Promise<void>` | low    |
+| `string` path + `stream: false` | `Promise<void>` | low    |
+| `Readable` stream               | `Promise<void>` | low    |
+| `Buffer`                        | `Promise<void>` | high   |
 
 ### Parse Settings
 
 Additional options can be passed to `parseDemo` to enable extra data:
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `messages` | `boolean` | `false` | Emit `svc_UserMessage` events |
+| Option     | Type      | Default | Description                                         |
+| ---------- | --------- | ------- | --------------------------------------------------- |
+| `messages` | `boolean` | `false` | Emit `svc_UserMessage` events                       |
 | `commands` | `boolean` | `false` | Emit `usercommand` events (decoded `CSGOUserCmdPB`) |
 
 ```ts
@@ -128,11 +133,11 @@ import { DemoReader, EntityMode } from 'cs2parser';
 const parser = new DemoReader();
 
 parser.gameEvents.on('player_death', e => {
-  console.log(`${e.attackerPlayer?.name} killed ${e.player?.name} with ${e.weapon}`);
+	console.log(`${e.attackerPlayer?.name} killed ${e.player?.name} with ${e.weapon}`);
 });
 
 await parser.parseHttpBroadcast('http://relay.example.com/match-id/', {
-  entities: EntityMode.ALL
+	entities: EntityMode.ALL
 });
 ```
 
@@ -149,23 +154,23 @@ const parser = new DemoReader();
 parser.on('broadcastsync', sync => console.log('connected', sync.map, 'tick', sync.tick));
 
 const reader = new HttpBroadcastReader(parser, 'http://relay.example.com/match-id/');
-await reader.start();                    // /sync + /start + first /full
+await reader.start(); // /sync + /start + first /full
 console.log('tail tick:', reader.tailTick);
-const terminus = await reader.run();     // /N/delta loop
-console.log(terminus.reason);            // 'stop' | 'timeout' | 'cancelled' | 'error'
+const terminus = await reader.run(); // /N/delta loop
+console.log(terminus.reason); // 'stop' | 'timeout' | 'cancelled' | 'error'
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entities` | `EntityMode` | `NONE` | Same modes as `parseDemo` |
-| `fetcher` | `BroadcastFetcher` | `globalThis.fetch` | Inject your own HTTP layer for tests, auth, or proxies |
-| `deltaThrottle` | `number` (ms) | `1000` | Minimum gap between successful `/delta` requests |
-| `deltaRetryInterval` | `number` (ms) | `1000` | Backoff on 404/405 (fragment not yet ready) |
-| `maxDeltaRetries` | `number` | `10` | Consecutive 404/405s on `/delta` before terminating with `'timeout'` |
-| `maxFullRetries` | `number` | `5` | Consecutive 404/405s on `/full` before terminating with `'error'` |
-| `signal` | `AbortSignal` | — | External cancellation |
-| `onFragmentError` | `(err, ctx) => 'abort' \| 'continue'` | `'abort'` | Skip a malformed fragment instead of aborting |
-| `gameEventDescriptors` | `CMsgSource1LegacyGameEventList \| Uint8Array \| false` | bundled | Preload the game-event descriptor list (see below). Defaults to the descriptor file shipped with the package; pass `false` to skip preload |
+| Option                 | Type                                                    | Default            | Description                                                                                                                                |
+| ---------------------- | ------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `entities`             | `EntityMode`                                            | `NONE`             | Same modes as `parseDemo`                                                                                                                  |
+| `fetcher`              | `BroadcastFetcher`                                      | `globalThis.fetch` | Inject your own HTTP layer for tests, auth, or proxies                                                                                     |
+| `deltaThrottle`        | `number` (ms)                                           | `1000`             | Minimum gap between successful `/delta` requests                                                                                           |
+| `deltaRetryInterval`   | `number` (ms)                                           | `1000`             | Backoff on 404/405 (fragment not yet ready)                                                                                                |
+| `maxDeltaRetries`      | `number`                                                | `10`               | Consecutive 404/405s on `/delta` before terminating with `'timeout'`                                                                       |
+| `maxFullRetries`       | `number`                                                | `5`                | Consecutive 404/405s on `/full` before terminating with `'error'`                                                                          |
+| `signal`               | `AbortSignal`                                           | —                  | External cancellation                                                                                                                      |
+| `onFragmentError`      | `(err, ctx) => 'abort' \| 'continue'`                   | `'abort'`          | Skip a malformed fragment instead of aborting                                                                                              |
+| `gameEventDescriptors` | `CMsgSource1LegacyGameEventList \| Uint8Array \| false` | bundled            | Preload the game-event descriptor list (see below). Defaults to the descriptor file shipped with the package; pass `false` to skip preload |
 
 `reader.stop()` aborts the loop and pending fetches; `reader.sync`, `reader.fragment`, `reader.tailTick` expose live state.
 
@@ -190,8 +195,8 @@ bun scripts/dump-event-descriptors.ts path/to/demo.dem event-descriptors.bin
 ```ts
 import fs from 'fs';
 const reader = new HttpBroadcastReader(parser, url, {
-  entities: EntityMode.ALL,
-  gameEventDescriptors: fs.readFileSync('event-descriptors.bin')
+	entities: EntityMode.ALL,
+	gameEventDescriptors: fs.readFileSync('event-descriptors.bin')
 });
 ```
 
@@ -204,7 +209,7 @@ The reader emits a synthetic `gameeventlist` event before processing the first f
 Broadcasts deliver bytes in a slightly different framing from `.dem` files; this is handled internally but worth knowing if you're debugging at the protocol layer:
 
 - **Frame header** is `[uvarint cmd][LE u32 tick][1 reserved byte][LE u32 size][payload]`, with `cmd === 0` as the end-of-stream marker. (`.dem` files use varints for tick and size and have no reserved byte.)
-- **`DEM_Packet` / `DEM_SignonPacket` payloads** are the raw SVC bit-stream — they are *not* wrapped in a `CDemoPacket` proto envelope as they are in `.dem` files.
+- **`DEM_Packet` / `DEM_SignonPacket` payloads** are the raw SVC bit-stream — they are _not_ wrapped in a `CDemoPacket` proto envelope as they are in `.dem` files.
 - **`DEM_FullPacket.string_table`** carries the tables that have changed since the last full packet. The reader applies these on every full fragment so `instancebaseline` reflects the current tick — required for entity parsing on mid-stream joins.
 - **Compression** is per-command via the `DEM_IsCompressed` bit (`cmd | 0x40`) and uses Snappy.
 
@@ -214,26 +219,26 @@ All `DemoReader` events fire as usual. One additional event:
 
 ```ts
 parser.on('broadcastsync', sync => {
-  // BroadcastSyncDto from /sync — fragment, signup_fragment, tick, tps, map, ...
+	// BroadcastSyncDto from /sync — fragment, signup_fragment, tick, tps, map, ...
 });
 ```
 
 Terminus reasons returned by `run()`:
 
-| Reason | Meaning |
-| --- | --- |
-| `'stop'` | Broadcast ended cleanly (`cmd === 0` end-of-stream marker received) |
-| `'timeout'` | `maxDeltaRetries` consecutive 404/405s on `/delta` (relay stopped advancing) |
-| `'cancelled'` | `reader.stop()`, `parser.cancel()`, or external `signal` aborted |
-| `'error'` | Fatal error (HTTP failure, malformed fragment without `onFragmentError: 'continue'`) |
+| Reason        | Meaning                                                                              |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `'stop'`      | Broadcast ended cleanly (`cmd === 0` end-of-stream marker received)                  |
+| `'timeout'`   | `maxDeltaRetries` consecutive 404/405s on `/delta` (relay stopped advancing)         |
+| `'cancelled'` | `reader.stop()`, `parser.cancel()`, or external `signal` aborted                     |
+| `'error'`     | Fatal error (HTTP failure, malformed fragment without `onFragmentError: 'continue'`) |
 
 ### Diagnostic scripts
 
-| Script | Purpose |
-| --- | --- |
-| `scripts/probe-broadcast.ts <url> [descriptors.bin]` | Connect, log `/sync` and the first 10 game events, exit |
-| `scripts/capture-broadcast-fixture.ts <url> [outDir]` | Save `sync.json` + `/start` + `/full` + a few `/delta`s to disk for offline replay |
-| `scripts/dump-event-descriptors.ts <demo.dem> [out.bin]` | Extract `CMsgSource1LegacyGameEventList` for `gameEventDescriptors` |
+| Script                                                   | Purpose                                                                            |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `scripts/probe-broadcast.ts <url> [descriptors.bin]`     | Connect, log `/sync` and the first 10 game events, exit                            |
+| `scripts/capture-broadcast-fixture.ts <url> [outDir]`    | Save `sync.json` + `/start` + `/full` + a few `/delta`s to disk for offline replay |
+| `scripts/dump-event-descriptors.ts <demo.dem> [out.bin]` | Extract `CMsgSource1LegacyGameEventList` for `gameEventDescriptors`                |
 
 A reference relay implementation is provided in `examples/relay.ts` for local testing.
 
@@ -241,18 +246,18 @@ A reference relay implementation is provided in `examples/relay.ts` for local te
 
 `DemoReader` exposes a handful of live properties that update during parsing. They're useful inside game-event handlers or low-level listeners.
 
-| Member | Type | Description |
-| --- | --- | --- |
-| `header` | `CDemoFileHeader \| null` | Populated after the first `'header'` event |
-| `entities` | `AnyEntity[]` | Sparse array indexed by entity ID. Each slot is a `TypedEntity` for known classes or `BaseEntity` otherwise; `undefined` slots mean the entity was deleted or never existed |
-| `currentTick` | `number` | Tick currently being processed (`-1` before the first frame) |
-| `currentTime` | `number` | `currentTick * tickInterval` — requires `'serverinfo'` to have arrived |
-| `gameEvents` | `GameEvents` | Typed emitter for in-game events (see [Game Events](#game-events)) |
-| `players` | `CMsgPlayerInfo[]` | Userinfo rows from the string table, sparse-indexed by `userid & 0xff` |
-| `playerControllers` | `Player[]` | All live `CCSPlayerController` entities wrapped as `Player` (requires `EntityMode.ALL`) |
-| `teams` | `Team[]` | All live `CCSTeam` entities (requires `EntityMode.ALL`) |
-| `smokes` | `SmokeHelper[]` | All live `CSmokeGrenadeProjectile` smoke clouds (requires `EntityMode.ALL`) |
-| `gameRules` | `GameRules \| null` | Wrapper around the current `CCSGameRulesProxy` entity |
+| Member              | Type                      | Description                                                                                                                                                                 |
+| ------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `header`            | `CDemoFileHeader \| null` | Populated after the first `'header'` event                                                                                                                                  |
+| `entities`          | `AnyEntity[]`             | Sparse array indexed by entity ID. Each slot is a `TypedEntity` for known classes or `BaseEntity` otherwise; `undefined` slots mean the entity was deleted or never existed |
+| `currentTick`       | `number`                  | Tick currently being processed (`-1` before the first frame)                                                                                                                |
+| `currentTime`       | `number`                  | `currentTick * tickInterval` — requires `'serverinfo'` to have arrived                                                                                                      |
+| `gameEvents`        | `GameEvents`              | Typed emitter for in-game events (see [Game Events](#game-events))                                                                                                          |
+| `players`           | `CMsgPlayerInfo[]`        | Userinfo rows from the string table, sparse-indexed by `userid & 0xff`                                                                                                      |
+| `playerControllers` | `Player[]`                | All live `CCSPlayerController` entities wrapped as `Player` (requires `EntityMode.ALL`)                                                                                     |
+| `teams`             | `Team[]`                  | All live `CCSTeam` entities (requires `EntityMode.ALL`)                                                                                                                     |
+| `smokes`            | `SmokeHelper[]`           | All live `CSmokeGrenadeProjectile` smoke clouds (requires `EntityMode.ALL`)                                                                                                 |
+| `gameRules`         | `GameRules \| null`       | Wrapper around the current `CCSGameRulesProxy` entity                                                                                                                       |
 
 ### Cancelling a parse
 
@@ -260,7 +265,7 @@ A reference relay implementation is provided in `examples/relay.ts` for local te
 const parser = new DemoReader();
 
 parser.on('tickend', () => {
-  if (parser.currentTick >= 1000) parser.cancel();
+	if (parser.currentTick >= 1000) parser.cancel();
 });
 
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
@@ -281,21 +286,21 @@ await parser.parseDemo('demo.dem'); // EntityMode.NONE — no entity parsing
 
 // Iterate — guard against sparse holes, or call .filter(Boolean) first.
 for (const player of parser.players) {
-  if (!player) continue;
-  console.log(player.name, player.steamid);
+	if (!player) continue;
+	console.log(player.name, player.steamid);
 }
 ```
 
 Each `CMsgPlayerInfo` is a plain object decoded from the demo's `userinfo` string table:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `name` | `string \| undefined` | Display name |
-| `steamid` | `string \| undefined` | SteamID64 as a decimal string. Bots share `"0"` |
-| `xuid` | `string \| undefined` | Xbox user id (usually equal to `steamid`) |
-| `userid` | `number \| undefined` | In-game user id (the slot index is `userid & 0xff`) |
-| `fakeplayer` | `boolean \| undefined` | `true` for bots |
-| `ishltv` | `boolean \| undefined` | `true` for the HLTV/GOTV observer slot |
+| Field        | Type                   | Description                                         |
+| ------------ | ---------------------- | --------------------------------------------------- |
+| `name`       | `string \| undefined`  | Display name                                        |
+| `steamid`    | `string \| undefined`  | SteamID64 as a decimal string. Bots share `"0"`     |
+| `xuid`       | `string \| undefined`  | Xbox user id (usually equal to `steamid`)           |
+| `userid`     | `number \| undefined`  | In-game user id (the slot index is `userid & 0xff`) |
+| `fakeplayer` | `boolean \| undefined` | `true` for bots                                     |
+| `ishltv`     | `boolean \| undefined` | `true` for the HLTV/GOTV observer slot              |
 
 `parser.players` is populated from `createstringtable` / `updatestringtable` events as soon as the userinfo table arrives, so it's usable inside `'end'` and also during parsing (e.g. once the first `round_start` fires).
 
@@ -307,17 +312,17 @@ Game events like `player_death` expose `userid` / `attacker` / `assister` fields
 const parser = new DemoReader();
 
 parser.gameEvents.on('player_death', event => {
-  const attacker = parser.players[event.attacker];
-  const victim   = parser.players[event.userid];
-  const assister = parser.players[event.assister];
+	const attacker = parser.players[event.attacker];
+	const victim = parser.players[event.userid];
+	const assister = parser.players[event.assister];
 
-  if (!attacker || !victim) return;
+	if (!attacker || !victim) return;
 
-  console.log(
-    `${attacker.name} (${attacker.steamid}) killed ${victim.name} with ${event.weapon}` +
-    (event.headshot ? ' (HS)' : '') +
-    (assister ? `, assisted by ${assister.name}` : '')
-  );
+	console.log(
+		`${attacker.name} (${attacker.steamid}) killed ${victim.name} with ${event.weapon}` +
+			(event.headshot ? ' (HS)' : '') +
+			(assister ? `, assisted by ${assister.name}` : '')
+	);
 });
 
 // Runs with EntityMode.NONE — no entity parsing needed for names + steamids.
@@ -334,11 +339,11 @@ This pattern is the fast path when you only need to log kills, build a scoreboar
 await parser.parseDemo(createReadStream('demo.dem'), { entities: EntityMode.ALL });
 
 for (const player of parser.playerControllers) {
-  console.log(player.name, player.steamId, player.teamNumber);
-  console.log('  k/d/a:', player.kills, player.deaths, player.assists);
-  console.log('  money:', player.money, 'mvps:', player.mvps);
-  console.log('  alive:', player.isAlive, 'health:', player.health, 'armor:', player.armor);
-  console.log('  position:', player.position);
+	console.log(player.name, player.steamId, player.teamNumber);
+	console.log('  k/d/a:', player.kills, player.deaths, player.assists);
+	console.log('  money:', player.money, 'mvps:', player.mvps);
+	console.log('  alive:', player.isAlive, 'health:', player.health, 'armor:', player.armor);
+	console.log('  position:', player.position);
 }
 ```
 
@@ -366,100 +371,100 @@ The `Player` class wraps a `CCSPlayerController` entity. It links to the player'
 
 **Identity**
 
-| Property | Type | Source |
-| --- | --- | --- |
-| `entityId` | `number` (readonly) | Controller entity index |
-| `entity` | `TypedEntity<'CCSPlayerController'> \| undefined` | Raw controller entity |
-| `name` | `string` | Controller |
-| `steamId` | `string` | Controller (empty if not yet set) |
-| `isConnected` | `boolean` | Controller (`m_iConnected === 0`) |
-| `clanTag` | `string` | Controller |
-| `color` | `number` | Comp teammate color (`-1` if unset) |
-| `userInfo` | `CMsgPlayerInfo \| null` | Matching entry from `parser.players` |
+| Property      | Type                                              | Source                               |
+| ------------- | ------------------------------------------------- | ------------------------------------ |
+| `entityId`    | `number` (readonly)                               | Controller entity index              |
+| `entity`      | `TypedEntity<'CCSPlayerController'> \| undefined` | Raw controller entity                |
+| `name`        | `string`                                          | Controller                           |
+| `steamId`     | `string`                                          | Controller (empty if not yet set)    |
+| `isConnected` | `boolean`                                         | Controller (`m_iConnected === 0`)    |
+| `clanTag`     | `string`                                          | Controller                           |
+| `color`       | `number`                                          | Comp teammate color (`-1` if unset)  |
+| `userInfo`    | `CMsgPlayerInfo \| null`                          | Matching entry from `parser.players` |
 
 **Team**
 
-| Property | Type | Source |
-| --- | --- | --- |
-| `teamNumber` | `number` | Controller |
-| `team` | `Team \| null` | Linked team entity |
+| Property     | Type           | Source             |
+| ------------ | -------------- | ------------------ |
+| `teamNumber` | `number`       | Controller         |
+| `team`       | `Team \| null` | Linked team entity |
 
 **Pawn link**
 
-| Property | Type | Source |
-| --- | --- | --- |
-| `pawnEntityId` | `number \| null` | Decoded from `m_hPlayerPawn` handle |
-| `pawn` | `PlayerPawn \| null` | Linked pawn entity |
-| `isAlive` | `boolean` | Controller (`m_bPawnIsAlive`) |
+| Property       | Type                 | Source                              |
+| -------------- | -------------------- | ----------------------------------- |
+| `pawnEntityId` | `number \| null`     | Decoded from `m_hPlayerPawn` handle |
+| `pawn`         | `PlayerPawn \| null` | Linked pawn entity                  |
+| `isAlive`      | `boolean`            | Controller (`m_bPawnIsAlive`)       |
 
 **Pawn shortcuts** (delegate to `pawn`, return a safe default if there's no pawn)
 
-| Property | Type |
-| --- | --- |
-| `health` / `armor` | `number` |
-| `position` | `Vector \| null` |
-| `eyeAngles` | `{ pitch: number; yaw: number }` |
-| `hasDefuser` / `hasHelmet` | `boolean` |
-| `isScoped` / `isDefusing` | `boolean` |
+| Property                   | Type                             |
+| -------------------------- | -------------------------------- |
+| `health` / `armor`         | `number`                         |
+| `position`                 | `Vector \| null`                 |
+| `eyeAngles`                | `{ pitch: number; yaw: number }` |
+| `hasDefuser` / `hasHelmet` | `boolean`                        |
+| `isScoped` / `isDefusing`  | `boolean`                        |
 
 **Economy**
 
-| Property | Type |
-| --- | --- |
-| `money` | `number` |
-| `totalCashSpent` | `number` |
+| Property             | Type     |
+| -------------------- | -------- |
+| `money`              | `number` |
+| `totalCashSpent`     | `number` |
 | `cashSpentThisRound` | `number` |
 
 **Match totals** (from `CCSPlayerController_ActionTrackingServices`)
 
-| Property | Type |
-| --- | --- |
-| `kills` / `deaths` / `assists` | `number` |
-| `damage` | `number` |
-| `headshotKills` | `number` |
-| `utilityDamage` | `number` |
-| `enemiesFlashed` | `number` |
+| Property                             | Type     |
+| ------------------------------------ | -------- |
+| `kills` / `deaths` / `assists`       | `number` |
+| `damage`                             | `number` |
+| `headshotKills`                      | `number` |
+| `utilityDamage`                      | `number` |
+| `enemiesFlashed`                     | `number` |
 | `enemy3Ks` / `enemy4Ks` / `enemy5Ks` | `number` |
-| `objective` | `number` |
+| `objective`                          | `number` |
 
 **Per-round stats** (from `CSPerRoundStats_t`, reset between rounds)
 
-| Property | Type |
-| --- | --- |
+| Property                                         | Type     |
+| ------------------------------------------------ | -------- |
 | `round_kills` / `round_deaths` / `round_assists` | `number` |
-| `round_damage` | `number` |
-| `round_headshotKills` | `number` |
-| `round_equipmentValue` | `number` |
-| `round_cashEarned` | `number` |
-| `round_utilityDamage` | `number` |
-| `round_enemiesFlashed` | `number` |
-| `round_liveTime` | `number` |
+| `round_damage`                                   | `number` |
+| `round_headshotKills`                            | `number` |
+| `round_equipmentValue`                           | `number` |
+| `round_cashEarned`                               | `number` |
+| `round_utilityDamage`                            | `number` |
+| `round_enemiesFlashed`                           | `number` |
+| `round_liveTime`                                 | `number` |
 
 **General**
 
-| Property | Type |
-| --- | --- |
+| Property                  | Type     |
+| ------------------------- | -------- |
 | `mvps` / `score` / `ping` | `number` |
 
 ### PlayerPawn Helper
 
 `parser.getPawn(entityId)` returns a `PlayerPawn` helper for a `CCSPlayerPawn` entity. The `controller` property navigates back to the owning `Player`.
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `entityId` | `number` | Pawn entity index |
-| `entity` | `TypedEntity<'CCSPlayerPawn'> \| undefined` | Raw pawn entity |
-| `health` / `maxHealth` | `number` | `maxHealth` defaults to `100` |
-| `armor` | `number` | |
-| `lifeState` | `number` | Raw life state flags |
-| `isAlive` | `boolean` | `lifeState === 0` |
-| `position` | `Vector` | Computed from cell + vec coords |
-| `eyeAngles` | `{ pitch: number; yaw: number }` | |
-| `hasDefuser` / `hasHelmet` | `boolean` | From `CCSPlayer_ItemServices` |
-| `isScoped` / `isWalking` / `isDefusing` | `boolean` | |
-| `flags` | `number` | Raw `m_fFlags` bitmask |
-| `ownerEntityHandle` | `number` | Raw `m_hOwnerEntity` handle |
-| `controller` | `Player \| undefined` | Owning controller, linked by `pawnEntityId` |
+| Property                                | Type                                        | Description                                 |
+| --------------------------------------- | ------------------------------------------- | ------------------------------------------- |
+| `entityId`                              | `number`                                    | Pawn entity index                           |
+| `entity`                                | `TypedEntity<'CCSPlayerPawn'> \| undefined` | Raw pawn entity                             |
+| `health` / `maxHealth`                  | `number`                                    | `maxHealth` defaults to `100`               |
+| `armor`                                 | `number`                                    |                                             |
+| `lifeState`                             | `number`                                    | Raw life state flags                        |
+| `isAlive`                               | `boolean`                                   | `lifeState === 0`                           |
+| `position`                              | `Vector`                                    | Computed from cell + vec coords             |
+| `eyeAngles`                             | `{ pitch: number; yaw: number }`            |                                             |
+| `hasDefuser` / `hasHelmet`              | `boolean`                                   | From `CCSPlayer_ItemServices`               |
+| `isScoped` / `isWalking` / `isDefusing` | `boolean`                                   |                                             |
+| `flags`                                 | `number`                                    | Raw `m_fFlags` bitmask                      |
+| `ownerEntityHandle`                     | `number`                                    | Raw `m_hOwnerEntity` handle                 |
+| `controller`                            | `Player \| undefined`                       | Owning controller, linked by `pawnEntityId` |
 
 `Vector` is re-exported from the package root: `import type { Vector } from 'cs2parser'`.
 
@@ -469,58 +474,61 @@ The `Player` class wraps a `CCSPlayerController` entity. It links to the player'
 import { TeamNumber } from 'cs2parser';
 
 for (const team of parser.teams) {
-  if (team.teamNumber < TeamNumber.Terrorist) continue; // skip Unassigned/Spectator
-  console.log(team.teamName, team.clanName, team.score);
-  console.log('  members:', team.members.map(p => p.name));
+	if (team.teamNumber < TeamNumber.Terrorist) continue; // skip Unassigned/Spectator
+	console.log(team.teamName, team.clanName, team.score);
+	console.log(
+		'  members:',
+		team.members.map(p => p.name)
+	);
 }
 ```
 
 `TeamNumber` is a const object you can import from the package root:
 
 ```ts
-TeamNumber.Unassigned        // 0
-TeamNumber.Spectators         // 1
-TeamNumber.Terrorists         // 2
-TeamNumber.CounterTerrorists  // 3
+TeamNumber.Unassigned; // 0
+TeamNumber.Spectators; // 1
+TeamNumber.Terrorists; // 2
+TeamNumber.CounterTerrorists; // 3
 ```
 
-| Property | Type |
-| --- | --- |
-| `entityId` | `number` |
-| `entity` | `TypedEntity<'CCSTeam'> \| undefined` |
-| `teamNumber` | `TeamNumber` |
-| `teamName` | `string` |
-| `clanName` | `string` |
-| `score` / `scoreFirstHalf` / `scoreSecondHalf` | `number` |
-| `members` | `Player[]` |
+| Property                                       | Type                                  |
+| ---------------------------------------------- | ------------------------------------- |
+| `entityId`                                     | `number`                              |
+| `entity`                                       | `TypedEntity<'CCSTeam'> \| undefined` |
+| `teamNumber`                                   | `TeamNumber`                          |
+| `teamName`                                     | `string`                              |
+| `clanName`                                     | `string`                              |
+| `score` / `scoreFirstHalf` / `scoreSecondHalf` | `number`                              |
+| `members`                                      | `Player[]`                            |
 
 ## Game Rules
 
 ```ts
 const rules = parser.gameRules;
 if (rules) {
-  console.log(rules.roundsPlayed, rules.phase, rules.isWarmup);
+	console.log(rules.roundsPlayed, rules.phase, rules.isWarmup);
 }
 ```
 
 `parser.gameRules` is `null` until the first `CCSGameRulesProxy` entity appears. Available with `EntityMode.ALL` or `EntityMode.ONLY_GAME_RULES`.
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `entityId` | `number` | Proxy entity index |
-| `entity` | `TypedEntity<'CCSGameRulesProxy'> \| undefined` | Raw proxy entity |
-| `isWarmup` | `boolean` | |
-| `isFreezePeriod` | `boolean` | |
-| `isGamePaused` | `boolean` | |
-| `isTerroristTimeOutActive` | `boolean` | |
-| `isCTTimeOutActive` | `boolean` | |
-| `roundsPlayed` | `number` | |
-| `gamePhase` | `number` | Raw phase number from the game rules proxy |
-| `phase` | `"first" \| "second" \| "halftime" \| "postgame" \| "unknown"` | Human-readable mapping of `gamePhase` |
-| `roundTime` | `number` | Current round length in seconds |
-| `roundStartTime` | `number` | Server time at which the current round started |
-| `terroristTimeOutRemaining` | `number` | Seconds remaining in the T timeout |
-| `ctTimeOutRemaining` | `number` | Seconds remaining in the CT timeout |
+| Property                    | Type                                                           | Description                                    |
+| --------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| `entityId`                  | `number`                                                       | Proxy entity index                             |
+| `entity`                    | `TypedEntity<'CCSGameRulesProxy'> \| undefined`                | Raw proxy entity                               |
+| `isWarmup`                  | `boolean`                                                      |                                                |
+| `isFreezePeriod`            | `boolean`                                                      |                                                |
+| `isGamePaused`              | `boolean`                                                      |                                                |
+| `isTerroristTimeOutActive`  | `boolean`                                                      |                                                |
+| `isCTTimeOutActive`         | `boolean`                                                      |                                                |
+| `roundsPlayed`              | `number`                                                       |                                                |
+| `gamePhase`                 | `number`                                                       | Raw phase number from the game rules proxy     |
+| `phase`                     | `"first" \| "second" \| "halftime" \| "postgame" \| "unknown"` | Human-readable mapping of `gamePhase`          |
+| `roundTime`                 | `number`                                                       | Current round length in seconds                |
+| `roundStartTime`            | `number`                                                       | Server time at which the current round started |
+| `terroristTimeOutRemaining` | `number`                                                       | Seconds remaining in the T timeout             |
+| `ctTimeOutRemaining`        | `number`                                                       | Seconds remaining in the CT timeout            |
 
 ### WinRoundReason
 
@@ -530,34 +538,34 @@ if (rules) {
 import { WinRoundReason } from 'cs2parser';
 
 parser.gameEvents.on('round_end', event => {
-  if (event.reason === WinRoundReason.BOMB_DEFUSED) console.log('CTs defused the bomb');
+	if (event.reason === WinRoundReason.BOMB_DEFUSED) console.log('CTs defused the bomb');
 });
 ```
 
-| Name | Value |
-| --- | --- |
-| `INVALID` | `-1` |
-| `STILL_IN_PROGRESS` | `0` |
-| `TARGET_BOMBED` | `1` |
-| `VIP_ESCAPED` | `2` |
-| `VIP_ASSASSINATED` | `3` |
-| `T_ESCAPED` | `4` |
-| `CT_PREVENT_ESCAPE` | `5` |
-| `ESCAPING_T_NEUTRALIZED` | `6` |
-| `BOMB_DEFUSED` | `7` |
-| `T_ELIMINATED` | `8` |
-| `CT_ELIMINATED` | `9` |
-| `ROUND_DRAW` | `10` |
-| `ALL_HOSTAGES_RESCUED` | `11` |
-| `TARGET_SAVED` | `12` |
-| `HOSTAGES_NOT_SAVED` | `13` |
-| `T_NOT_ESCAPED` | `14` |
-| `VIP_NOT_ESCAPED` | `15` |
-| `GAME_COMMENCING` | `16` |
-| `T_SURRENDER` | `17` |
-| `CT_SURRENDER` | `18` |
-| `T_PLANTED` | `19` |
-| `CT_REACHED_HOSTAGE` | `20` |
+| Name                     | Value |
+| ------------------------ | ----- |
+| `INVALID`                | `-1`  |
+| `STILL_IN_PROGRESS`      | `0`   |
+| `TARGET_BOMBED`          | `1`   |
+| `VIP_ESCAPED`            | `2`   |
+| `VIP_ASSASSINATED`       | `3`   |
+| `T_ESCAPED`              | `4`   |
+| `CT_PREVENT_ESCAPE`      | `5`   |
+| `ESCAPING_T_NEUTRALIZED` | `6`   |
+| `BOMB_DEFUSED`           | `7`   |
+| `T_ELIMINATED`           | `8`   |
+| `CT_ELIMINATED`          | `9`   |
+| `ROUND_DRAW`             | `10`  |
+| `ALL_HOSTAGES_RESCUED`   | `11`  |
+| `TARGET_SAVED`           | `12`  |
+| `HOSTAGES_NOT_SAVED`     | `13`  |
+| `T_NOT_ESCAPED`          | `14`  |
+| `VIP_NOT_ESCAPED`        | `15`  |
+| `GAME_COMMENCING`        | `16`  |
+| `T_SURRENDER`            | `17`  |
+| `CT_SURRENDER`           | `18`  |
+| `T_PLANTED`              | `19`  |
+| `CT_REACHED_HOSTAGE`     | `20`  |
 
 ## Smokes
 
@@ -565,19 +573,19 @@ parser.gameEvents.on('round_end', event => {
 
 ```ts
 for (const smoke of parser.smokes) {
-  console.log(smoke.detonationPos); // Vector | null — cloud centre
-  console.log(smoke.voxels);        // Vector[] — seed voxel world positions
+	console.log(smoke.detonationPos); // Vector | null — cloud centre
+	console.log(smoke.voxels); // Vector[] — seed voxel world positions
 }
 ```
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `entityId` | `number` | Projectile entity index |
-| `detonationPos` | `Vector \| null` | World-space cloud centre |
-| `hasVoxelData` | `boolean` | True once the voxel seed has arrived |
-| `voxels` | `Vector[]` | Seed voxels as world positions, computed on demand |
-| `gridVoxels` | `SmokeVoxel[]` | Raw `[0, 32)` grid coords + per-voxel state bytes |
-| `voxelCount` | `number` | Number of seed voxels |
+| Property        | Type             | Description                                        |
+| --------------- | ---------------- | -------------------------------------------------- |
+| `entityId`      | `number`         | Projectile entity index                            |
+| `detonationPos` | `Vector \| null` | World-space cloud centre                           |
+| `hasVoxelData`  | `boolean`        | True once the voxel seed has arrived               |
+| `voxels`        | `Vector[]`       | Seed voxels as world positions, computed on demand |
+| `gridVoxels`    | `SmokeVoxel[]`   | Raw `[0, 32)` grid coords + per-voxel state bytes  |
+| `voxelCount`    | `number`         | Number of seed voxels                              |
 
 The voxel stream was reverse-engineered from the game client: positions use the verified transform `world = (grid − 16) · 20 + detonationPos` with per-axis signs `[−1, +1, +1]`. Low-level decoders (`decodeSmokeVoxelJournal`, `voxelToWorld`, `mortonEncode3`, …) are also exported for advanced use.
 
@@ -620,29 +628,29 @@ import type { TypedEntity, AnyEntity, EntityProperties } from 'cs2parser';
 
 // Get typed properties for a specific entity
 const props = parser.getEntity(88, 'CCSPlayerPawn');
-props?.['CCSPlayerPawn.m_iHealth'];    // number | undefined
+props?.['CCSPlayerPawn.m_iHealth']; // number | undefined
 props?.['CCSPlayerPawn.m_ArmorValue']; // number | undefined
 
 // Find all entities of a class
 const weapons = parser.findEntities('CAK47');
 for (const { entityId, properties } of weapons) {
-  console.log(entityId, properties['CAK47.m_iClip1']);
+	console.log(entityId, properties['CAK47.m_iClip1']);
 }
 
 // Type guard for narrowing
 const entity = parser.entities[306];
 if (isEntityClass(entity, 'CCSGameRulesProxy')) {
-  entity.properties['CCSGameRulesProxy.CCSGameRules.m_bWarmupPeriod']; // typed
+	entity.properties['CCSGameRulesProxy.CCSGameRules.m_bWarmupPeriod']; // typed
 }
 
 // Parametric `TypedEntity<K>` — useful for function signatures and helpers
 function controllerName(e: TypedEntity<'CCSPlayerController'>): string {
-  return e.properties['CCSPlayerController.m_iszPlayerName'] ?? '';
+	return e.properties['CCSPlayerController.m_iszPlayerName'] ?? '';
 }
 
 // `EntityProperties<K>` — just the property map (Partial)
 function pawnHp(props: EntityProperties<'CCSPlayerPawn'>) {
-  return props['CCSPlayerPawn.m_iHealth'] ?? 0;
+	return props['CCSPlayerPawn.m_iHealth'] ?? 0;
 }
 
 // `AnyEntity` is the slot type in `parser.entities[]` — known typed entities plus
@@ -660,17 +668,17 @@ and a `prop` accessor for free:
 import { DemoReader, EntityHelper } from 'cs2parser';
 
 class C4 extends EntityHelper<'CC4'> {
-  get clipAmmo(): number {
-    return this.prop('CC4.m_iClip1') ?? 0;
-  }
+	get clipAmmo(): number {
+		return this.prop('CC4.m_iClip1') ?? 0;
+	}
 }
 
 const parser = new DemoReader();
 // ... after parsing
 const c4Entities = parser.findEntities('CC4');
 for (const { entityId } of c4Entities) {
-  const c4 = new C4(parser, entityId);
-  console.log(c4.clipAmmo);
+	const c4 = new C4(parser, entityId);
+	console.log(c4.clipAmmo);
 }
 ```
 
@@ -680,33 +688,33 @@ for (const { entityId } of c4Entities) {
 
 ```ts
 // Parse lifecycle
-parser.on('header', header => { });          // CDemoFileHeader — fires once
-parser.on('serverinfo', info => { });        // CSVCMsg_ServerInfo — fires once
-parser.on('tickstart', tick => { });         // number
-parser.on('tickend', tick => { });           // number
-parser.on('progress', fraction => { });      // 0..1, ~every 5000 frames
-parser.on('end', ({ incomplete, error }) => { });
-parser.on('cancel', () => { });              // fires on parser.cancel()
-parser.on('error', ({ error }) => { });      // fatal parse error
-parser.on('debug', msg => { });              // diagnostic strings
+parser.on('header', header => {}); // CDemoFileHeader — fires once
+parser.on('serverinfo', info => {}); // CSVCMsg_ServerInfo — fires once
+parser.on('tickstart', tick => {}); // number
+parser.on('tickend', tick => {}); // number
+parser.on('progress', fraction => {}); // 0..1, ~every 5000 frames
+parser.on('end', ({ incomplete, error }) => {});
+parser.on('cancel', () => {}); // fires on parser.cancel()
+parser.on('error', ({ error }) => {}); // fatal parse error
+parser.on('debug', msg => {}); // diagnostic strings
 
 // String tables — populate parser.players
-parser.on('createstringtable', table => { });
-parser.on('updatestringtable', update => { });
-parser.on('clearallstringtables', () => { });
+parser.on('createstringtable', table => {});
+parser.on('updatestringtable', update => {});
+parser.on('clearallstringtables', () => {});
 
 // Entity lifecycle (requires EntityMode.ALL / ONLY_GAME_RULES)
-parser.on('entitycreated', ([entityId, classId, entityType, className]) => { });
-parser.on('entityupdated', ({ entityId, propId, value }) => { });
-parser.on('entitydeleted', entityId => { });
+parser.on('entitycreated', ([entityId, classId, entityType, className]) => {});
+parser.on('entityupdated', ({ entityId, propId, value }) => {});
+parser.on('entitydeleted', entityId => {});
 
 // Raw game events (prefer parser.gameEvents for typed access)
-parser.on('gameeventlist', list => { });
-parser.on('gameevent', event => { });
+parser.on('gameeventlist', list => {});
+parser.on('gameevent', event => {});
 
 // Opt-in network messages
-parser.on('svc_UserMessage', msg => { });    // requires { messages: true }
-parser.on('usercommand', cmd => { });        // requires { commands: true }
+parser.on('svc_UserMessage', msg => {}); // requires { messages: true }
+parser.on('usercommand', cmd => {}); // requires { commands: true }
 ```
 
 Any message key from `SVC_Messages` / `ECstrike15UserMessages` can be opted-in through `parseDemo` settings and listened to by name — `messages: true` and `commands: true` shown above are the most common.
@@ -736,41 +744,42 @@ Demo: `demo.dem` (318 MB, 136,812 ticks)
 
 ## Entity Mode Comparison
 
-| Mode | Throughput | Time | RSS | Heap | Entities |
-| --- | --- | --- | --- | --- | --- |
-| `EntityMode.NONE` | 527.8 MB/s | 0.6s | 133MB | 30MB | 0 |
-| `EntityMode.ONLY_GAME_RULES` | 138.9 MB/s | 2.3s | 175MB | 32MB | 1 |
-| `EntityMode.ALL` | 120.8 MB/s | 2.6s | 177MB | 32MB | 248 |
+| Mode                         | Throughput | Time | RSS   | Heap | Entities |
+| ---------------------------- | ---------- | ---- | ----- | ---- | -------- |
+| `EntityMode.NONE`            | 527.8 MB/s | 0.6s | 133MB | 30MB | 0        |
+| `EntityMode.ONLY_GAME_RULES` | 138.9 MB/s | 2.3s | 175MB | 32MB | 1        |
+| `EntityMode.ALL`             | 120.8 MB/s | 2.6s | 177MB | 32MB | 248      |
 
 `ONLY_GAME_RULES` parses entities but only stores game rules — enables synthetic `round_start`/`round_end` events without full entity tracking overhead.
 
 ## Parse Method Comparison (EntityMode.ALL)
 
-| Method | Throughput | Time | RSS | Heap |
-| --- | --- | --- | --- | --- |
-| `parseDemo(path)` | 119.2 MB/s | 2.7s | 144MB | 37MB |
-| `parseDemo(path, {stream: false})` | 122.1 MB/s | 2.6s | 150MB | 38MB |
-| `parseDemo(buffer)` | 119.2 MB/s | 2.7s | 488MB | 702MB |
-| `parseDemo(stream)` | 122.8 MB/s | 2.6s | 137MB | 15MB |
+| Method                             | Throughput | Time | RSS   | Heap  |
+| ---------------------------------- | ---------- | ---- | ----- | ----- |
+| `parseDemo(path)`                  | 119.2 MB/s | 2.7s | 144MB | 37MB  |
+| `parseDemo(path, {stream: false})` | 122.1 MB/s | 2.6s | 150MB | 38MB  |
+| `parseDemo(buffer)`                | 119.2 MB/s | 2.7s | 488MB | 702MB |
+| `parseDemo(stream)`                | 122.8 MB/s | 2.6s | 137MB | 15MB  |
 
 ## Examples
 
 The [`examples/`](examples/) directory contains runnable scripts:
 
-| File | Description |
-| --- | --- |
-| `header.ts` | `DemoReader.parseHeader` — fast metadata read |
+| File            | Description                                                      |
+| --------------- | ---------------------------------------------------------------- |
+| `header.ts`     | `DemoReader.parseHeader` — fast metadata read                    |
 | `serverinfo.ts` | `DemoReader.parseServerInfo` — tick interval / map / max clients |
-| `stream.ts` | Streaming a `.dem` file via `Readable` |
-| `voicedata.ts` | Opt-in `svc_VoiceData` parsing |
-| `broadcast.ts` | Live HTTP broadcast with preloaded `gameEventDescriptors` |
-| `relay.ts` | Reference HTTP relay (Valve protocol) for local testing |
+| `stream.ts`     | Streaming a `.dem` file via `Readable`                           |
+| `voicedata.ts`  | Opt-in `svc_VoiceData` parsing                                   |
+| `broadcast.ts`  | Live HTTP broadcast with preloaded `gameEventDescriptors`        |
+| `relay.ts`      | Reference HTTP relay (Valve protocol) for local testing          |
 
 ## Acknowledgements
 
 Creating this library wouldn't be possible without awesome work of:
- - [LaihoE](https://github.com/LaihoE), creator of [demoparser](https://github.com/LaihoE/demoparser)
- - [Saul](https://github.com/saul), creator of [demofile-net](https://github.com/saul/demofile-net)
- - [markus-wa](https://github.com/markus-wa), creator of [demoinfocs-golang](https://github.com/markus-wa/demoinfocs-golang)
+
+- [LaihoE](https://github.com/LaihoE), creator of [demoparser](https://github.com/LaihoE/demoparser)
+- [Saul](https://github.com/saul), creator of [demofile-net](https://github.com/saul/demofile-net)
+- [markus-wa](https://github.com/markus-wa), creator of [demoinfocs-golang](https://github.com/markus-wa/demoinfocs-golang)
 
 Huge thanks to all of them, as they all have helped me in some way or the other during the past few years.
