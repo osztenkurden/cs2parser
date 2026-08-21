@@ -96,13 +96,22 @@ function generateTsProto() {
 	const protoFiles = fs.readdirSync(PROTO_DIR).filter(f => f.endsWith('.proto'));
 	console.log(`Generating TypeScript for ${protoFiles.length} proto files...`);
 
+	// The parser only ever reads messages off the wire, and the generated registry
+	// pulls in every message class, so encode/JSON/partial helpers are dead weight
+	// that ships to consumers. Dropping them keeps the bundle in check.
 	const tsProtoOpts = [
 		'esModuleInterop=true',
 		'importSuffix=.js',
 		'noDefaultsForOptionals=true',
 		'forceLong=string',
 		'snakeToCamel=false',
-		'enumsAsLiterals=true'
+		'enumsAsLiterals=true',
+		'outputEncodeMethods=decode-only',
+		'outputJsonMethods=false',
+		'outputPartialMethods=false',
+		// Steam RPC service clients call encode() on request messages; nothing here
+		// speaks to Steam, so skip them rather than keep encode around for their sake.
+		'outputServices=false'
 	]
 		.map(opt => `--ts_proto_opt=${opt}`)
 		.join(' ');
