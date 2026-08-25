@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 import { DemoReader, EntityMode } from '../../src/index.js';
 import fs from 'fs';
+import { Readable } from 'stream';
 
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 const demoAvailable = fs.existsSync(demoPath);
@@ -38,6 +39,18 @@ describe.skipIf(!demoAvailable)('parse method consistency (EntityMode.ALL)', () 
 			results.push({ tick: r.currentTick, entities: r.entities.filter(Boolean).length, method: 'stream' });
 		}
 
+		// Method 5: a Readable that makes the entire demo available at once
+		{
+			const r = new DemoReader();
+			const buf = fs.readFileSync(demoPath);
+			await r.parseDemo(Readable.from([buf]), { entities: EntityMode.ALL });
+			results.push({
+				tick: r.currentTick,
+				entities: r.entities.filter(Boolean).length,
+				method: 'one-chunk-stream'
+			});
+		}
+
 		// All methods must produce the same results
 		const baseTick = results[0]!.tick;
 		const baseEntities = results[0]!.entities;
@@ -49,5 +62,41 @@ describe.skipIf(!demoAvailable)('parse method consistency (EntityMode.ALL)', () 
 			expect(r.tick).toBe(baseTick);
 			expect(r.entities).toBe(baseEntities);
 		}
+	});
+
+	test('a one-chunk Readable yields to the event loop before parsing ends', async () => {
+		const r = new DemoReader();
+		const buf = fs.readFileSync(demoPath);
+		let parseEnded = false;
+		let timerScheduled = false;
+		let timerFiredBeforeEnd = false;
+		let endCount = 0;
+		let endReason: string | undefined;
+		let resolveTimer!: () => void;
+		const timerFinished = new Promise<void>(resolve => {
+			resolveTimer = resolve;
+		});
+
+		r.once('header', () => {
+			timerScheduled = true;
+			setTimeout(() => {
+				timerFiredBeforeEnd = !parseEnded;
+				if (timerFiredBeforeEnd) r.cancel();
+				resolveTimer();
+			}, 0);
+		});
+		r.on('end', result => {
+			parseEnded = true;
+			endCount++;
+			endReason = result.reason;
+		});
+
+		await r.parseDemo(Readable.from([buf]), { entities: EntityMode.NONE });
+
+		expect(timerScheduled).toBe(true);
+		if (timerScheduled) await timerFinished;
+		expect(timerFiredBeforeEnd).toBe(true);
+		expect(endCount).toBe(1);
+		expect(endReason).toBe('cancelled');
 	});
 });
