@@ -464,85 +464,51 @@ export class DemoReader extends EventEmitter<{
 	}
 
 	/** Core streaming parse from a Readable. */
-	private _parseStream(stream: Readable, opts: { entities?: EntityMode } & ParseSettings = {}): Promise<void> {
+	private async _parseStream(stream: Readable, opts: { entities?: EntityMode } & ParseSettings = {}): Promise<void> {
 		const entityMode = opts.entities ?? EntityMode.NONE;
 		this._stream = stream;
 		this._directWriteMode = true;
 		this.gameEvents.entityMode = entityMode;
 
-		const { promise, resolve } = Promise.withResolvers<void>();
+		const iterator = stream[Symbol.asyncIterator]();
+		const readNextChunk = async (): Promise<Buffer | null> => {
+			const next = await iterator.next();
+			if (next.done) return null;
+			return Buffer.isBuffer(next.value) ? next.value : Buffer.from(next.value);
+		};
 
-		let session: ParseSession | null = null;
-		let finished = false;
-		let pendingChunks: Buffer[] = [];
+		try {
+			// ParseSession starts after the 16-byte demo magic prefix, so collect
+			// enough initial input to construct it at the correct offset.
+			const initialChunks: Buffer[] = [];
+			let initialSize = 0;
+			while (initialSize < 16) {
+				const chunk = await readNextChunk();
+				if (chunk === null) {
+					this.emit('end', { incomplete: true });
+					return;
+				}
+				initialChunks.push(chunk);
+				initialSize += chunk.length;
+			}
 
-		const finish = () => {
-			finished = true;
-			stream.off('data', onData);
-			stream.off('error', onError);
-			stream.off('end', onEnd);
+			const initialBuffer =
+				initialChunks.length === 1 ? initialChunks[0]! : Buffer.concat(initialChunks, initialSize);
+			const session = new ParseSession(initialBuffer, entityMode, this._emitQueue, this, opts);
+			await session.runAsync(readNextChunk);
+		} catch (e) {
+			if (!this._hasEnded) {
+				const error = e instanceof Error ? e : new Error(`Exception while reading demo stream: ${e}`);
+				this.emit('end', { error, incomplete: true });
+			}
+		} finally {
+			try {
+				await iterator.return?.();
+			} catch {}
+			this._stream = null;
 			this._directWriteMode = false;
 			this._hasEnded = true;
-		};
-
-		const tryInit = () => {
-			const totalPending = pendingChunks.reduce((s, c) => s + c.length, 0);
-			if (totalPending < 16) return false;
-
-			session = new ParseSession(Buffer.concat(pendingChunks), entityMode, this._emitQueue, this, opts);
-			pendingChunks = [];
-			return true;
-		};
-
-		const onData = (chunk: Buffer) => {
-			if (finished) return;
-
-			if (!session) {
-				pendingChunks.push(chunk);
-				if (!tryInit()) return;
-			} else {
-				session.pushChunk(chunk);
-			}
-
-			try {
-				const more = session!.processFrames();
-				if (!more) {
-					session!.flush();
-					finish();
-					resolve();
-				}
-			} catch (e) {
-				finish();
-				const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
-				this.emit('end', { error, incomplete: false });
-				resolve();
-			}
-		};
-
-		const onError = (err: Error) => {
-			if (finished) return;
-			finish();
-			this.emit('end', { error: err, incomplete: true });
-			resolve();
-		};
-
-		const onEnd = () => {
-			if (finished) return;
-			if (session) {
-				try {
-					session.processFrames();
-				} catch {}
-			}
-			finish();
-			this.emit('end', { incomplete: true });
-			resolve();
-		};
-
-		stream.on('data', onData);
-		stream.on('error', onError);
-		stream.on('end', onEnd);
-
-		return promise;
+		}
 	}
 
 	/**
