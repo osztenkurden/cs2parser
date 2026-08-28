@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/osztenkurden/cs2parser/compare/v1.11.1...v1.12.0) (2026-08-25)
+
+
+### Features
+
+* make Readables with full buffer also be non blocking ([c820915](https://github.com/osztenkurden/cs2parser/commit/c82091501bd84d635dc6249b47e67dfa2c025adc))
+
 ## [1.11.1](https://github.com/osztenkurden/cs2parser/compare/v1.11.0...v1.11.1) (2026-07-01)
 
 
