@@ -34,6 +34,7 @@ export class DemoReader extends EventEmitter<{
 	_parseStartTime = 0n;
 	header: CDemoFileHeader | null = null;
 	private _hasEnded = false;
+	private _endResult!: OutputEvents['end'];
 	private _stream: Readable | null = null;
 
 	entities: AnyEntity[];
@@ -244,7 +245,8 @@ export class DemoReader extends EventEmitter<{
 		super();
 		this.entities = [];
 		this.gameEvents.listen(this);
-		this.on('end', () => {
+		this.on('end', result => {
+			this._endResult = result;
 			this._hasEnded = true;
 			this.emit(
 				'debug',
@@ -438,6 +440,8 @@ export class DemoReader extends EventEmitter<{
 		if (this._hasEnded) return;
 		for (const element of queue) {
 			if (this._hasEnded) return;
+			// Errors are also included in the end result; an error listener is optional.
+			if (element[0] === 'error' && this.listenerCount('error') === 0) continue;
 			this.emit(element[0], element[1] as any);
 		}
 		queue.length = 0;
@@ -516,6 +520,7 @@ export class DemoReader extends EventEmitter<{
 	 *
 	 * Accepts a file path, a Buffer, or a Readable stream.
 	 * File paths stream by default (non-blocking, low memory). Pass `stream: false` to load into memory instead.
+	 * Resolves with the same object emitted by `end`, including any parse error or cancellation reason.
 	 *
 	 * @param opts.entities - Entity parsing mode:
 	 *   - `EntityMode.NONE` (default) — skip entity parsing entirely (fastest)
@@ -535,29 +540,37 @@ export class DemoReader extends EventEmitter<{
 	 * // Pre-loaded buffer (non-blocking)
 	 * await parser.parseDemo(buffer, { entities: EntityMode.ALL });
 	 */
-	parseDemo(source: Readable, opts?: { entities?: EntityMode } & ParseSettings): Promise<void>;
-	parseDemo(source: string, opts: { entities?: EntityMode; stream: false } & ParseSettings): Promise<void>;
-	parseDemo(source: string, opts?: { entities?: EntityMode; stream?: true } & ParseSettings): Promise<void>;
-	parseDemo(source: Buffer, opts?: { entities?: EntityMode } & ParseSettings): Promise<void>;
+	parseDemo(source: Readable, opts?: { entities?: EntityMode } & ParseSettings): Promise<OutputEvents['end']>;
+	parseDemo(
+		source: string,
+		opts: { entities?: EntityMode; stream: false } & ParseSettings
+	): Promise<OutputEvents['end']>;
+	parseDemo(
+		source: string,
+		opts?: { entities?: EntityMode; stream?: true } & ParseSettings
+	): Promise<OutputEvents['end']>;
+	parseDemo(source: Buffer, opts?: { entities?: EntityMode } & ParseSettings): Promise<OutputEvents['end']>;
 	parseDemo(
 		source: string | Buffer | Readable,
 		opts: { entities?: EntityMode; stream?: boolean } = {}
-	): Promise<void> {
+	): Promise<OutputEvents['end']> {
 		if (this._hasEnded) throw new Error('Demo has already been parsed');
 		this._parseStartTime = process.hrtime.bigint();
 
+		let parsing: Promise<void>;
 		if (typeof source === 'string') {
 			if (opts.stream === false) {
-				return this._parseFile(source, opts);
+				parsing = this._parseFile(source, opts);
+			} else {
+				parsing = this._parseStream(fs.createReadStream(source), opts);
 			}
-			return this._parseStream(fs.createReadStream(source), opts);
+		} else if (Buffer.isBuffer(source)) {
+			parsing = this._parseBuffer(source, opts);
+		} else {
+			parsing = this._parseStream(source, opts);
 		}
 
-		if (Buffer.isBuffer(source)) {
-			return this._parseBuffer(source, opts);
-		}
-
-		return this._parseStream(source, opts);
+		return parsing.then(() => this._endResult);
 	}
 
 	public cancel() {
