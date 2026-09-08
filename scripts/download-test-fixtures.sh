@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-FIXTURE_TAG="test-fixtures/v1"
+FIXTURE_TAG="test-fixtures/v2"
 FIXTURE_DIR="tests/fixtures"
 REPO="osztenkurden/cs2parser"
 

@@ -75,6 +75,40 @@ export class BitBuffer {
 			this._pointer.length - this._byteOffset >= 4 ? 32 : (this._pointer.length - this._byteOffset) * 8;
 		this.UpdateBuffer();
 	}
+	/**
+	 * Peek the 17 bits a Huffman field-path code needs, without consuming them.
+	 *
+	 * Specialised because it is the single hottest read in the parser — once per
+	 * field-path operation, millions of times per demo — and because 17 bits do not
+	 * fit the 32-bit window about half the time, so the spanning branch is taken
+	 * constantly. Reading the next word byte-by-byte beats going through the
+	 * DataView here, and hardcoding the width drops two mask-table lookups.
+	 */
+	public peekHuffmanCode(): number {
+		const avail = this._bitsAvail;
+		if (avail >= 17) return (this._buf & 0x1ffff) >>> 0;
+
+		const pointer = this._pointer;
+		const offset = this._byteOffset;
+		let next: number;
+		if (pointer.length - offset >= 4) {
+			next =
+				(pointer[offset]! |
+					(pointer[offset + 1]! << 8) |
+					(pointer[offset + 2]! << 16) |
+					(pointer[offset + 3]! << 24)) >>>
+				0;
+		} else {
+			next = 0;
+			const bytesToRead = Math.min(pointer.length - offset, 4);
+			for (let i = 0; i < bytesToRead; i++) next |= pointer[offset + i]! << (i * 8);
+		}
+
+		// `next << avail` is a 32-bit shift, but only the low 17 bits are kept and
+		// avail < 17, so every bit that survives the mask is in the right place.
+		return ((this._buf | (next << avail)) & 0x1ffff) >>> 0;
+	}
+
 	public PeekUBitsWithLog(numBits: number): number {
 		if (this._bitsAvail >= numBits) {
 			return (this._buf & MASK[numBits]!) >>> 0;

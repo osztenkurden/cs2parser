@@ -87,9 +87,30 @@ describe('createAllocator', () => {
 		expect(() => allocator.alloc(-1)).toThrow(RangeError);
 	});
 
-	test('throws on out of memory', () => {
+	test('falls back to a standalone buffer when the request exceeds the arena', () => {
 		const allocator = createAllocator(64);
-		expect(() => allocator.alloc(128)).toThrow('Out of memory');
+		const big = allocator.alloc(128);
+
+		expect(big).toBeInstanceOf(Uint8Array);
+		expect(big.length).toBe(128);
+		// Not carved out of the arena, so it doesn't consume any of it.
+		expect(allocator.stats().usedBytes).toBe(0);
+		expect(allocator.stats().freeBytes).toBe(64);
+	});
+
+	test('falls back when the arena is exhausted, then recovers', () => {
+		const allocator = createAllocator(64);
+		const a = allocator.alloc(64);
+		const overflow = allocator.alloc(32);
+
+		expect(overflow.length).toBe(32);
+		expect(allocator.stats().freeBytes).toBe(0);
+
+		// Freeing a standalone buffer is a no-op; freeing an arena block reclaims it.
+		allocator.free(overflow);
+		expect(allocator.stats().freeBytes).toBe(0);
+		allocator.free(a);
+		expect(allocator.stats().freeBytes).toBe(64);
 	});
 
 	test('throws on double free', () => {

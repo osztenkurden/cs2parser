@@ -4,11 +4,18 @@ import { DemoReader, EntityMode } from '../src/index.js';
 const demoPath = process.argv[2]!;
 const method = process.argv[3]!;
 const entityMode =
-	process.argv[4] === 'ALL' ? EntityMode.ALL
-	: process.argv[4] === 'ONLY_GAME_RULES' ? EntityMode.ONLY_GAME_RULES
-	: EntityMode.NONE;
+	process.argv[4] === 'ALL'
+		? EntityMode.ALL
+		: process.argv[4] === 'ONLY_GAME_RULES'
+			? EntityMode.ONLY_GAME_RULES
+			: EntityMode.NONE;
 
 const p = new DemoReader();
+let completed = false;
+p.on('error', () => {}); // the end payload carries the failure for validation below
+p.on('end', end => {
+	completed = !end.incomplete && !end.error;
+});
 const start = performance.now();
 
 switch (method) {
@@ -24,15 +31,20 @@ switch (method) {
 	case 'stream':
 		await p.parseDemo(fs.createReadStream(demoPath), { entities: entityMode });
 		break;
+	default:
+		throw new Error(`Unknown parse method: ${method}`);
 }
 
 const ms = performance.now() - start;
+if (!completed) throw new Error('Benchmark parse failed or was incomplete');
 const mem = process.memoryUsage();
-console.log(JSON.stringify({
-	time: (ms / 1000).toFixed(1) + 's',
-	ms,
-	rss: (mem.rss / 1024 / 1024).toFixed(0) + 'MB',
-	heap: (mem.heapUsed / 1024 / 1024).toFixed(0) + 'MB',
-	entities: p.entities.filter(Boolean).length,
-	tick: p.currentTick
-}));
+console.log(
+	JSON.stringify({
+		time: (ms / 1000).toFixed(1) + 's',
+		ms,
+		rss: (mem.rss / 1024 / 1024).toFixed(0) + 'MB',
+		heap: (mem.heapUsed / 1024 / 1024).toFixed(0) + 'MB',
+		entities: p.entities.filter(Boolean).length,
+		tick: p.currentTick
+	})
+);

@@ -314,4 +314,22 @@ describe('BitBuffer', () => {
 			expect(bb.ReadByte()).toBe(0xbb);
 		});
 	});
+
+	test('Huffman peeks match the source bits without consuming them', () => {
+		const storage = Uint8Array.from({ length: 44 }, (_, i) => (i * 97 + 53) & 255);
+		for (let length = 1; length <= 40; length++) {
+			const bytes = storage.subarray(3, 3 + length);
+			for (let offset = 0; offset < length * 8; offset++) {
+				const reader = new BitBuffer(bytes);
+				for (let skip = offset; skip > 0; skip -= 32) reader.ReadUBits(Math.min(skip, 32));
+				let expected = 0;
+				for (let bit = 0; bit < 17; bit++) {
+					const position = offset + bit;
+					expected |= (((bytes[position >>> 3] ?? 0) >>> (position & 7)) & 1) << bit;
+				}
+				expect(reader.peekHuffmanCode()).toBe(expected);
+				expect(reader.RemainingBits).toBe(length * 8 - offset);
+			}
+		}
+	});
 });

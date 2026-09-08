@@ -11,7 +11,13 @@ function createAllocator(bufferSize = BUFFER_SIZE) {
 
 		// First-fit search through free blocks
 		const idx = blocks.findIndex(b => b.free && b.size >= size);
-		if (idx === -1) throw new Error(`Out of memory: cannot allocate ${size} bytes`);
+		if (idx === -1) {
+			// The arena is a fast path, not a hard limit. A full-update
+			// svc_PacketEntities on a busy tick can exceed the whole arena — that
+			// used to abort the parse outright. Fall back to a standalone buffer;
+			// `free` recognises it by its ArrayBuffer and ignores it.
+			return new Uint8Array(size);
+		}
 
 		const block = blocks[idx]!;
 
@@ -35,6 +41,9 @@ function createAllocator(bufferSize = BUFFER_SIZE) {
 
 	function free(view: Uint8Array) {
 		if (!(view instanceof Uint8Array)) throw new TypeError('Expected a Uint8Array');
+
+		// Standalone fallback allocation — not ours to reclaim, GC handles it.
+		if (view.buffer !== buffer.buffer) return;
 
 		const offset = view.byteOffset;
 		const idx = blocks.findIndex(b => b.offset === offset && !b.free);

@@ -8,10 +8,22 @@ if (!demoPath) {
 
 const start = process.hrtime.bigint();
 const reader = new DemoReader();
-reader.on('svc_VoiceData', console.log);
+
+// svc_VoiceInit carries the codec and sample rate the voice payloads are encoded
+// with — you need it to turn svc_VoiceData into audio.
+reader.on('svc_VoiceInit', init => console.log('voice codec:', init.codec, 'quality:', init.quality));
+
+let packets = 0;
+let bytes = 0;
+reader.on('svc_VoiceData', data => {
+	packets++;
+	bytes += data.audio?.voice_data?.length ?? 0;
+});
+
 reader.on('CS_UM_ServerRankUpdate', console.log);
-reader.on('svc_UserCmds', console.log);
-await reader.parseDemo(demoPath, { svc_VoiceData: true, CS_UM_ServerRankUpdate: true });
-const end = process.hrtime.bigint();
-const time = Number(end - start);
-console.log(`Parsed voice data in ${time / 1000000}ms`);
+
+// Listening is all it takes — messages are decoded when something wants them.
+await reader.parseDemo(demoPath);
+
+const ms = Number(process.hrtime.bigint() - start) / 1_000_000;
+console.log(`${packets} voice packets, ${bytes} bytes of audio, parsed in ${ms.toFixed(0)}ms`);
