@@ -91,6 +91,17 @@ await parser.parseDemo(createReadStream('demo.dem'), { entities: EntityMode.ALL 
 await parser.parseDemo(buffer, { entities: EntityMode.ALL });
 ```
 
+All input types resolve with the same object passed to the `end` event: `{ incomplete: boolean, error?: any, reason?: EndReason }`. Check the result without adding an `end` or `error` listener:
+
+```ts
+const { incomplete, error, reason } = await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
+if (error) {
+	console.error('Parsing failed:', error);
+} else if (incomplete) {
+	console.warn('Parsing did not finish:', reason ?? 'incomplete demo');
+}
+```
+
 ### Entity Modes
 
 | Mode                         | Entities        | Round events | Speed                |
@@ -101,12 +112,12 @@ await parser.parseDemo(buffer, { entities: EntityMode.ALL });
 
 `ONLY_GAME_RULES` parses the entity bitstream but only stores `CCSGameRulesProxy` properties. This enables synthetic `round_start`/`round_end` events without populating the full entities array.
 
-| Input                           | Returns         | Memory |
-| ------------------------------- | --------------- | ------ |
-| `string` path                   | `Promise<void>` | low    |
-| `string` path + `stream: false` | `Promise<void>` | low    |
-| `Readable` stream               | `Promise<void>` | low    |
-| `Buffer`                        | `Promise<void>` | high   |
+| Input                          | Returns                    | Memory |
+| ------------------------------ | -------------------------- | ------ |
+| `string` path                  | Promise of the end payload | low    |
+| `string` path + `stream: false` | Promise of the end payload | low    |
+| `Readable` stream              | Promise of the end payload | low    |
+| `Buffer`                       | Promise of the end payload | high   |
 
 ### Parse Settings
 

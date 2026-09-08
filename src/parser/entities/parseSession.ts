@@ -248,8 +248,12 @@ export class ParseSession {
 		this.flush();
 	}
 
-	/** Run non-blocking parse to completion, yielding to the event loop periodically. */
-	async runAsync(): Promise<void> {
+	/**
+	 * Run non-blocking parse to completion, yielding to the event loop periodically.
+	 * When `readNextChunk` is provided, truncated frame reads wait for the next stream
+	 * chunk and resume from the start of that frame.
+	 */
+	async runAsync(readNextChunk?: () => Promise<Buffer | null>): Promise<void> {
 		if (this._broadcastMode) {
 			throw new Error('runAsync is not supported on broadcast sessions; use pushBroadcastFragment');
 		}
@@ -263,11 +267,12 @@ export class ParseSession {
 		try {
 			while (true) {
 				if (forceBreak) break;
+				this._frameMarked = this._frameOffset;
 				try {
 					if (++frameCount % 5000 === 0) {
 						this.enqueueEvent('progress', this.getProgress());
 					}
-					if (!this.readFrame()) break;
+					if (!this.readFrame(readNextChunk !== undefined)) break;
 
 					const now = Date.now();
 					if (now - lastYieldTime >= 16) {
@@ -275,6 +280,35 @@ export class ParseSession {
 						await new Promise<void>(resolve => setTimeout(resolve, 0));
 					}
 				} catch (e) {
+					if (e instanceof RangeError && readNextChunk) {
+						// Incremental stream input may stop in the middle of a frame. Restore
+						// the frame boundary before appending more bytes and trying again.
+						this._frameOffset = Math.max(0, this._frameMarked);
+						let chunk: Buffer | null;
+						try {
+							chunk = await readNextChunk();
+						} catch (streamError) {
+							if (!forceBreak) {
+								const error =
+									streamError instanceof Error
+										? streamError
+										: new Error(`Exception while reading demo stream: ${streamError}`);
+								this.enqueueEvent('end', { error, incomplete: true });
+							}
+							break;
+						}
+
+						if (forceBreak) break;
+						if (chunk === null) {
+							if (this._readingTrailer) this.finishDemo();
+							else this.enqueueEvent('end', { incomplete: true });
+							break;
+						}
+
+						this.pushChunk(chunk);
+						continue;
+					}
+
 					if (e instanceof RangeError) {
 						this.enqueueEvent('end', { incomplete: true });
 					} else {

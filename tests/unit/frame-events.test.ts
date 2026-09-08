@@ -42,9 +42,10 @@ describe('demo frame events', () => {
 				expect(end).toEqual({ incomplete: false });
 				events.push('end');
 			});
-			await reader.parseDemo(
+			const result = await reader.parseDemo(
 				Readable.from([demoFile(stop, trailer.subarray(0, split)), trailer.subarray(split)])
 			);
+			expect(result).toEqual({ incomplete: false });
 			expect(events).toEqual(['info', 'end']);
 		}
 	});
@@ -56,7 +57,8 @@ describe('demo frame events', () => {
 			const ends: unknown[] = [];
 			reader.on('DEM_FileInfo', () => infos++);
 			reader.on('end', end => ends.push(end));
-			await reader.parseDemo(Readable.from([demoFile(stop), trailer]));
+			const result = await reader.parseDemo(Readable.from([demoFile(stop), trailer]));
+			expect(result).toEqual({ incomplete: false });
 			expect(infos).toBe(0);
 			expect(ends).toEqual([{ incomplete: false }]);
 		}
