@@ -32,12 +32,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: tests/fixtures/*.dem
-          key: test-fixtures-v1
+          key: test-fixtures-v2
 
       - name: Download test fixtures
         if: steps.fixture-cache.outputs.cache-hit != 'true'
         run: |
-          gh release download test-fixtures/v1 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }} || echo "No test fixtures release found, skipping benchmark"
+          gh release download test-fixtures/v2 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }} || echo "No test fixtures release found, skipping benchmark"
         env:
           GH_TOKEN: ${{ github.token }}
 

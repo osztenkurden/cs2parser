@@ -6,7 +6,7 @@ Integration tests require a CS2 demo file (`.dem`). These are too large to store
 
 ### For CI
 
-Demo files are stored as GitHub Release Assets on the `test-fixtures/v1` tag. The CI workflow downloads them automatically.
+Demo files are stored as GitHub Release Assets on the `test-fixtures/v2` tag. The CI workflow downloads them automatically.
 
 ### For local development
 

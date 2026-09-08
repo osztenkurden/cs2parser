@@ -52,7 +52,7 @@ jobs:
       - name: Download test fixtures
         if: steps.fixture-cache.outputs.cache-hit != 'true'
         run: |
-          gh release download test-fixtures/v1 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }} || echo "No test fixtures release found, skipping integration tests"
+          gh release download test-fixtures/v2 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }} || echo "No test fixtures release found, skipping integration tests"
         env:
           GH_TOKEN: ${{ github.token }}
 
