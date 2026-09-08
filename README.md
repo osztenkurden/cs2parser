@@ -316,25 +316,27 @@ Each `CMsgPlayerInfo` is a plain object decoded from the demo's `userinfo` strin
 | Field        | Type                   | Description                                         |
 | ------------ | ---------------------- | --------------------------------------------------- |
 | `name`       | `string \| undefined`  | Display name                                        |
-| `steamid`    | `string \| undefined`  | SteamID64 as a decimal string. Bots share `"0"`     |
-| `xuid`       | `string \| undefined`  | Xbox user id (usually equal to `steamid`)           |
+| `steamid`    | `string \| undefined`  | Decimal ID; bots/TV may have server-generated IDs that differ from their controller's `"0"` |
+| `xuid`       | `string \| undefined`  | Account identifier; may be `"0"` for bots           |
 | `userid`     | `number \| undefined`  | In-game user id (the slot index is `userid & 0xff`) |
-| `fakeplayer` | `boolean \| undefined` | `true` for bots                                     |
+| `fakeplayer` | `boolean \| undefined` | `true` for fake clients, including bots and TV       |
 | `ishltv`     | `boolean \| undefined` | `true` for the HLTV/GOTV observer slot              |
 
-`parser.players` is populated from `createstringtable` / `updatestringtable` events as soon as the userinfo table arrives, so it's usable inside `'end'` and also during parsing (e.g. once the first `round_start` fires).
+`parser.players` is populated from `createstringtable` / `updatestringtable` events as soon as the userinfo table arrives, and cleared by `clearallstringtables`. It is usable inside `'end'` and during parsing (e.g. once the first `round_start` fires).
+
+For per-recording statistics, track the full `userid`, not just the slot: a new connection can reuse a slot. Do not use bot names or Steam IDs as unique keys. Helpers expose live state and can be recreated by full snapshots, so copy values when recording history instead of using `Player` object identity as a persistent key.
 
 #### Looking up players during a game event
 
-Game events like `player_death` expose `userid` / `attacker` / `assister` fields which are slot indices into `parser.players`. You can index the array directly to pull out the corresponding `CMsgPlayerInfo` — no entity parsing required.
+Game events like `player_death` expose `userid` / `attacker` / `assister` fields whose low byte identifies a slot in `parser.players`; `0xff` means no player. You can use these to look up `CMsgPlayerInfo` without entity parsing.
 
 ```ts
 const parser = new DemoReader();
 
 parser.gameEvents.on('player_death', event => {
-	const attacker = parser.players[event.attacker];
-	const victim = parser.players[event.userid];
-	const assister = parser.players[event.assister];
+	const attacker = parser.players[event.attacker & 0xff];
+	const victim = parser.players[event.userid & 0xff];
+	const assister = parser.players[event.assister & 0xff];
 
 	if (!attacker || !victim) return;
 
@@ -372,8 +374,11 @@ for (const player of parser.playerControllers) {
 Several `DemoReader` methods resolve a `Player` helper from different identifiers. All require `EntityMode.ALL`.
 
 ```ts
-// By controller entity ID (e.g. from event.userid_pawn lookups or parser.entities)
-const p1 = parser.getPlayer(88);
+// By controller entity ID (pawn handles identify a different entity)
+const p1 = parser.getPlayer(1);
+
+// By zero-based player slot, including humans, bots, and TV
+const samePlayer = parser.getPlayerBySlot(0);
 
 // From a CMsgPlayerInfo (e.g. an element of parser.players)
 const p2 = parser.getPlayerByInfo(parser.players[0]);
@@ -383,7 +388,21 @@ const p2 = parser.getPlayerByInfo(parser.players[0]);
 const p3 = parser.getByAccountId(918429678);
 ```
 
-`getPlayerByInfo` returns `null` for bots (they share `steamid === '0'` so cannot be uniquely matched), for disconnected players, and before a controller has been assigned. `getByAccountId` is O(1) on cached entries, with a linear-scan fallback.
+`getPlayerBySlot` and `getPlayerByInfo` use direct slot lookups for humans, bots, and TV. `getPlayerByInfo` checks the full `userid` against the current roster and returns `null` for stale entries or missing controllers. Inputs containing only a Steam ID retain the Steam ID scan. `getByAccountId` returns `null` for zero, which cannot distinguish bots or TV; other IDs use a cache with a linear-scan fallback.
+
+Game-event annotations (`player`, `attackerPlayer`, `assisterPlayer`) use the same slot mapping. A pawn reference can point at a previous pawn, for example when grenade damage continues after a respawn; it does not override the player identity.
+
+### Bot analysis
+
+```powershell
+bun scripts/analyze-players.ts "C:\steamcmd\bot_gameplay.dem"
+```
+
+The script reports human and bot scores, event K/D/A, damage, shots, headshots, position, aim angles, command counts, and annotation coverage. It enables `EntityMode.ALL`; optional messages still require a listener.
+
+Bot input commands may not be present in a recording. In this fixture, all `usercommand` messages belong to the human player. Bot movement and aim remain available through pawn properties, while `GE_FireBulletsId` messages provide shot origin, angles, recoil, spread, and inaccuracy. Subscribe to that message and resolve `message.player` through `parser.getPawn(message.player & 0x7ff)?.controller` when the field is defined. These are shot observations, not a reconstruction of missing bot inputs.
+
+Helper defaults such as `0` or `false` can also mean a property has not arrived. Inspect raw `player.entity?.properties` or `player.pawn?.entity?.properties` when distinguishing missing data from a measured zero matters.
 
 ### Player Helper
 
@@ -394,10 +413,13 @@ The `Player` class wraps a `CCSPlayerController` entity. It links to the player'
 | Property      | Type                                              | Source                               |
 | ------------- | ------------------------------------------------- | ------------------------------------ |
 | `entityId`    | `number` (readonly)                               | Controller entity index              |
+| `userSlot`    | `number`                                          | Zero-based player slot               |
 | `entity`      | `TypedEntity<'CCSPlayerController'> \| undefined` | Raw controller entity                |
 | `name`        | `string`                                          | Controller                           |
 | `steamId`     | `string`                                          | Controller (empty if not yet set)    |
 | `isConnected` | `boolean`                                         | Controller (`m_iConnected === 0`)    |
+| `isBot`       | `boolean`                                         | Userinfo `fakeplayer`, excluding TV; false if unknown |
+| `isHLTV`      | `boolean`                                         | Userinfo `ishltv`; false if unknown   |
 | `clanTag`     | `string`                                          | Controller                           |
 | `color`       | `number`                                          | Comp teammate color (`-1` if unset)  |
 | `userInfo`    | `CMsgPlayerInfo \| null`                          | Matching entry from `parser.players` |

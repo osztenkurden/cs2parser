@@ -28,10 +28,22 @@ export class Player extends EntityHelper<'CCSPlayerController'> {
 	}
 
 	get userInfo(): CMsgPlayerInfo | null {
-		for (const info of this._parser.players) {
-			if (info && String(info.steamid) === this.steamId) return info;
-		}
-		return null;
+		return this._parser.players[this.userSlot] ?? null;
+	}
+
+	/** Zero-based player slot; the full connection userid lives in userInfo. */
+	get userSlot(): number {
+		return this.entityId - 1;
+	}
+
+	/** False when userinfo is unavailable. TV observers are not gameplay bots. */
+	get isBot(): boolean {
+		const info = this.userInfo;
+		return info?.fakeplayer === true && !info.ishltv;
+	}
+
+	get isHLTV(): boolean {
+		return this.userInfo?.ishltv === true;
 	}
 
 	// --- Team ---

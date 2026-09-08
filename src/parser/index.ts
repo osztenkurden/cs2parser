@@ -121,6 +121,12 @@ export class DemoReader extends EventEmitter<
 		return null;
 	}
 
+	/** Get a human, bot, or TV controller by zero-based player slot. Requires EntityMode.ALL. */
+	getPlayerBySlot(slot: number): Player | null {
+		if (!Number.isInteger(slot) || slot < 0 || slot >= 0xff) return null;
+		return this.getPlayer(slot + 1);
+	}
+
 	getPawn(entityId: number): PlayerPawn | null {
 		const e = this.entities[entityId];
 		if (e && e.className === 'CCSPlayerPawn') {
@@ -164,18 +170,21 @@ export class DemoReader extends EventEmitter<
 
 	/**
 	 * Get a Player helper for a given CMsgPlayerInfo (e.g. an element from `parser.players`).
-	 * Matches by steamid against CCSPlayerController.m_steamID. Requires EntityMode.ALL.
-	 *
-	 * Returns null if:
-	 *   - info is null/undefined or has no steamid
-	 *   - info is a bot (steamid === '0') — bots share steamid '0' and cannot be uniquely matched
-	 *   - the player has not yet been assigned a controller entity
-	 *   - the player has disconnected and the controller has been removed
+	 * Uses the player slot and verifies the full userid against the current roster, so
+	 * an old entry cannot resolve to a replacement connection. Supports bots and TV.
+	 * SteamID-only inputs retain the SteamID scan fallback. Requires EntityMode.ALL.
 	 */
 	getPlayerByInfo(info: CMsgPlayerInfo | null | undefined): Player | null {
-		if (!info || info.steamid === undefined) return null;
+		if (!info) return null;
+		if (info.userid !== undefined) {
+			if (!Number.isInteger(info.userid) || info.userid < 0) return null;
+			const slot = info.userid & 0xff;
+			if (this._playerInfoMap[slot]?.userid !== info.userid) return null;
+			return this.getPlayerBySlot(slot);
+		}
+		if (info.steamid === undefined) return null;
 		const target = String(info.steamid);
-		if (target === '0') return null; // bots share steamid '0' — ambiguous
+		if (target === '0') return null;
 		for (let i = 0; i < this.entities.length; i++) {
 			const e = this.entities[i];
 			if (!e || e.className !== 'CCSPlayerController') continue;
@@ -194,6 +203,8 @@ export class DemoReader extends EventEmitter<
 	 * controllers whose `m_steamID` was set after entity creation.
 	 */
 	getByAccountId(accountId: number): Player | null {
+		// Zero is shared by bots and TV; it cannot identify a player.
+		if (!Number.isInteger(accountId) || accountId <= 0 || accountId > 0xffffffff) return null;
 		// Fast path: cached entityId. Validate against the live entity in case the slot
 		// was deleted, reused, or the controller's steamID changed.
 		const cached = this._accountIdToEntityId.get(accountId);
@@ -216,6 +227,7 @@ export class DemoReader extends EventEmitter<
 			const raw = (e.properties as Partial<ICCSPlayerController>)['CCSPlayerController.m_steamID'];
 			if (raw === undefined) continue;
 			const id = steamIdToAccountId(raw);
+			if (id === 0) continue;
 			this._accountIdToEntityId.set(id, i);
 			if (id === accountId) {
 				return this._getOrCreate(this._playerCache, i, id => new Player(this, id));
@@ -307,15 +319,19 @@ export class DemoReader extends EventEmitter<
 			if (!table) return;
 
 			for (const player of table.players) {
-				this._playerInfoMap[player.userid! & 255] = player;
+				if (player.userid === undefined || player.userid < 0 || (player.userid & 255) === 255) continue;
+				this._playerInfoMap[player.userid & 255] = player;
 			}
 		});
 		this.on('updatestringtable', update => {
 			if (!update) return;
 			for (const player of update.players) {
-				if (player.userid === undefined) continue;
+				if (player.userid === undefined || player.userid < 0 || (player.userid & 255) === 255) continue;
 				this._playerInfoMap[player.userid & 255] = player;
 			}
+		});
+		this.on('clearallstringtables', () => {
+			this._playerInfoMap.length = 0;
 		});
 
 		this.on('entitycreated', ([entityId, classId, entityType, className]) => {
