@@ -110,15 +110,24 @@ await parser.parseDemo(buffer, { entities: EntityMode.ALL });
 
 ### Parse Settings
 
-Additional options can be passed to `parseDemo` to enable extra data:
+Network messages are decoded when something is listening for them, so most of the
+time there is nothing to configure — see [Network Messages](#network-messages).
 
-| Option     | Type      | Default | Description                                         |
-| ---------- | --------- | ------- | --------------------------------------------------- |
-| `messages` | `boolean` | `false` | Emit `svc_UserMessage` events                       |
-| `commands` | `boolean` | `false` | Emit `usercommand` events (decoded `CSGOUserCmdPB`) |
+`parseDemo` also accepts one optional boolean per message name, for the two cases
+subscription can't express:
+
+| Option             | Effect                                            |
+| ------------------ | ------------------------------------------------- |
+| `<message>: true`  | Decode the message even with no listener attached |
+| `<message>: false` | Skip the message even if a listener is attached   |
 
 ```ts
-await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, commands: true, messages: true });
+// Usually all you need:
+parser.on('svc_VoiceData', data => {});
+await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
+
+// Force a message off for one parse, even though something is listening:
+await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, svc_UserCmds: false });
 ```
 
 ## HTTP Broadcast (live GOTV)
@@ -712,12 +721,141 @@ parser.on('entitydeleted', entityId => {});
 parser.on('gameeventlist', list => {});
 parser.on('gameevent', event => {});
 
-// Opt-in network messages
-parser.on('svc_UserMessage', msg => {}); // requires { messages: true }
-parser.on('usercommand', cmd => {}); // requires { commands: true }
+// Network messages — see below
+parser.on('svc_UserCmds', cmd => {});
+parser.on('anymessage', ({ name, id, bytes }) => {});
 ```
 
-Any message key from `SVC_Messages` / `ECstrike15UserMessages` can be opted-in through `parseDemo` settings and listened to by name — `messages: true` and `commands: true` shown above are the most common.
+## Network Messages
+
+Every message that can appear in a `DEM_Packet` is listenable by its protobuf enum
+name. The table is [generated](#proto-generation) from the message enums, so it
+covers all of `NET_Messages`, `SVC_Messages`, `EBaseUserMessages`,
+`EBaseEntityMessages`, `EBaseGameEvents`, `ECstrike15UserMessages`,
+`ETEProtobufIds` and `ECsgoGameEvents` — 213 messages.
+
+Attaching a listener is all it takes. The message is decoded only while something
+is listening, so subscribing to a rare message costs nothing on demos that don't
+contain it, and a listener attached mid-parse takes effect from the next packet.
+
+```ts
+// Per-shot ground truth — origin, angles, weapon, seed, recoil index
+parser.on('GE_FireBulletsId', shot => {
+	console.log(shot.origin, shot.angles, shot.recoil_index);
+});
+
+// Chat. CS2 uses both, depending on the server.
+parser.on('UM_SayText', e => console.log(e.text));
+parser.on('UM_SayText2', e => console.log(e.param2));
+
+// Server tick and frame timing, once per packet
+parser.on('net_Tick', t => {});
+
+// End-of-match scoreboard, straight from the server
+parser.on('CS_UM_EndOfMatchAllPlayersData', data => {});
+```
+
+Payload types come from the generated protobuf definitions, so `shot.recoil_index`
+autocompletes and `parser.on('not_a_message', …)` is a compile error.
+
+### Messages with a dedicated event
+
+Seven messages are decoded by the parser itself and surfaced through a
+purpose-built event instead of by name:
+
+| Message                         | Event                                               |
+| ------------------------------- | --------------------------------------------------- |
+| `svc_ServerInfo`                | `serverinfo`                                        |
+| `svc_CreateStringTable`         | `createstringtable`                                 |
+| `svc_UpdateStringTable`         | `updatestringtable`                                 |
+| `svc_ClearAllStringTables`      | `clearallstringtables`                              |
+| `svc_PacketEntities`            | `entitycreated` / `entityupdated` / `entitydeleted` |
+| `GE_Source1LegacyGameEventList` | `gameeventlist`                                     |
+| `GE_Source1LegacyGameEvent`     | `gameevent` (prefer `parser.gameEvents`)            |
+
+### User commands
+
+`usercommand` fires once per player command in `svc_UserCmds`, with the payload
+fully reconstructed:
+
+```ts
+parser.on('usercommand', ({ playerSlot, cmd, isDelta }) => {
+	const base = cmd?.base;
+	if (!base) return;
+	console.log(playerSlot, base.viewangles, base.buttons_pb, base.subtick_moves);
+});
+```
+
+| Field                | Meaning                                                       |
+| -------------------- | ------------------------------------------------------------- |
+| `cmd`                | The resolved `CSGOUserCmdPB`; null if it could not be rebuilt |
+| `isDelta`            | Whether it arrived as a delta rather than a full payload      |
+| `deltaData`          | The raw delta bytes, for callers who want them                |
+| `playerSlot`         | Userinfo slot                                                 |
+| `cmdNumber`          | Client-side sequence number                                   |
+| `clientTick`         | Tick the client produced the command on                       |
+| `serverTickExecuted` | Tick the server executed it on                                |
+
+Buttons, view angles, movement and subtick moves live under `cmd.base`; per-frame
+aim history is in `cmd.input_history`.
+
+This is the largest payload in a demo — 127 MB and 1.24 M commands in a 20-round
+match — and it is decoded only while something is listening.
+
+#### Delta encoding
+
+CS2 sends almost every advancing command as a delta against the player's previous
+one: in that same match, 1,234,273 of 1,235,910 commands, carrying 104 MB of the
+127 MB total. The parser tracks each player's running command and applies deltas
+automatically, so `cmd` is the complete command either way.
+
+The encoding is not protobuf, despite looking like it. Fields can arrive with wire
+type 7 meaning "reset to the declared default", and repeated fields use list
+opcodes that resize and patch the previous command's list in place. Handing these
+bytes to a stock protobuf decoder throws on about half of them and quietly
+produces wrong buttons and view angles on the rest.
+
+A command that cannot be resolved yields `cmd: null` and invalidates that player's
+delta chain. Subsequent deltas remain null until a full command supplies a new
+baseline. Removing the `usercommand` listener while parsing also invalidates the
+baseline, so reattaching it may require waiting for the next full command. The
+parser reports reconstruction failures on `debug` when the demo completes.
+
+### Discovering messages
+
+`anymessage` fires for every non-core message with its undecoded body, including
+ids the registry doesn't know — useful after a game update introduces a message
+the bundled protos predate.
+
+```ts
+const seen = new Map<number, string>();
+parser.on('anymessage', ({ id, name, bytes }) => {
+	seen.set(id, name ?? `unknown(${id}) ${bytes.length}B`);
+});
+```
+
+`DemoReader.messageNames` lists every subscribable name, `DemoReader.messageId(name)`
+gives its wire id, and `DemoReader.isMessageName(name)` narrows a string to a
+subscribable name. Core messages still have wire IDs but return false from
+`isMessageName`, because they use the dedicated events listed above.
+
+Run `bun scripts/probe-message-histogram.ts <demo.dem>` to see which messages a
+given demo actually contains, with counts and byte totals.
+
+### Demo frame commands
+
+Other demo frames can be subscribed to by name, such as `DEM_CustomData`,
+`DEM_StringTables`, and `DEM_FileInfo`. Their byte payloads are safe to retain.
+
+```ts
+parser.on('DEM_FileInfo', info => console.log(info.playback_time, info.playback_ticks));
+// Or read the file-info trailer without parsing the demo:
+const info = DemoReader.parseFileInfo('demo.dem');
+```
+
+Listening for `DEM_FileInfo` or `DEM_SpawnGroups` reads past `DEM_Stop` through
+the trailer; streams wait for EOF. An absent or truncated trailer does not make
+the gameplay portion of the demo incomplete.
 
 ## Type Generation
 
@@ -736,19 +874,39 @@ Fetch proto definitions from [SteamTracking/GameTracking-CS2](https://github.com
 bun scripts/generate-protos.ts
 ```
 
+Then rebuild the network-message registry from the regenerated enums. It reports
+any enum member it can't resolve to a protobuf class, so new messages surface
+instead of being silently skipped:
+
+```bash
+bun run generate:messages         # writes src/parser/descriptors/generated/
+bun run generate:messages:check   # CI: fail if the committed file is stale
+```
+
+The user-command delta decoder has its own generated table, derived from the
+messages Valve marks with `option (codegen_delta_encoder)`:
+
+```bash
+bun run generate:delta-schema
+bun run generate:delta-schema:check
+```
+
+`npm run build` runs both `:check` variants, so a stale generated file cannot be
+published. `bun run generate` regenerates everything in order.
+
 ## Performance
 
-CPU: Apple M1
+CPU: Intel(R) Core(TM) Ultra 9 275HX
 
-Demo: `demo.dem` (318 MB, 136,812 ticks)
+Demo: `NEWEST.dem` (210 MB, 124,341 ticks)
 
 ## Entity Mode Comparison
 
 | Mode                         | Throughput | Time | RSS   | Heap | Entities |
 | ---------------------------- | ---------- | ---- | ----- | ---- | -------- |
-| `EntityMode.NONE`            | 527.8 MB/s | 0.6s | 133MB | 30MB | 0        |
-| `EntityMode.ONLY_GAME_RULES` | 138.9 MB/s | 2.3s | 175MB | 32MB | 1        |
-| `EntityMode.ALL`             | 120.8 MB/s | 2.6s | 177MB | 32MB | 248      |
+| `EntityMode.NONE`            | 312.6 MB/s | 0.7s | 139MB | 33MB | 0        |
+| `EntityMode.ONLY_GAME_RULES` | 81.2 MB/s  | 2.6s | 157MB | 19MB | 1        |
+| `EntityMode.ALL`             | 60.9 MB/s  | 3.4s | 164MB | 17MB | 617      |
 
 `ONLY_GAME_RULES` parses entities but only stores game rules — enables synthetic `round_start`/`round_end` events without full entity tracking overhead.
 
@@ -756,10 +914,10 @@ Demo: `demo.dem` (318 MB, 136,812 ticks)
 
 | Method                             | Throughput | Time | RSS   | Heap  |
 | ---------------------------------- | ---------- | ---- | ----- | ----- |
-| `parseDemo(path)`                  | 119.2 MB/s | 2.7s | 144MB | 37MB  |
-| `parseDemo(path, {stream: false})` | 122.1 MB/s | 2.6s | 150MB | 38MB  |
-| `parseDemo(buffer)`                | 119.2 MB/s | 2.7s | 488MB | 702MB |
-| `parseDemo(stream)`                | 122.8 MB/s | 2.6s | 137MB | 15MB  |
+| `parseDemo(path)`                  | 60.8 MB/s  | 3.5s | 164MB | 18MB  |
+| `parseDemo(path, {stream: false})` | 66.3 MB/s  | 3.2s | 166MB | 37MB  |
+| `parseDemo(buffer)`                | 64.8 MB/s  | 3.2s | 408MB | 460MB |
+| `parseDemo(stream)`                | 61.5 MB/s  | 3.4s | 161MB | 17MB  |
 
 ## Examples
 

@@ -225,6 +225,47 @@ export class HttpBroadcastReader {
 		if (!fullBytes) return;
 
 		if (await this._processFragment(fullBytes, 0, 'full', sync.fragment)) return;
+
+		// `{N}/full` is a keyframe at fragment N's *first* tick; fragment N's own
+		// `{N}/delta` carries that fragment's ticks, and `{N+1}/delta` starts one
+		// keyframe interval later. Going straight from the keyframe to `{N+1}/delta`
+		// therefore drops a whole fragment — measured against a live relay:
+		// full(6) = tick 1314, delta(6) = 1314..1505, delta(7) = 1506..1697.
+		await this._fetchInitialDelta(sync.fragment);
+	}
+
+	/**
+	 * Fetch the starting fragment's own `/delta`, the one between the keyframe and
+	 * the poll loop.
+	 *
+	 * A single attempt, unlike the retrying `/full` and `/delta` fetches: a relay
+	 * only advertises fragment N in `/sync` once it holds both of N's blobs, so a
+	 * miss here means a relay that doesn't serve them rather than a fragment worth
+	 * waiting for. Log it and start from the keyframe instead of failing the connect.
+	 */
+	private async _fetchInitialDelta(fragment: number): Promise<void> {
+		let result: FetchResult;
+		try {
+			result = await this.fetcher.bytes(`${this._prefix}${fragment}/delta`, this.abortController.signal);
+		} catch (e) {
+			if (this._isAbortError(e) || this.abortController.signal.aborted) {
+				this._terminate('cancelled');
+				return;
+			}
+			this._terminate('error', e);
+			return;
+		}
+
+		if (!result.ok) {
+			this.parser.emit(
+				'debug',
+				`broadcast: ${fragment}/delta unavailable (HTTP ${result.status}); starting from the keyframe, ` +
+					`the first keyframe interval of ticks will be missing`
+			);
+			return;
+		}
+
+		await this._processFragment(result.data, 0, 'delta', fragment);
 	}
 
 	/** @returns true if cancelled (and sets terminus accordingly). */

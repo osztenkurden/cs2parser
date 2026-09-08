@@ -1,55 +1,30 @@
-import {
-	CCSUsrMsg_ServerRankRevealAll,
-	CCSUsrMsg_ServerRankUpdate,
-	ECstrike15UserMessages
-} from '../../ts-proto/cstrike15_usermessages.js';
-import {
-	CSVCMsg_ClearAllStringTables,
-	CSVCMsg_CreateStringTable,
-	// CSVCMsg_FlattenedSerializer,
-	CSVCMsg_PacketEntities,
-	CSVCMsg_ServerInfo,
-	CSVCMsg_UpdateStringTable,
-	CSVCMsg_UserCommands,
-	CSVCMsg_UserMessage,
-	CSVCMsg_VoiceData,
-	SVC_Messages
-} from '../../ts-proto/netmessages.js';
-import { CUserMessageSayText2, EBaseUserMessages } from '../../ts-proto/usermessages.js';
-import { CNETMsg_SetConVar, NET_Messages } from '../../ts-proto/networkbasetypes.js';
-import type { OptionalMessagesId, RevertKeysAndValues } from '../entities/types.js';
+import { messageRegistry, type NetMessageName } from './generated/messageRegistry.js';
 
-//import ImportedCLCMessages = ;
+/**
+ * Messages the parser decodes itself and surfaces through a dedicated event.
+ *
+ * Everything else in the registry is an on-demand event named after its protobuf
+ * enum member — see {@link onDemandMessageNames}. These are excluded because they
+ * already have a first-class surface, and because some of them (svc_PacketEntities
+ * in particular) decode into buffers the parser recycles at the end of the packet,
+ * so handing the raw message to a listener would hand out a dangling view.
+ */
+export const CORE_HANDLED = {
+	svc_ServerInfo: 'serverinfo',
+	svc_CreateStringTable: 'createstringtable',
+	svc_UpdateStringTable: 'updatestringtable',
+	svc_ClearAllStringTables: 'clearallstringtables',
+	svc_PacketEntities: 'entitycreated / entityupdated / entitydeleted',
+	GE_Source1LegacyGameEventList: 'gameeventlist',
+	GE_Source1LegacyGameEvent: 'gameevent'
+} as const satisfies Partial<Record<NetMessageName, string>>;
 
-export const svcMessages = {
-	[SVC_Messages.svc_PacketEntities]: CSVCMsg_PacketEntities,
-	[SVC_Messages.svc_ServerInfo]: CSVCMsg_ServerInfo,
-	[SVC_Messages.svc_CreateStringTable]: CSVCMsg_CreateStringTable,
-	[SVC_Messages.svc_UpdateStringTable]: CSVCMsg_UpdateStringTable,
-	[SVC_Messages.svc_ClearAllStringTables]: CSVCMsg_ClearAllStringTables
-} as const;
+/** Message names that carry a dedicated event instead of an on-demand one. */
+export type CoreHandledName = keyof typeof CORE_HANDLED;
 
-export const optionalSvcMessages = {
-	[SVC_Messages.svc_VoiceData]: CSVCMsg_VoiceData,
-	[ECstrike15UserMessages.CS_UM_ServerRankRevealAll]: CCSUsrMsg_ServerRankRevealAll,
-	[ECstrike15UserMessages.CS_UM_ServerRankUpdate]: CCSUsrMsg_ServerRankUpdate,
-	[EBaseUserMessages.UM_SayText2]: CUserMessageSayText2,
-	[SVC_Messages.svc_UserCmds]: CSVCMsg_UserCommands,
-	[SVC_Messages.svc_UserMessage]: CSVCMsg_UserMessage,
-	// NET-layer message: the server's replicated convars (game_type, game_mode, mp_*, …). Sent in
-	// the signon stream and on change. Opt in with `{ net_SetConVar: true }`; listen on 'net_SetConVar'.
-	[NET_Messages.net_SetConVar]: CNETMsg_SetConVar
-} as const;
-
-type svcIdToName = RevertKeysAndValues<OptionalMessagesId>;
-type OptionalSvcIdToName = { [K in keyof typeof optionalSvcMessages]: svcIdToName[K] };
-
-export const optionalSvcIds: OptionalSvcIdToName = Object.entries({
-	...SVC_Messages,
-	...ECstrike15UserMessages,
-	...EBaseUserMessages,
-	...NET_Messages
-}).reduce(
-	(prev, curr) => (curr[1] in optionalSvcMessages ? { ...prev, [curr[1]]: curr[0] } : prev),
-	{} as OptionalSvcIdToName
+export const CORE_HANDLED_IDS: ReadonlySet<number> = new Set(
+	(Object.keys(CORE_HANDLED) as CoreHandledName[]).map(name => messageRegistry[name].id)
 );
+
+/** Every message that can be subscribed to by name. */
+export type OnDemandMessageName = Exclude<NetMessageName, CoreHandledName>;

@@ -228,13 +228,16 @@ export class EntityParser {
 	public directEntities:
 		| { className: string; classId: number; entityType: number; properties: Record<string, unknown> }[]
 		| null = null;
-	public directPropIdToName: Record<number, string> | null = null;
-	public directPropIdToInfo: Record<number, PropInfo> | null = null;
+	/** Property metadata indexed by prop id for direct entity updates. */
+	public directPropInfoById: (PropInfo | undefined)[] | null = null;
 	public onlyGameRules = false;
+	/** Width of the class-id field on entity creation. See `classIdBitWidth` in classInfo.ts. */
+	private readonly classIdBits: number;
 	constructor(
 		private classInfo: ClassInfo,
 		private enqueueEvent: emit
 	) {
+		this.classIdBits = classInfo.classIdBits;
 		const paths = [] as FieldPath[];
 		for (let i = 0; i < 8192; i++) {
 			paths.push({
@@ -261,12 +264,12 @@ export class EntityParser {
 		const serializer = cls.serializer;
 		const paths = this.paths;
 		const directEntities = this.directEntities;
-		const directPropIdToInfo = this.directPropIdToInfo;
 		// Hoist per-entity lookups outside the hot loop: entityId is constant for this
 		// call, so directEntities[entityId] cannot change between iterations.
 		const ent = directEntities ? directEntities[entityId] : null;
 		const entProps = ent ? ent.properties : null;
-		const classPropIdToName = this.classInfo.propIdToName;
+		const propNameById = this.classInfo.propNameById;
+		const propInfoById = this.directPropInfoById;
 		const emitEntityUpdates = !directEntities; // emit only when no direct-write target
 
 		let i = 0;
@@ -277,11 +280,11 @@ export class EntityParser {
 			const result = constructorFieldHelper.decode(reader, info.decoder);
 			if (info.hasInfo) {
 				if (entProps) {
-					const meta = directPropIdToInfo![info.propId];
+					const meta = propInfoById![info.propId];
 					if (meta !== undefined) {
 						applyPropUpdate(entProps, meta, result, info.arrayIndex, info.isResize);
 					}
-				} else if (emitEntityUpdates && classPropIdToName[info.propId] !== undefined) {
+				} else if (emitEntityUpdates && propNameById[info.propId] !== undefined) {
 					this.enqueueEvent('entityupdated', {
 						entityId,
 						propId: info.propId,
@@ -320,7 +323,7 @@ export class EntityParser {
 	}
 
 	createEntity = (reader: BitBuffer, entityId: number, baselines: Uint8Array[]) => {
-		const classId = reader.ReadUBits(8);
+		const classId = reader.ReadUBits(this.classIdBits);
 
 		//serial
 		reader.ReadUBits(NSERIALBITS);

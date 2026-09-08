@@ -91,15 +91,31 @@ function buildLUT(node: TreeNode, code: number, depth: number) {
 }
 buildLUT(huffmanTree, 0, 0);
 
+/**
+ * Scratch field path, reused across calls.
+ *
+ * `parsePaths` runs once per entity update — millions of times on a full demo —
+ * and used to allocate a fresh object with a 7-element array literal each time.
+ * The value never escapes: `writeFp` copies it into the parser's own path table
+ * before the next iteration overwrites it.
+ */
+const scratchPath: FieldPath = { path: [-1, 0, 0, 0, 0, 0, 0], last: 0 };
+
 export const parsePaths = (reader: BitBuffer, entityParser: EntityParser) => {
-	const fieldPath: FieldPath = {
-		path: [-1, 0, 0, 0, 0, 0, 0],
-		last: 0
-	};
+	const fieldPath = scratchPath;
+	const p = fieldPath.path;
+	p[0] = -1;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	fieldPath.last = 0;
 	let idx = 0;
 
 	while (true) {
-		const peeked = reader.PeekUBitsWithLog(HUFFMAN_CODE_MAXLEN);
+		const peeked = reader.peekHuffmanCode();
 		const symbol = huffmanSymbol[peeked]!;
 		const codeLen = huffmanLength[peeked]!;
 		reader.consumePeeked(codeLen);

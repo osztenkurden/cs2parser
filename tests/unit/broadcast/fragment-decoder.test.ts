@@ -137,6 +137,21 @@ describe('ParseSession.pushBroadcastFragment', () => {
 		expect(events.filter(e => e[0] === 'tickstart').length).toBe(1);
 	});
 
+	test('reports a skipped command once, not per frame', () => {
+		const { session, events } = makeSession();
+		const frag = buildFragment([
+			{ cmd: 200, tick: 1, payload: new Uint8Array([0xaa, 0xbb]) },
+			{ cmd: 200, tick: 2, payload: new Uint8Array([0xcc]) },
+			{ cmd: 201, tick: 3, payload: new Uint8Array([0xdd]) }
+		]);
+		session.pushBroadcastFragment(frag, 0);
+		// 200 and 201 both carry DEM_IsCompressed (64), so they mask down to 136/137.
+		const debugs = events.filter(e => e[0] === 'debug').map(e => String(e[1]));
+		expect(debugs.filter(d => d.includes('frame command 136')).length).toBe(1);
+		expect(debugs.filter(d => d.includes('frame command 137')).length).toBe(1);
+		expect(debugs.find(d => d.includes('frame command 136'))).toContain('raw 200');
+	});
+
 	test('processes multiple commands in sequence', () => {
 		const { session, events } = makeSession();
 		const frag = buildFragment([

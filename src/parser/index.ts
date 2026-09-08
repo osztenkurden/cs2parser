@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { type CDemoFileHeader, EDemoCommands } from '../ts-proto/demo.js';
+import { type CDemoFileHeader, type CDemoFileInfo, EDemoCommands } from '../ts-proto/demo.js';
 import { decoders } from './descriptors/decoders.js';
 import { BitBuffer } from './ubitreader.js';
 import { GameEvents } from './descriptors/gameEventEmitter.js';
@@ -18,8 +18,13 @@ import { isEntityClass } from '../generated/entityTypes.js';
 import EventEmitter from 'events';
 import { PlayerPawn } from '../helpers/playerPawn.js';
 import { SmokeHelper } from '../helpers/smoke.js';
-import { SVC_Messages } from '../ts-proto/netmessages.js';
-import { messages } from './descriptors/index.js';
+import { CSVCMsg_ServerInfo, SVC_Messages } from '../ts-proto/netmessages.js';
+import {
+	messageRegistry,
+	onDemandMessageNames,
+	CORE_HANDLED_IDS,
+	type OnDemandMessageName
+} from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
 
 /** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
@@ -28,9 +33,17 @@ const steamIdToAccountId = (steamId: bigint | number): number => {
 	return Number(big & 0xffffffffn);
 };
 
-export class DemoReader extends EventEmitter<{
-	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
-}> {
+/** EventEmitter's own meta-events, which DemoReader subscribes to internally. */
+type EmitterMetaEvents = {
+	newListener: [eventName: string | symbol, listener: (...args: any[]) => void];
+	removeListener: [eventName: string | symbol, listener: (...args: any[]) => void];
+};
+
+export class DemoReader extends EventEmitter<
+	{
+		[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
+	} & EmitterMetaEvents
+> {
 	_parseStartTime = 0n;
 	header: CDemoFileHeader | null = null;
 	private _hasEnded = false;
@@ -51,6 +64,30 @@ export class DemoReader extends EventEmitter<{
 	private _accountIdToEntityId: Map<number, number> = new Map();
 
 	gameEvents = new GameEvents();
+
+	/**
+	 * Bumped whenever a listener is added or removed. The parse session watches it
+	 * to know when to recompute which network messages anyone is subscribed to, so
+	 * a listener attached mid-parse takes effect from the next packet.
+	 * @internal
+	 */
+	_listenerEpoch = 0;
+
+	/** Every network message that can be listened to by name. */
+	static readonly messageNames: readonly OnDemandMessageName[] = onDemandMessageNames;
+
+	/** Wire id for a network message name, or undefined if the name isn't a message. */
+	static messageId(name: string): number | undefined {
+		return (messageRegistry as Record<string, { id: number } | undefined>)[name]?.id;
+	}
+
+	/** True if `name` is a network message that can be subscribed to by name. */
+	static isMessageName(name: string): name is OnDemandMessageName {
+		return (
+			Object.hasOwn(messageRegistry, name) &&
+			!CORE_HANDLED_IDS.has(messageRegistry[name as keyof typeof messageRegistry].id)
+		);
+	}
 
 	get currentTime(): number {
 		return this.currentTick * this.tickInterval;
@@ -243,6 +280,15 @@ export class DemoReader extends EventEmitter<{
 	constructor() {
 		super();
 		this.entities = [];
+		// EventEmitter fires these for every add/remove, including listeners
+		// attached before the parse starts. Binding decode to subscriptions is
+		// what makes `on('svc_UserCmds', …)` work without a matching parse flag.
+		this.on('newListener', () => {
+			this._listenerEpoch++;
+		});
+		this.on('removeListener', () => {
+			this._listenerEpoch++;
+		});
 		this.gameEvents.listen(this);
 		this.on('end', () => {
 			this._hasEnded = true;
@@ -394,10 +440,60 @@ export class DemoReader extends EventEmitter<{
 					}
 					const serverInfo = Buffer.alloc(msgSize);
 					const slice = reader.readBytesToSlice(serverInfo, msgSize);
-					return messages[SVC_Messages.svc_ServerInfo].class.decode(slice);
+					return CSVCMsg_ServerInfo.decode(slice);
 				}
 			}
 			return null;
+		} finally {
+			fs.closeSync(fd);
+		}
+	};
+
+	/**
+	 * Read `CDemoFileInfo` — playback time, tick count and frame count — without
+	 * parsing the demo.
+	 *
+	 * CS2 writes this frame *after* `DEM_Stop`, at the little-endian uint32 offset
+	 * stored in bytes 8–11 of the 16-byte `PBDEMS2` header, so a normal parse never
+	 * reaches it. This seeks straight there and decodes the one frame.
+	 *
+	 * Returns null if the file has no trailer (an interrupted recording) or the
+	 * offset doesn't point at a `DEM_FileInfo` frame.
+	 *
+	 * @example
+	 * const info = DemoReader.parseFileInfo('demo.dem');
+	 * console.log(info?.playback_time, info?.playback_ticks);
+	 */
+	static parseFileInfo = (filePath: string): CDemoFileInfo | null => {
+		const fileSize = fs.statSync(filePath).size;
+		if (fileSize < 16) return null;
+
+		const fd = fs.openSync(filePath, 'r');
+		try {
+			const magic = Buffer.alloc(16);
+			fs.readSync(fd, magic, 0, 16, 0);
+			const fileInfoOffset = magic.readUInt32LE(8);
+			if (fileInfoOffset < 16 || fileInfoOffset >= fileSize) return null;
+
+			// Frame header is three uvarints, at most 5 bytes each.
+			const headerScratch = Buffer.alloc(Math.min(16, fileSize - fileInfoOffset));
+			fs.readSync(fd, headerScratch, 0, headerScratch.length, fileInfoOffset);
+			const headerReader = new BitBuffer(headerScratch);
+			const command = headerReader.ReadUVarInt32();
+			headerReader.ReadUVarInt32(); // tick
+			const size = headerReader.ReadUVarInt32();
+
+			if ((command & ~EDemoCommands.DEM_IsCompressed) !== EDemoCommands.DEM_FileInfo) return null;
+
+			const bodyOffset = fileInfoOffset + (headerScratch.length - headerReader.RemainingBytes);
+			if (bodyOffset + size > fileSize) return null;
+
+			const body = Buffer.alloc(size);
+			fs.readSync(fd, body, 0, size, bodyOffset);
+
+			const bytes =
+				(command & EDemoCommands.DEM_IsCompressed) !== 0 ? (snappy.uncompressSync(body) as Buffer) : body;
+			return decoders[EDemoCommands.DEM_FileInfo].decode(bytes);
 		} finally {
 			fs.closeSync(fd);
 		}
@@ -530,7 +626,13 @@ export class DemoReader extends EventEmitter<{
 			if (finished) return;
 			if (session) {
 				try {
-					session.processFrames();
+					const more = session.processFrames(true);
+					session.flush();
+					if (!more) {
+						finish();
+						resolve();
+						return;
+					}
 				} catch {}
 			}
 			finish();

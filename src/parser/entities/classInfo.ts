@@ -77,6 +77,22 @@ const verifySerializerName = (serializerName: string) => {
 	);
 };
 
+/**
+ * Bits used to encode a server-class id on entity creation.
+ *
+ * Source 2 sizes the field as `floor(log2(numClasses)) + 1` — the same formula
+ * demoinfocs-golang and DemoFile.Net derive from `svc_ServerInfo.max_classes`.
+ * We take the count from `CDemoClassInfo` instead, which is available exactly
+ * when the EntityParser is constructed and so has no message-ordering hazard.
+ *
+ * Hardcoding 8 bits (as this did until now) caps the parser at 255 classes;
+ * demos from servers that register extra networked classes cross that line and
+ * desync the bitstream on the first entity creation.
+ *
+ * `32 - Math.clz32(n)` is an exact integer form of `floor(log2(n)) + 1`.
+ */
+export const classIdBitWidth = (numClasses: number) => (numClasses < 1 ? 1 : 32 - Math.clz32(numClasses));
+
 export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDemoClassInfo) => {
 	if (!sendTables.data) {
 		throw 'NO SEND TABLES';
@@ -167,11 +183,22 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 		}
 	}
 
+	// Prop ids are handed out sequentially from 1000, so the same tables index
+	// cleanly as arrays. The hot decode loop reads them once per updated field;
+	// a packed array element read beats a numeric key on a dictionary-mode object.
+	const propInfoById: (PropInfo | undefined)[] = [];
+	for (const key in propIdToInfo) propInfoById[key as unknown as number] = propIdToInfo[key as unknown as number];
+	const propNameById: (string | undefined)[] = [];
+	for (const key in propIdToName) propNameById[key as unknown as number] = propIdToName[key as unknown as number];
+
 	return {
 		classes: classById,
+		classIdBits: classIdBitWidth(cDemoClassInfo.classes.length),
 		propIdToName,
 		propIdToDecoder,
-		propIdToInfo
+		propIdToInfo,
+		propInfoById,
+		propNameById
 	};
 };
 

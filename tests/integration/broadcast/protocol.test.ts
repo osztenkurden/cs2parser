@@ -37,6 +37,7 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 			bytes: {
 				'0/start': ok(syncFrag(0)),
 				'5/full': ok(syncFrag(100)),
+				'5/delta': ok(syncFrag(105)),
 				'6/delta': ok(syncFrag(110)),
 				'7/delta': ok(endFrag())
 			}
@@ -57,7 +58,63 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 		expect(terminus.reason).toBe('stop');
 		expect(syncEvents.length).toBe(1);
 		expect(reader.sync?.protocol).toBe(5);
-		expect(fetcher.calls.map(c => c.path)).toEqual(['sync', '0/start', '5/full', '6/delta', '7/delta']);
+		expect(fetcher.calls.map(c => c.path)).toEqual([
+			'sync',
+			'0/start',
+			'5/full',
+			'5/delta',
+			'6/delta',
+			'7/delta'
+		]);
+	});
+
+	test("fetches the starting fragment's own /delta, not just its keyframe", async () => {
+		// {N}/full is a keyframe at fragment N's first tick and {N}/delta carries that
+		// fragment's ticks, so jumping to {N+1}/delta would skip a whole keyframe interval.
+		const fetcher = new MockBroadcastFetcher({
+			sync: baseSync,
+			bytes: {
+				'0/start': ok(syncFrag(0)),
+				'5/full': ok(syncFrag(100)),
+				'5/delta': ok(syncFrag(105)),
+				'6/delta': ok(endFrag())
+			}
+		});
+		const parser = new DemoReader();
+		const ticks: number[] = [];
+		parser.on('tickstart', t => ticks.push(t));
+		const reader = new HttpBroadcastReader(parser, 'https://example.com/', { fetcher, deltaThrottle: 0 });
+
+		await reader.start();
+		expect(fetcher.calls.map(c => c.path)).toEqual(['sync', '0/start', '5/full', '5/delta']);
+		expect(ticks).toContain(105);
+
+		await reader.run();
+		expect(fetcher.calls.map(c => c.path)).toContain('6/delta');
+	});
+
+	test('a relay without {N}/delta still connects, with a debug note', async () => {
+		const fetcher = new MockBroadcastFetcher({
+			sync: baseSync,
+			bytes: {
+				'0/start': ok(syncFrag(0)),
+				'5/full': ok(syncFrag(100)),
+				'5/delta': notFound(),
+				'6/delta': ok(endFrag())
+			}
+		});
+		const parser = new DemoReader();
+		const debugs: string[] = [];
+		parser.on('debug', m => debugs.push(String(m)));
+		const reader = new HttpBroadcastReader(parser, 'https://example.com/', { fetcher, deltaThrottle: 0 });
+
+		await reader.start();
+		const terminus = await reader.run();
+
+		// One attempt only — no retry storm on a relay that simply doesn't serve it.
+		expect(fetcher.calls.filter(c => c.path === '5/delta').length).toBe(1);
+		expect(terminus.reason).toBe('stop');
+		expect(debugs.some(d => d.includes('5/delta unavailable'))).toBe(true);
 	});
 
 	test('protocol mismatch throws BroadcastProtocolError', async () => {
@@ -99,6 +156,7 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 			bytes: {
 				'0/start': ok(syncFrag(0)),
 				'5/full': ok(syncFrag(100)),
+				'5/delta': ok(syncFrag(105)),
 				'6/delta': () => {
 					attempts++;
 					if (attempts < 3) return notFound();
@@ -272,6 +330,7 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 			bytes: {
 				'0/start': ok(syncFrag(0)),
 				'5/full': ok(syncFrag(100)),
+				'5/delta': ok(syncFrag(105)),
 				'6/delta': ok(endFrag())
 			}
 		});

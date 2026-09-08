@@ -46,6 +46,7 @@ describe('HttpBroadcastReader (throttle timing)', () => {
 			bytes: {
 				'0/start': ok(syncFrag(0)),
 				'5/full': ok(syncFrag(100)),
+				'5/delta': ok(syncFrag(105)),
 				'6/delta': slowDelta(syncFrag(110)),
 				'7/delta': slowDelta(syncFrag(120)),
 				'8/delta': slowDelta(syncFrag(130)),
