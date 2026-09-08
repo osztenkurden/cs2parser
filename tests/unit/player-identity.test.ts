@@ -1,3 +1,4 @@
+import { nativeSnappy } from '../../src/compression/native.js';
 import { describe, expect, test } from 'bun:test';
 import { DemoReader } from '../../src/index.js';
 import { annotateGameEvent } from '../../src/helpers/eventAnnotation.js';
@@ -19,7 +20,7 @@ function controller(reader: DemoReader, slot: number, steamId = 0n) {
 }
 
 function userinfo(reader: DemoReader, event: 'createstringtable' | 'updatestringtable', players: CMsgPlayerInfo[]) {
-	const table = parseStringTable(Buffer.alloc(0), 'userinfo', 0, false, 0, 0, false, []);
+	const table = parseStringTable(Buffer.alloc(0), 'userinfo', 0, false, 0, 0, false, [], nativeSnappy);
 	reader.emit(event, { ...table, players });
 }
 

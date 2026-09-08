@@ -7,7 +7,7 @@ if (!demoPath) {
 }
 
 const start = process.hrtime.bigint();
-const data = DemoReader.parseServerInfo(demoPath);
+const data = await DemoReader.parseServerInfo(demoPath);
 const end = process.hrtime.bigint();
 console.log(data);
 const time = Number((end-start))

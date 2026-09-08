@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import type { BaseDemoReader as DemoReader } from '../parser/base.js';
 import { ParseSession, type ParseSettings } from '../parser/entities/parseSession.js';
 import { EntityMode, type EndReason } from '../parser/entities/types.js';
 import { CMsgSource1LegacyGameEventList } from '../ts-proto/gameevents.js';
@@ -134,6 +134,8 @@ export class HttpBroadcastReader {
 	async start(): Promise<void> {
 		if (this._started) throw new Error('HttpBroadcastReader.start() already called');
 		this._started = true;
+		// Reserve the parser before I/O; a second reader must not terminate an active parse.
+		this.session = this.parser._attachBroadcastSession(this.opts);
 
 		// Wire cancellation sources here (not in constructor) so a reader that is
 		// constructed but never started doesn't anchor a listener on the parser.
@@ -173,18 +175,10 @@ export class HttpBroadcastReader {
 		this.parser.emit('broadcastsync', sync);
 		if (this._aborted()) return;
 
-		// Attach session — this also sets _directWriteMode and entityMode on the parser.
-		try {
-			this.session = this.parser._attachBroadcastSession(this.opts);
-		} catch (e) {
-			this._terminate('error', e);
-			throw e;
-		}
-
 		// Preload event descriptors before any fragment so `gameevent` payloads
 		// can resolve their names. Broadcasts seldom resend the descriptor list,
 		// so we either (a) use the caller-supplied descriptors, (b) fall back to
-		// the descriptor file bundled with the package, or (c) skip preload
+		// the descriptor data embedded in the package, or (c) skip preload
 		// entirely if the caller passed `false`.
 		try {
 			if (this.opts.gameEventDescriptors !== false) {

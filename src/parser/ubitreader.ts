@@ -22,7 +22,8 @@ export class BitBuffer {
 	public _buf = 0;
 	private _pointer: Uint8Array;
 	_byteOffset = 0;
-	private _uintbuffer: Buffer;
+	private _uintbuffer: Uint8Array;
+	private _uintbufferView: DataView;
 	private _bufArray: Uint8Array;
 	private _bufArrayView: DataView;
 	private _pointerView: DataView;
@@ -30,7 +31,8 @@ export class BitBuffer {
 	constructor(pointer: Uint8Array) {
 		this._pointer = pointer;
 		this._pointerView = new DataView(this._pointer.buffer);
-		this._uintbuffer = Buffer.alloc(8);
+		this._uintbuffer = new Uint8Array(8);
+		this._uintbufferView = new DataView(this._uintbuffer.buffer);
 		this._bufArray = new Uint8Array(4);
 		this._bufArrayView = new DataView(this._bufArray.buffer);
 		this.FetchNext();
@@ -226,7 +228,7 @@ export class BitBuffer {
 		}
 	}
 
-	readBytes = (outputBuffer: Buffer | Uint8Array<ArrayBuffer>) => {
+	readBytes = (outputBuffer: Uint8Array) => {
 		this._readBytesInto(outputBuffer, outputBuffer.length);
 	};
 
@@ -413,7 +415,7 @@ export class BitBuffer {
 	decudeUint64() {
 		const bytes = this._uintbuffer;
 		this.readBytes(bytes);
-		return bytes.readBigUInt64LE(0);
+		return this._uintbufferView.getBigUint64(0, true);
 	}
 	decode_noscale() {
 		return this.ReadUBits(32);

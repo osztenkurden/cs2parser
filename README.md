@@ -5,7 +5,7 @@
 
 # cs2parser
 
-A fast, typed CS2 demo parser for Node.js and Bun.
+A fast, typed CS2 demo parser for Node.js, Bun, and modern browsers.
 
 Parses `.dem` files and live HTTP GOTV broadcasts from Counter-Strike 2, providing typed access to entities, players, game events, and more.
 
@@ -40,12 +40,61 @@ parser.on('end', () => {
 await parser.parseDemo(createReadStream('path/to/demo.dem'), { entities: EntityMode.ALL });
 ```
 
+## Browser
+
+Use the dedicated `cs2parser/browser` export. It shares the parser, entity helpers, and events with the server export and uses an embedded WASM Snappy decoder. No Node globals, separate WASM assets, workers, or cross-origin isolation are required. Applications can also use this export inside their own module worker.
+
+```ts
+import { DemoReader, EntityMode } from 'cs2parser/browser';
+
+// file is a File from an <input type="file"> or drag-and-drop.
+const parser = new DemoReader();
+parser.gameEvents.on('player_death', event => console.log(event.weapon));
+parser.on('progress', bytesParsed => console.log(bytesParsed / file.size));
+const result = await parser.parseDemo(file.stream(), { entities: EntityMode.ALL });
+
+// Fetch a demo without buffering the whole response.
+const response = await fetch('/match.dem');
+if (!response.ok || !response.body) throw new Error('Unable to fetch demo');
+await new DemoReader().parseDemo(response.body);
+
+// Metadata reads use only the relevant File/Blob slices.
+const header = await DemoReader.parseHeader(file);
+const serverInfo = await DemoReader.parseServerInfo(file);
+const fileInfo = await DemoReader.parseFileInfo(file);
+```
+
+Browser `parseDemo` accepts `Uint8Array` and `ReadableStream<Uint8Array>`. Metadata helpers accept `Uint8Array` and `Blob` (including `File`). Filesystem paths, Node streams, and the `stream` option are available only from the server export.
+
+HTTP broadcasts use the same API: `await new DemoReader().parseHttpBroadcast(relayUrl)`. The relay must allow your page's origin through CORS, and HTTPS pages need an HTTPS relay.
+
+### WASM Snappy
+
+The browser parser reuses its decompression storage. Event byte payloads have their own storage and remain safe to retain. The decoder also supports caller-owned output for standalone raw Snappy blocks:
+
+```ts
+import { SnappyDecoder, snappyUncompressedLength } from 'cs2parser/browser';
+
+const decoder = new SnappyDecoder();
+const output = new Uint8Array(snappyUncompressedLength(compressed));
+const decoded = decoder.uncompress(compressed, output);
+// Reuse output on later calls when it is large enough. decoded is a view into output.
+```
+
+Omitting `output` allocates an owned result. Supplying an undersized buffer throws `RangeError`; malformed blocks throw an error. WASM memory grows as needed and is reused, with copies into WASM memory and into the destination. A restrictive Content Security Policy must [allow WebAssembly compilation](https://www.w3.org/TR/CSP3/#can-compile-wasm-bytes) (for example, `script-src 'self' 'wasm-unsafe-eval'`). The server export continues to use native Snappy.
+
+The original decoder source is `wasm/snappy.c`. After changing it, run `npm run build:snappy` with Clang and `wasm-ld` installed. Normal package builds use the checked-in embedded bytes and need no C compiler.
+
+### Migration
+
+All three metadata helpers now return promises, including on the server: add `await` to existing calls. `progress` now reports cumulative bytes parsed, rather than a fraction of the current buffer. Ordinary parsing stops at `DEM_Stop`, so unread trailer bytes can keep `bytesParsed / file.size` below 1. The server's `stream: false` option now reads larger chunks through the shared asynchronous stream loop.
+
 ## parseHeader
 
 Static method that reads only the demo file header without parsing the full file. Fast and low-memory.
 
 ```ts
-const header = DemoReader.parseHeader('path/to/demo.dem');
+const header = await DemoReader.parseHeader('path/to/demo.dem');
 if (header) {
 	console.log(header.map_name); // e.g. "de_dust2"
 	console.log(header.server_name); // server name
@@ -55,14 +104,14 @@ if (header) {
 }
 ```
 
-Returns `null` if the file header cannot be read. Only reads the first 4 KB of the file.
+Resolves to `null` if the header is absent or truncated. Reads the header frame's declared size, including headers larger than 4 KB. Metadata helpers reject on I/O or malformed-data errors. The server also accepts the browser metadata inputs (`Uint8Array` and `Blob`/`File`).
 
 ## parseServerInfo
 
 Static method that reads server info from the first few packets without parsing the full demo. Fast and low-memory.
 
 ```ts
-const info = DemoReader.parseServerInfo('path/to/demo.dem');
+const info = await DemoReader.parseServerInfo('path/to/demo.dem');
 if (info) {
 	console.log(info.map_name); // e.g. "de_dust2"
 	console.log(info.server_name); // server name
@@ -75,21 +124,26 @@ Returns `null` if server info cannot be found. Reads only the demo's signon sect
 
 ## parseDemo
 
-A single method with overloads for all input types. File paths stream by default.
+A single method accepts the inputs below. File paths stream by default on the server.
 
 ```ts
 // File path (streams by default )
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
 
-// File path sync (loads chunks consecutively into memory)
+// File path with larger chunks (4 MiB, through the shared async stream loop)
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, stream: false });
 
-// Readable stream
+// Node Readable stream (server export)
 await parser.parseDemo(createReadStream('demo.dem'), { entities: EntityMode.ALL });
 
-// Pre-loaded buffer (big memory usage)
+// Pre-loaded Uint8Array or Node Buffer (holds the whole file in memory)
 await parser.parseDemo(buffer, { entities: EntityMode.ALL });
+
+// Web Stream (both exports)
+await parser.parseDemo(file.stream(), { entities: EntityMode.ALL });
 ```
+
+Parsing takes ownership of a supplied stream. Early completion, failure, and `cancel()` cancel unread input; cleanup releases the reader lock. Each `DemoReader` handles one demo or broadcast.
 
 All input types resolve with the same object passed to the `end` event: `{ incomplete: boolean, error?: any, reason?: EndReason }`. Check the result without adding an `end` or `error` listener:
 
@@ -117,7 +171,8 @@ if (error) {
 | `string` path                  | Promise of the end payload | low    |
 | `string` path + `stream: false` | Promise of the end payload | low    |
 | `Readable` stream              | Promise of the end payload | low    |
-| `Buffer`                       | Promise of the end payload | high   |
+| `Uint8Array` / `Buffer`        | Promise of the end payload | high   |
+| `ReadableStream<Uint8Array>`   | Promise of the end payload | low    |
 
 ### Parse Settings
 
@@ -198,7 +253,7 @@ console.log(terminus.reason); // 'stop' | 'timeout' | 'cancelled' | 'error'
 
 Broadcasts deliver `CSVCMsg_GameEventList` once at game start. A client connecting at fragment 700 has already missed it, so `gameevent` payloads would arrive without resolvable names.
 
-**The package ships a default descriptor list** at `dist/default-event-descriptors.bin` and the reader auto-loads it when no `gameEventDescriptors` option is passed. For most consumers this is enough — names like `player_death`, `weapon_fire`, `bomb_planted` resolve out of the box.
+**The package embeds a default descriptor list** and the reader decodes it lazily when no `gameEventDescriptors` option is passed. Names like `player_death`, `weapon_fire`, `bomb_planted` resolve out of the box without fetching an extra asset. When updating the source binary, regenerate the embedded data with `npm run generate:broadcast-descriptors`.
 
 ```ts
 const reader = new HttpBroadcastReader(parser, url, { entities: EntityMode.ALL });
@@ -734,7 +789,7 @@ parser.on('header', header => {}); // CDemoFileHeader — fires once
 parser.on('serverinfo', info => {}); // CSVCMsg_ServerInfo — fires once
 parser.on('tickstart', tick => {}); // number
 parser.on('tickend', tick => {}); // number
-parser.on('progress', fraction => {}); // 0..1, ~every 5000 frames
+parser.on('progress', bytesParsed => {}); // cumulative bytes, periodically and at completion
 parser.on('end', ({ incomplete, error }) => {});
 parser.on('cancel', () => {}); // fires on parser.cancel()
 parser.on('error', ({ error }) => {}); // fatal parse error
@@ -883,7 +938,7 @@ Other demo frames can be subscribed to by name, such as `DEM_CustomData`,
 ```ts
 parser.on('DEM_FileInfo', info => console.log(info.playback_time, info.playback_ticks));
 // Or read the file-info trailer without parsing the demo:
-const info = DemoReader.parseFileInfo('demo.dem');
+const info = await DemoReader.parseFileInfo('demo.dem');
 ```
 
 Listening for `DEM_FileInfo` or `DEM_SpawnGroups` reads past `DEM_Stop` through

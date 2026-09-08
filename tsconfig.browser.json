@@ -1,0 +1,10 @@
+{
+	"extends": "./tsconfig.json",
+	"include": ["src/browser.ts"],
+	"exclude": [],
+	"compilerOptions": {
+		"types": [],
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"skipLibCheck": false
+	}
+}

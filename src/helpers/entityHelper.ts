@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import type { BaseDemoReader as DemoReader } from '../parser/base.js';
 import type { EntityTypeMap, KnownClassName, TypedEntity } from '../generated/entityTypes.js';
 
 /**

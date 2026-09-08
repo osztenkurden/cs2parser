@@ -3,15 +3,15 @@ import type {
 	CMsgSource1LegacyGameEventList_descriptor_t
 } from '../../ts-proto/gameevents.js';
 import type { _GameEventsArguments, EventWithName, GameEventsArguments } from './eventTypes.js';
-import type { DemoReader } from './../index.js';
+import type { BaseDemoReader as DemoReader } from '../base.js';
 import { annotateGameEvent } from '../../helpers/eventAnnotation.js';
 import { EntityMode } from '../entities/types.js';
 import type { WinRoundReason } from '../../helpers/gameRules.js';
-import EventEmitter from 'events';
+import { TypedEventEmitter } from './typedEmitter.js';
 
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
-export class GameEvents extends EventEmitter<GameEventsArguments> {
+export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 	_eventDescriptors: Record<number, CMsgSource1LegacyGameEventList_descriptor_t> = {};
 	private _demoReader!: DemoReader;
 

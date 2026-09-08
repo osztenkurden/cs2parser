@@ -6,13 +6,13 @@ const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 const demoAvailable = fs.existsSync(demoPath);
 
 describe.skipIf(!demoAvailable)('parseServerInfo', () => {
-	test('reads server info successfully', () => {
-		const info = DemoReader.parseServerInfo(demoPath);
+	test('reads server info successfully', async () => {
+		const info = await DemoReader.parseServerInfo(demoPath);
 		expect(info).not.toBeNull();
 	});
 
-	test('server info contains expected fields', () => {
-		const info = DemoReader.parseServerInfo(demoPath);
+	test('server info contains expected fields', async () => {
+		const info = await DemoReader.parseServerInfo(demoPath);
 		expect(info).not.toBeNull();
 		if (!info) return;
 
@@ -22,7 +22,7 @@ describe.skipIf(!demoAvailable)('parseServerInfo', () => {
 		expect(info.max_clients).toBeGreaterThan(0);
 	});
 
-	test('throws for nonexistent file', () => {
-		expect(() => DemoReader.parseServerInfo('nonexistent.dem')).toThrow();
+	test('throws for nonexistent file', async () => {
+		await expect(DemoReader.parseServerInfo('nonexistent.dem')).rejects.toThrow();
 	});
 });

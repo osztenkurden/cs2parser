@@ -2,17 +2,18 @@ import type { CDemoStringTables_table_t } from '../ts-proto/demo.js';
 import type { CSVCMsg_CreateStringTable, CSVCMsg_UpdateStringTable } from '../ts-proto/netmessages.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { BitBuffer } from './ubitreader.js';
-import snappy from 'snappy';
+import type { SnappyDecoder } from '../compression/types.js';
 
 export const parseStringTable = (
-	data: Buffer,
+	data: Uint8Array,
 	name: string,
 	numEntries: number,
 	udf: boolean,
 	userDataSize: number,
 	flags: number,
 	varintBitCount: boolean,
-	baselines: Uint8Array[]
+	baselines: Uint8Array[],
+	snappy: SnappyDecoder
 ) => {
 	const bitreader = new BitBuffer(data);
 	const players: CMsgPlayerInfo[] = [];
@@ -21,7 +22,7 @@ export const parseStringTable = (
 	const items: { idx: number; key: string; value: any }[] = [];
 	for (let i = 0; i < numEntries; i++) {
 		let key = '';
-		let value: Buffer | null = null;
+		let value: Uint8Array | null = null;
 
 		idx += 1;
 		if (!bitreader.readBoolean()) {
@@ -81,12 +82,12 @@ export const parseStringTable = (
 				}
 			}
 
-			value = Buffer.allocUnsafe(bits % 8 === 0 ? bits / 8 : 0);
+			value = new Uint8Array(bits % 8 === 0 ? bits / 8 : 0);
 
 			bitreader.readBytes(value);
 
 			if (isCompressed && value?.length) {
-				value = snappy.uncompressSync(value) as Buffer;
+				value = snappy.uncompress(value);
 			}
 		}
 
@@ -127,7 +128,8 @@ export type StringTableObject = ReturnType<typeof parseStringTable>;
 
 export const createStringTable = (
 	createTableMessage: CSVCMsg_CreateStringTable | undefined,
-	baselines: Uint8Array[]
+	baselines: Uint8Array[],
+	snappy: SnappyDecoder
 ) => {
 	if (
 		!createTableMessage ||
@@ -136,8 +138,8 @@ export const createStringTable = (
 		return undefined;
 
 	const data = createTableMessage.data_compressed
-		? (snappy.uncompressSync(Buffer.from(createTableMessage.string_data!)) as Buffer)
-		: Buffer.from(createTableMessage.string_data!);
+		? snappy.uncompress(createTableMessage.string_data!)
+		: createTableMessage.string_data!;
 	return parseStringTable(
 		data,
 		createTableMessage.name,
@@ -146,7 +148,8 @@ export const createStringTable = (
 		createTableMessage.user_data_size!,
 		createTableMessage.flags!,
 		createTableMessage.using_varint_bitcounts!,
-		baselines
+		baselines,
+		snappy
 	);
 };
 
@@ -155,7 +158,8 @@ export const createStringTable = (
 export const updateStringTable = (
 	updateTableMessage: CSVCMsg_UpdateStringTable,
 	savedTables: (StringTableObject['table'] | null)[],
-	baselines: Uint8Array[]
+	baselines: Uint8Array[],
+	snappy: SnappyDecoder
 ) => {
 	const existing = savedTables[updateTableMessage.table_id!];
 
@@ -163,14 +167,15 @@ export const updateStringTable = (
 		return null;
 	}
 	const updated = parseStringTable(
-		Buffer.from(updateTableMessage.string_data!),
+		updateTableMessage.string_data!,
 		existing.name,
 		updateTableMessage.num_changed_entries!,
 		existing.user_data_fixed_size,
 		existing.user_data_size,
 		existing.flags,
 		existing.using_varint_bitcounts,
-		baselines
+		baselines,
+		snappy
 	);
 
 	return {
@@ -199,7 +204,7 @@ export const applyStringTableSnapshot = (
 			// the existing parseStringTable behaviour.
 			if (key.includes(':')) continue;
 			const intKey = parseInt(key);
-			if (Number.isFinite(intKey)) baselines[intKey] = value;
+			if (Number.isFinite(intKey)) baselines[intKey] = Uint8Array.from(value);
 		} else {
 			try {
 				players.push(CMsgPlayerInfo.decode(value));

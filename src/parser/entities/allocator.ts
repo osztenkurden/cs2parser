@@ -1,7 +1,7 @@
 const BUFFER_SIZE = 128 * 1024; // 128 KB
 
 function createAllocator(bufferSize = BUFFER_SIZE) {
-	const buffer = Buffer.alloc(bufferSize);
+	const buffer = new Uint8Array(bufferSize);
 
 	// Each block: { offset, size, free }
 	const blocks = [{ offset: 0, size: bufferSize, free: true }];

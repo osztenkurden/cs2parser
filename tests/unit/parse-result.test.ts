@@ -95,3 +95,45 @@ test('returns a stream read error without an end listener', async () => {
 	expect(result).toEqual({ incomplete: true, error });
 	expect(result.error).toBe(error);
 });
+
+test('cancelling a Node stream settles a pending read and destroys the source once', async () => {
+	let requested!: () => void;
+	const reading = new Promise<void>(resolve => {
+		requested = resolve;
+	});
+	let destroys = 0;
+	const source = new Readable({
+		read() {
+			requested();
+		},
+		destroy(error, callback) {
+			destroys++;
+			callback(error);
+		}
+	});
+	const reader = new DemoReader();
+	const ends: unknown[] = [];
+	reader.on('end', result => ends.push(result));
+	const pending = reader.parseDemo(source);
+	await reading;
+	reader.cancel();
+	const result = await pending;
+	expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+	expect(ends).toEqual([result]);
+	expect(source.destroyed).toBe(true);
+	expect(destroys).toBe(1);
+});
+
+test('early completion closes a Node source that never sends EOF', async () => {
+	let sent = false;
+	const source = new Readable({
+		read() {
+			if (!sent) {
+				sent = true;
+				this.push(completeDemo);
+			}
+		}
+	});
+	expect(await new DemoReader().parseDemo(source)).toEqual({ incomplete: false });
+	expect(source.destroyed).toBe(true);
+});
