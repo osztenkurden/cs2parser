@@ -3,6 +3,7 @@ import { BinaryReader } from '@bufbuild/protobuf/wire';
 import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { existsSync, readFileSync } from 'node:fs';
+import { Readable } from 'node:stream';
 import { DemoReader, EntityMode } from '../../src/index.js';
 import { DemoReader as BrowserReader } from '../../src/browser.js';
 import { BitBuffer } from '../../src/parser/ubitreader.js';
@@ -186,7 +187,7 @@ const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 	let bytes: Buffer;
 	let releaseFixture: boolean;
-	const native = {} as Record<ParityMode, ParityResult>;
+	const server = {} as Record<ParityMode, ParityResult>;
 	const expectedRelease = structuredClone(golden.modes);
 	// Keep MASTER output intact. Only these audited, wire-proven leaf corrections change the oracle.
 	for (const correction of golden.reviewedCorrections.snapshots) {
@@ -205,57 +206,84 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			const capture = captureParity(reader, mode);
 			const result = await reader.parseDemo(demoPath, { entities: EntityMode[mode] });
 			expect(result).toEqual({ incomplete: false });
-			native[mode] = await capture.finish();
+			server[mode] = await capture.finish();
 		}
 	}, 300000);
 
 	for (const mode of PARITY_MODES) {
-		test(`${mode}: native path matches the independent release golden when applicable`, () => {
-			if (releaseFixture) expect(native[mode]).toEqual(expectedRelease[mode]);
+		test(`${mode}: server path matches the independent release golden when applicable`, () => {
+			if (releaseFixture) expect(server[mode]).toEqual(expectedRelease[mode]);
 			// For arbitrary demos the path result is the runtime reference, not the wrong release golden.
-			expect(native[mode].tickCount).toBe(native.NONE.tickCount);
-			expect(native[mode].headerSha256).toBe(native.NONE.headerSha256);
-			expect(native[mode].rawGameEvents).toEqual(native.NONE.rawGameEvents);
-			expect(native[mode].final.players).toEqual(native.NONE.final.players);
-			expect(native[mode].checkpoints.map(state => [state.tick, state.players])).toEqual(
-				native.NONE.checkpoints.map(state => [state.tick, state.players])
+			expect(server[mode].final.tick).toBeGreaterThan(0);
+			expect(server[mode].final.tick).toBe(server.NONE.final.tick);
+			expect(server[mode].tickCount).toBe(server.NONE.tickCount);
+			expect(server[mode].headerSha256).toBe(server.NONE.headerSha256);
+			expect(server[mode].rawGameEvents).toEqual(server.NONE.rawGameEvents);
+			expect(server[mode].final.players).toEqual(server.NONE.final.players);
+			expect(server[mode].final.players.count).toBeGreaterThan(0);
+			expect(server[mode].checkpoints.map(state => [state.tick, state.players])).toEqual(
+				server.NONE.checkpoints.map(state => [state.tick, state.players])
 			);
 		});
 
-		test(`${mode}: native Buffer matches native path`, async () => {
-			const reader = new DemoReader();
-			const capture = captureParity(reader, mode);
-			expect(await reader.parseDemo(bytes, { entities: EntityMode[mode] })).toEqual({ incomplete: false });
-			expect(await capture.finish()).toEqual(native[mode]);
-		}, 300000);
-
-		for (const [runtime, Reader] of [
-			['native', DemoReader],
-			['browser', BrowserReader]
-		] as const) {
-			for (const chunkSize of [0, ...PARITY_CHUNK_SIZES]) {
-				test(`${mode}: ${runtime} ${chunkSize ? `Web stream / ${chunkSize} bytes` : 'Uint8Array'} deep parity`, async () => {
-					const reader = new Reader();
-					const capture = captureParity(reader, mode);
-					const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-					const source = chunkSize ? chunkedDemo(view, chunkSize) : view;
-					expect(await reader.parseDemo(source, { entities: EntityMode[mode] })).toEqual({
-						incomplete: false
-					});
-					const actual = await capture.finish();
-					expect(actual).toEqual(native[mode]);
-					if (releaseFixture) expect(actual).toEqual(expectedRelease[mode]);
-				}, 300000);
-			}
+		for (const chunkSize of [0, PARITY_CHUNK_SIZES[0], ...(mode === 'ALL' ? [PARITY_CHUNK_SIZES[2]] : [])]) {
+			test(`${mode}: browser ${chunkSize ? `Web stream / ${chunkSize} bytes` : 'Uint8Array'} deep parity`, async () => {
+				const reader = new BrowserReader();
+				const capture = captureParity(reader, mode);
+				const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+				const source = chunkSize ? chunkedDemo(view, chunkSize) : view;
+				expect(await reader.parseDemo(source, { entities: EntityMode[mode] })).toEqual({ incomplete: false });
+				expect(await capture.finish()).toEqual(server[mode]);
+			}, 300000);
 		}
 	}
 
+	for (const [method, source, options] of [
+		['Buffer', () => bytes, {}],
+		['Web stream / 4093 bytes', () => chunkedDemo(bytes, PARITY_CHUNK_SIZES[0]), {}],
+		['path stream:false', () => demoPath, { stream: false }],
+		['one-chunk Readable', () => Readable.from([bytes]), {}]
+	] as const) {
+		test(`ALL: server ${method} deep parity`, async () => {
+			const reader = new DemoReader();
+			const capture = captureParity(reader, 'ALL');
+			expect(await reader.parseDemo(source(), { entities: EntityMode.ALL, ...options })).toEqual({
+				incomplete: false
+			});
+			expect(await capture.finish()).toEqual(server.ALL);
+		}, 300000);
+	}
+
 	test('skipping unused entities preserves full game-rule state and synthetic payloads', () => {
-		expect(native.NONE.final.entities.count).toBe(0);
-		expect(native.ONLY_GAME_RULES.final.entities).toEqual(native.ALL.final.gameRules);
-		expect(native.ONLY_GAME_RULES.checkpoints.map(state => [state.tick, state.entities])).toEqual(
-			native.ALL.checkpoints.map(state => [state.tick, state.gameRules])
+		expect(server.NONE.final.entities.count).toBe(0);
+		expect(server.ALL.final.entities.count).toBeGreaterThan(0);
+		expect(server.ONLY_GAME_RULES.final.entities).toEqual(server.ALL.final.gameRules);
+		expect(server.ONLY_GAME_RULES.checkpoints.map(state => [state.tick, state.entities])).toEqual(
+			server.ALL.checkpoints.map(state => [state.tick, state.gameRules])
 		);
-		expect(native.ONLY_GAME_RULES.syntheticRoundEvents).toEqual(native.ALL.syntheticRoundEvents);
+		expect(server.ONLY_GAME_RULES.syntheticRoundEvents).toEqual(server.ALL.syntheticRoundEvents);
 	});
+
+	test('a one-chunk Readable yields to a timer that cancels exactly once before completion', async () => {
+		const reader = new DemoReader();
+		const ends: unknown[] = [];
+		let timerFinished: Promise<void> | undefined;
+		let timerFiredBeforeEnd = false;
+		reader.once('header', () => {
+			timerFinished = new Promise(resolve => {
+				setTimeout(() => {
+					timerFiredBeforeEnd = ends.length === 0;
+					if (timerFiredBeforeEnd) reader.cancel();
+					resolve();
+				}, 0);
+			});
+		});
+		reader.on('end', result => ends.push(result));
+		const result = await reader.parseDemo(Readable.from([bytes]), { entities: EntityMode.NONE });
+		expect(timerFinished).toBeDefined();
+		await timerFinished;
+		expect(timerFiredBeforeEnd).toBe(true);
+		expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+		expect(ends).toEqual([result]);
+	}, 300000);
 });

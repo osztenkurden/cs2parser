@@ -59,9 +59,11 @@ type SnapshotData = {
 	entities: Record<string, { serializers: string[]; ownFields: Record<string, string> }>;
 };
 
-function collectFromDemo(demoPath: string): SnapshotData {
+async function collectFromDemo(demoPath: string): Promise<SnapshotData> {
 	const parser = new DemoReader();
-	parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
+	const end = await parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
+	if (end.error) throw end.error;
+	if (end.incomplete) throw new Error('Demo parsing was incomplete; refusing to generate entity types.');
 
 	// Build (fullPath → tsType) entries, collapsing container sub-fields into
 	// `Array<{ ... }>` at the container's key and emitting typed arrays where
@@ -346,7 +348,7 @@ const useSnapshot = args.includes('--snapshot');
 if (demoIdx !== -1 && args[demoIdx + 1]) {
 	const demoPath = args[demoIdx + 1]!;
 	console.log(`Parsing demo: ${demoPath}...`);
-	const data = collectFromDemo(demoPath);
+	const data = await collectFromDemo(demoPath);
 	saveSnapshot(data);
 
 	const output = generateTypeScript(data, path.basename(demoPath));

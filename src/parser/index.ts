@@ -2,8 +2,9 @@ import { createReadStream, openAsBlob } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { BaseDemoReader, type DemoInput, type ParseOptions } from './base.js';
-import { nativeSnappy } from '../compression/native.js';
-import { parseHeader, parseServerInfo, parseFileInfo, type MetadataInput } from './metadata.js';
+import { SnappyDecoder } from '../compression/wasm.js';
+import { parseHeaderAsync, parseServerInfoAsync, parseFileInfoAsync, type MetadataInput } from './metadata.js';
+import { parseMetadataSync } from './metadataSync.js';
 
 const metadataSource = async (source: string | MetadataInput) => {
 	if (typeof source !== 'string') return source;
@@ -12,22 +13,37 @@ const metadataSource = async (source: string | MetadataInput) => {
 	return openAsBlob(source);
 };
 
-/** Server entry: shared parsing with native Snappy and Node file/stream inputs. */
+/** Server entry: shared parsing with WASM Snappy and Node file/stream inputs. */
 export class DemoReader extends BaseDemoReader {
 	constructor() {
-		super(nativeSnappy);
+		super(new SnappyDecoder());
 	}
 
-	static async parseHeader(source: string | MetadataInput) {
-		return parseHeader(await metadataSource(source), nativeSnappy);
+	static async parseHeaderAsync(source: string | MetadataInput) {
+		return parseHeaderAsync(await metadataSource(source), new SnappyDecoder());
 	}
 
-	static async parseServerInfo(source: string | MetadataInput) {
-		return parseServerInfo(await metadataSource(source), nativeSnappy);
+	static async parseServerInfoAsync(source: string | MetadataInput) {
+		return parseServerInfoAsync(await metadataSource(source), new SnappyDecoder());
 	}
 
-	static async parseFileInfo(source: string | MetadataInput) {
-		return parseFileInfo(await metadataSource(source), nativeSnappy);
+	static async parseFileInfoAsync(source: string | MetadataInput) {
+		return parseFileInfoAsync(await metadataSource(source), new SnappyDecoder());
+	}
+
+	/** Synchronously read the header from a file path or bytes. Blocks the calling thread. */
+	static parseHeader(source: string | Uint8Array) {
+		return parseMetadataSync(source, 'header');
+	}
+
+	/** Synchronously scan signon metadata from a file path or bytes. Blocks the calling thread. */
+	static parseServerInfo(source: string | Uint8Array) {
+		return parseMetadataSync(source, 'serverInfo');
+	}
+
+	/** Synchronously read the file-info trailer from a file path or bytes. Blocks the calling thread. */
+	static parseFileInfo(source: string | Uint8Array) {
+		return parseMetadataSync(source, 'fileInfo');
 	}
 
 	override parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {

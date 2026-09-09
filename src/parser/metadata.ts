@@ -5,6 +5,53 @@ import { BitBuffer } from './ubitreader.js';
 
 export type MetadataInput = Uint8Array | Blob;
 
+/** Shared framing for asynchronous Blob reads and synchronous server range reads. */
+export function parseMetadataFrameHeader(header: Uint8Array, offset: number, limit: number) {
+	let pos = 0;
+	const varint = (): number | null => {
+		let value = 0;
+		for (let shift = 0; shift < 35; shift += 7) {
+			const byte = header[pos++];
+			if (byte === undefined) return null;
+			if (shift === 28 && byte > 15) throw new Error('Invalid demo frame varint');
+			value |= (byte & 127) << shift;
+			if (!(byte & 128)) return value >>> 0;
+		}
+		throw new Error('Invalid demo frame varint');
+	};
+	const command = varint(),
+		tick = varint(),
+		size = varint();
+	if (command === null || tick === null || size === null || offset + pos + size > limit) return null;
+	return {
+		type: command & ~EDemoCommands.DEM_IsCompressed,
+		tick,
+		size,
+		bodyOffset: offset + pos,
+		next: offset + pos + size,
+		compressed: (command & EDemoCommands.DEM_IsCompressed) !== 0
+	};
+}
+
+/** Undefined means keep searching; null means a truncated message ended the search. */
+export function parseServerInfoPacket(bytes: Uint8Array): CSVCMsg_ServerInfo | null | undefined {
+	const data = CDemoPacket.decode(bytes).data;
+	if (!data) return undefined;
+	const bits = new BitBuffer(data);
+	while (bits.RemainingBits > 8) {
+		const command = bits.readUbitVar();
+		const size = bits.ReadUVarInt32();
+		if (size > Math.floor(bits.RemainingBits / 8)) return null;
+		if (command === SVC_Messages.svc_ServerInfo) {
+			const bytes = new Uint8Array(size);
+			bits.readBytes(bytes);
+			return CSVCMsg_ServerInfo.decode(bytes);
+		}
+		bits.skipBytesBetter(size);
+	}
+	return undefined;
+}
+
 /** Range reads keep metadata access cheap even for multi-gigabyte Files. */
 class MetadataReader {
 	readonly size: number;
@@ -21,42 +68,24 @@ class MetadataReader {
 	}
 
 	async frame(offset: number) {
-		const header = await this.read(offset, 15);
-		let pos = 0;
-		const varint = (): number | null => {
-			let value = 0;
-			for (let shift = 0; shift < 35; shift += 7) {
-				const byte = header[pos++];
-				if (byte === undefined) return null;
-				if (shift === 28 && byte > 15) throw new Error('Invalid demo frame varint');
-				value |= (byte & 127) << shift;
-				if (!(byte & 128)) return value >>> 0;
-			}
-			throw new Error('Invalid demo frame varint');
-		};
-		const command = varint(),
-			tick = varint(),
-			size = varint();
-		if (command === null || tick === null || size === null || offset + pos + size > this.size) return null;
-		const bodyOffset = offset + pos;
+		const frame = parseMetadataFrameHeader(await this.read(offset, 15), offset, this.size);
+		if (!frame) return null;
 		return {
-			type: command & ~EDemoCommands.DEM_IsCompressed,
-			tick,
-			next: bodyOffset + size,
+			...frame,
 			bytes: async () => {
-				const bytes = await this.read(bodyOffset, size);
-				return command & EDemoCommands.DEM_IsCompressed ? this.snappy.uncompress(bytes) : bytes;
+				const bytes = await this.read(frame.bodyOffset, frame.size);
+				return frame.compressed ? this.snappy.uncompress(bytes) : bytes;
 			}
 		};
 	}
 }
 
-export async function parseHeader(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileHeader | null> {
+export async function parseHeaderAsync(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileHeader | null> {
 	const frame = await new MetadataReader(source, snappy).frame(16);
 	return frame?.type === EDemoCommands.DEM_FileHeader ? CDemoFileHeader.decode(await frame.bytes()) : null;
 }
 
-export async function parseFileInfo(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileInfo | null> {
+export async function parseFileInfoAsync(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileInfo | null> {
 	const reader = new MetadataReader(source, snappy);
 	const prefix = await reader.read(0, 16);
 	if (prefix.length < 16) return null;
@@ -66,7 +95,7 @@ export async function parseFileInfo(source: MetadataInput, snappy: SnappyDecoder
 	return frame?.type === EDemoCommands.DEM_FileInfo ? CDemoFileInfo.decode(await frame.bytes()) : null;
 }
 
-export async function parseServerInfo(
+export async function parseServerInfoAsync(
 	source: MetadataInput,
 	snappy: SnappyDecoder
 ): Promise<CSVCMsg_ServerInfo | null> {
@@ -76,21 +105,8 @@ export async function parseServerInfo(
 		const frame = await reader.frame(offset);
 		if (!frame) return null;
 		if (frame.type === EDemoCommands.DEM_Packet || frame.type === EDemoCommands.DEM_SignonPacket) {
-			const data = CDemoPacket.decode(await frame.bytes()).data;
-			if (data) {
-				const bits = new BitBuffer(data);
-				while (bits.RemainingBits > 8) {
-					const command = bits.readUbitVar();
-					const size = bits.ReadUVarInt32();
-					if (size > Math.floor(bits.RemainingBits / 8)) return null;
-					if (command === SVC_Messages.svc_ServerInfo) {
-						const bytes = new Uint8Array(size);
-						bits.readBytes(bytes);
-						return CSVCMsg_ServerInfo.decode(bytes);
-					}
-					bits.skipBytesBetter(size);
-				}
-			}
+			const info = parseServerInfoPacket(await frame.bytes());
+			if (info !== undefined) return info;
 		}
 		if (frame.tick !== 0xffffffff) break;
 		offset = frame.next;

@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'scripts/benchmark*'
+      - 'package.json'
+      - '.github/workflows/benchmark.yml'
 
 jobs:
   benchmark:
@@ -44,14 +47,14 @@ jobs:
       - name: Run benchmark
         id: bench
         run: |
-          DEMO=$(ls tests/fixtures/*.dem 2>/dev/null | head -1)
-          if [ -z "$DEMO" ]; then
+          DEMO=tests/fixtures/demo.dem
+          if [ ! -s "$DEMO" ]; then
             echo "No demo file found, skipping benchmark"
             echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "skipped=false" >> "$GITHUB_OUTPUT"
-          bun --expose-gc scripts/benchmark.ts "$DEMO" | tee benchmark-output.txt
+          bun run benchmark "$DEMO" --runs 3 --markdown benchmark.md
 
       - name: Comment benchmark results on PR
         if: steps.bench.outputs.skipped != 'true' && github.event.pull_request.head.repo.full_name == github.repository

@@ -1,4 +1,3 @@
-import { nativeSnappy } from '../../src/compression/native.js';
 import { describe, expect, test } from 'bun:test';
 import { DemoReader } from '../../src/index.js';
 import { annotateGameEvent } from '../../src/helpers/eventAnnotation.js';
@@ -20,11 +19,17 @@ function controller(reader: DemoReader, slot: number, steamId = 0n) {
 }
 
 function userinfo(reader: DemoReader, event: 'createstringtable' | 'updatestringtable', players: CMsgPlayerInfo[]) {
-	const table = parseStringTable(Buffer.alloc(0), 'userinfo', 0, false, 0, 0, false, [], nativeSnappy);
+	const table = parseStringTable(Buffer.alloc(0), 'userinfo', 0, false, 0, 0, false, [], reader._snappy);
 	reader.emit(event, { ...table, players });
 }
 
 describe('player identity', () => {
+	test('getPlayerByInfo returns null for missing info or identifiers', () => {
+		const reader = new DemoReader();
+		controller(reader, 0);
+		for (const info of [null, undefined, {}]) expect(reader.getPlayerByInfo(info)).toBeNull();
+	});
+
 	test.each(['0', '90071996842377308'])('bots resolve with userinfo steamid %s and duplicate names', steamid => {
 		const reader = new DemoReader();
 		const first = controller(reader, 2);

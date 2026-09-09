@@ -3,23 +3,32 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import snappy from 'snappy';
 import { DemoReader } from 'cs2parser';
 import { DemoReader as BrowserReader, SnappyDecoder } from 'cs2parser/browser';
 
 const directory = await mkdtemp(join(tmpdir(), 'cs2parser-package-'));
 try {
-	const header = snappy.compressSync(Buffer.from([42, 7, ...Buffer.from('de_nuke')]));
+	// Raw Snappy: nine output bytes, one nine-byte literal containing the protobuf header.
+	const header = Buffer.from([9, 32, 42, 7, ...Buffer.from('de_nuke')]);
+	// Literal-compressed CDemoPacket containing a bit-packed svc_ServerInfo with map_name=de_nuke.
+	const signon = Buffer.from([14, 52, 26, 12, 152, 36, 232, 29, 144, 149, 125, 185, 213, 173, 149, 1]);
+	// Compressed DEM_FileInfo with playback_ticks=42.
+	const trailer = Buffer.from([66, 0, 4, 2, 4, 16, 42]);
 	const demo = Buffer.concat([
 		Buffer.from('PBDEMS2\0\0\0\0\0\0\0\0\0'),
-		Buffer.from([65, 0, header.length]),
+		Buffer.from([65, 255, 255, 255, 255, 15, header.length]),
 		header,
-		Buffer.from([0, 0, 0])
+		Buffer.from([72, 255, 255, 255, 255, 15, signon.length]),
+		signon,
+		Buffer.from([0, 0, 0]),
+		trailer
 	]);
+	demo.writeUInt32LE(demo.length - trailer.length, 8);
 	const path = join(directory, 'fixture.dem');
 	await writeFile(path, demo);
 	for (const source of [path, Uint8Array.from(demo), Readable.from([demo])]) {
 		const reader = new DemoReader();
+		assert(reader._snappy instanceof SnappyDecoder);
 		assert.deepEqual(await reader.parseDemo(source), { incomplete: false });
 		assert.equal(reader.header.map_name, 'de_nuke');
 	}
@@ -53,8 +62,21 @@ try {
 	});
 	assert.deepEqual(await new DemoReader().parseDemo(withoutEOF), { incomplete: false });
 	assert.equal(withoutEOF.destroyed, true);
-	assert.equal((await DemoReader.parseHeader(path)).map_name, 'de_nuke');
-	for (const read of [DemoReader.parseHeader, DemoReader.parseFileInfo, DemoReader.parseServerInfo]) {
+	assert.equal((await DemoReader.parseHeaderAsync(path)).map_name, 'de_nuke');
+	for (const source of [path, demo, Uint8Array.from(demo)]) {
+		assert.equal(DemoReader.parseHeader(source).map_name, 'de_nuke');
+		assert.equal(DemoReader.parseServerInfo(source).map_name, 'de_nuke');
+		assert.equal(DemoReader.parseFileInfo(source).playback_ticks, 42);
+		assert.deepEqual(DemoReader.parseHeader(source), await DemoReader.parseHeaderAsync(source));
+		assert.deepEqual(DemoReader.parseServerInfo(source), await DemoReader.parseServerInfoAsync(source));
+		assert.deepEqual(DemoReader.parseFileInfo(source), await DemoReader.parseFileInfoAsync(source));
+	}
+	for (const method of ['parseHeader', 'parseServerInfo', 'parseFileInfo']) {
+		assert.equal(method in BrowserReader, false);
+		assert.throws(() => DemoReader[method](new Blob([demo])), TypeError);
+		assert.throws(() => DemoReader[method](join(directory, 'missing.dem')));
+	}
+	for (const read of [DemoReader.parseHeaderAsync, DemoReader.parseFileInfoAsync, DemoReader.parseServerInfoAsync]) {
 		await assert.rejects(read(join(directory, 'missing.dem')));
 	}
 	const browser = new BrowserReader();

@@ -12,8 +12,7 @@
 	"homepage": "https://github.com/osztenkurden/cs2parser#readme",
 	"dependencies": {
 		"@bufbuild/protobuf": "^2.10.0",
-		"events": "^3.3.0",
-		"snappy": "^7.3.3"
+		"events": "^3.3.0"
 	},
 	"license": "GPL-3.0",
 	"engines": {
@@ -21,7 +20,8 @@
 	},
 	"files": [
 		"./dist",
-		"ACKNOWLEDGEMENTS"
+		"ACKNOWLEDGEMENTS",
+		"MIGRATION.md"
 	],
 	"types": "./dist/index.d.mts",
 	"exports": {
@@ -52,8 +52,7 @@
 		"generate:delta-schema:check": "bun scripts/generate-usercmd-delta-schema.ts --check",
 		"generate:messages:check": "bun scripts/generate-message-registry.ts --check",
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-message-registry.ts && bun scripts/generate-usercmd-delta-schema.ts && bun scripts/generate-entity-types.ts --snapshot",
-		"benchmark": "bun --expose-gc scripts/benchmark.ts",
-		"benchmark:readme": "bun scripts/benchmark-readme.ts",
+		"benchmark": "bun scripts/benchmark-compare.mjs",
 		"build:snappy": "bun scripts/build-snappy-wasm.ts",
 		"generate:broadcast-descriptors": "bun scripts/generate-broadcast-descriptors.ts",
 		"test:browser": "npm run build && tsc -p tests/browser/tsconfig.json && playwright test"
@@ -70,6 +69,7 @@
 		"del-cli": "^5.1.0",
 		"husky": "^9.1.7",
 		"prettier": "^3.0.3",
+		"snappy": "^7.3.3",
 		"ts-proto": "2.11.6",
 		"tsdown": "^0.22.7",
 		"typescript": "^7.0.2"

@@ -7,7 +7,6 @@
       "dependencies": {
         "@bufbuild/protobuf": "^2.10.0",
         "events": "^3.3.0",
-        "snappy": "^7.3.3",
       },
       "devDependencies": {
         "@commitlint/cli": "^20.5.0",
@@ -21,6 +20,7 @@
         "del-cli": "^5.1.0",
         "husky": "^9.1.7",
         "prettier": "^3.0.3",
+        "snappy": "^7.3.3",
         "ts-proto": "2.11.6",
         "tsdown": "^0.22.7",
         "typescript": "^7.0.2",

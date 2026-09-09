@@ -8,9 +8,16 @@ const demoAvailable = fs.existsSync(demoPath);
 const KEY = 'CSmokeGrenadeProjectile.m_VoxelFrameData';
 const SIZE_KEY = 'CSmokeGrenadeProjectile.m_nVoxelFrameDataSize';
 
-describe.skipIf(!demoAvailable)('smoke voxel journal (integration)', () => {
+describe.skipIf(!demoAvailable)('smoke voxel journal and SmokeHelper (integration)', () => {
 	// Largest journal captured per smoke entity.
 	const best = new Map<number, { data: Uint8Array; size: number }>();
+	// Smokes disappear, so capture the first populated live helper state per entity.
+	const snaps: {
+		count: number;
+		firstWorld: { x: number; y: number; z: number };
+		det: { x: number; y: number; z: number };
+	}[] = [];
+	const seen = new Set<number>();
 
 	beforeAll(async () => {
 		const reader = new DemoReader();
@@ -24,6 +31,16 @@ describe.skipIf(!demoAvailable)('smoke voxel journal (integration)', () => {
 				if (!(data instanceof Uint8Array) || data.length === 0 || !size) continue;
 				const cur = best.get(i);
 				if (!cur || size > cur.size) best.set(i, { data: data.slice(), size });
+			}
+		});
+		reader.on('tickend', () => {
+			for (const smoke of reader.smokes) {
+				if (seen.has(smoke.entityId) || !smoke.hasVoxelData) continue;
+				const voxels = smoke.voxels;
+				const det = smoke.detonationPos;
+				if (voxels.length === 0 || !det) continue;
+				seen.add(smoke.entityId);
+				snaps.push({ count: voxels.length, firstWorld: voxels[0]!, det });
 			}
 		});
 		await reader.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
@@ -59,28 +76,6 @@ describe.skipIf(!demoAvailable)('smoke voxel journal (integration)', () => {
 		// Heartbeats dominate a settled smoke.
 		const heartbeats = frames.filter(f => f.isHeartbeat).length;
 		expect(heartbeats).toBeGreaterThan(0);
-	});
-});
-
-describe.skipIf(!demoAvailable)('SmokeHelper (integration)', () => {
-	// Capture the live SmokeHelper voxel readouts during parse (smokes are deleted
-	// when they dissipate, so snapshot the first populated state per entity).
-	const snaps: { count: number; firstWorld: { x: number; y: number; z: number }; det: { x: number; y: number; z: number } }[] = [];
-	const seen = new Set<number>();
-
-	beforeAll(async () => {
-		const reader = new DemoReader();
-		reader.on('tickend', () => {
-			for (const smoke of reader.smokes) {
-				if (seen.has(smoke.entityId) || !smoke.hasVoxelData) continue;
-				const voxels = smoke.voxels;
-				const det = smoke.detonationPos;
-				if (voxels.length === 0 || !det) continue;
-				seen.add(smoke.entityId);
-				snaps.push({ count: voxels.length, firstWorld: voxels[0]!, det });
-			}
-		});
-		await reader.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
 	});
 
 	test('parser.smokes yields helpers with decodable voxels', () => {

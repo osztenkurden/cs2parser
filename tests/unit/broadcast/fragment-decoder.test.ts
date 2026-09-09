@@ -171,9 +171,4 @@ describe('ParseSession.forBroadcast', () => {
 		const session = ParseSession.forBroadcast(EntityMode.NONE, () => {}, parser);
 		expect(() => session.pushChunk(Buffer.alloc(16))).toThrow(/broadcast/);
 	});
-
-	test('refuses processFrames', () => {
-		const parser = new DemoReader();
-		const session = ParseSession.forBroadcast(EntityMode.NONE, () => {}, parser);
-	});
 });
