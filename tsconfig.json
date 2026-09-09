@@ -1,6 +1,6 @@
 {
 	"include": ["./src/**/*", "./examples/**/*", "./scripts/**/*", "./tests/**/*"],
-	"exclude": ["./examples/relay.ts"],
+	"exclude": ["./examples/relay.ts", "./tests/browser/consumer.ts", "./tests/browser/entry.ts"],
 	"compilerOptions": {
 		"types": ["node", "bun-types"],
 		/* Base Options: */
@@ -24,6 +24,6 @@
 		"noEmit": true,
 		"outDir": "dist",
 		/* If your code doesn't run in the DOM: */
-		"lib": ["es2024"]
+		"lib": ["es2024", "DOM", "DOM.Iterable"]
 	}
 }

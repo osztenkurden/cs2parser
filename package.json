@@ -12,6 +12,7 @@
 	"homepage": "https://github.com/osztenkurden/cs2parser#readme",
 	"dependencies": {
 		"@bufbuild/protobuf": "^2.10.0",
+		"events": "^3.3.0",
 		"snappy": "^7.3.3"
 	},
 	"license": "GPL-3.0",
@@ -25,16 +26,22 @@
 	"types": "./dist/index.d.mts",
 	"exports": {
 		".": "./dist/index.mjs",
-		"./package.json": "./package.json"
+		"./package.json": "./package.json",
+		"./browser": {
+			"types": "./dist/browser.d.mts",
+			"import": "./dist/browser.mjs",
+			"default": "./dist/browser.mjs"
+		}
 	},
 	"scripts": {
-		"typecheck": "tsc",
+		"typecheck": "tsc && tsc -p tsconfig.browser.json",
 		"format": "prettier --write src/",
 		"format:check": "prettier --check src/",
-		"build": "npm run generate:messages:check && npm run generate:delta-schema:check && npm run typecheck && tsdown",
+		"build": "npm run generate:messages:check && npm run generate:delta-schema:check && bun scripts/build-snappy-wasm.ts --check && bun scripts/generate-broadcast-descriptors.ts --check && npm run typecheck && tsdown",
 		"test": "bun test --timeout 300000",
 		"test:watch": "bun test --watch --timeout 300000",
 		"test:coverage": "bun test --coverage --timeout 300000",
+		"test:node": "node tests/node/package.smoke.mjs",
 		"prepublishOnly": "npm run format:check && npm run build",
 		"prepare": "husky",
 		"generate:entities": "bun scripts/generate-entity-types.ts",
@@ -46,11 +53,15 @@
 		"generate:messages:check": "bun scripts/generate-message-registry.ts --check",
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-message-registry.ts && bun scripts/generate-usercmd-delta-schema.ts && bun scripts/generate-entity-types.ts --snapshot",
 		"benchmark": "bun --expose-gc scripts/benchmark.ts",
-		"benchmark:readme": "bun scripts/benchmark-readme.ts"
+		"benchmark:readme": "bun scripts/benchmark-readme.ts",
+		"build:snappy": "bun scripts/build-snappy-wasm.ts",
+		"generate:broadcast-descriptors": "bun scripts/generate-broadcast-descriptors.ts",
+		"test:browser": "npm run build && tsc -p tests/browser/tsconfig.json && playwright test"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^20.5.0",
 		"@commitlint/config-conventional": "^20.5.0",
+		"@playwright/test": "^1.63.0",
 		"@types/bun": "^1.3.11",
 		"@types/bytebuffer": "^5.0.49",
 		"@types/fs-extra": "^11.0.4",

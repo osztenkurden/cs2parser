@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import type { BaseDemoReader as DemoReader } from '../parser/base.js';
 import type { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import type { PlayerPawn, Vector } from './playerPawn.js';
 import type { Team } from './team.js';

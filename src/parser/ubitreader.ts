@@ -1,7 +1,3 @@
-const bitMask = new Uint32Array(32);
-for (let i = 1; i < 32; ++i) {
-	bitMask[i] = (1 << i) - 1;
-}
 // Internal 33-element mask for hot-path use (avoids branches for 0 and 32)
 const MASK = new Uint32Array(33);
 for (let i = 1; i < 32; ++i) {
@@ -14,25 +10,26 @@ const BIT_COORD_PRES_SCALE = 360 / (1 << 20);
 
 const _f32ReinterpretF = new Float32Array(1);
 const _f32ReinterpretU = new Uint32Array(_f32ReinterpretF.buffer);
+const _u64ReinterpretBytes = new Uint8Array(8);
+const _u64Reinterpret = new DataView(_u64ReinterpretBytes.buffer);
+
+// Keep error construction out of the hot read methods' inlining budgets.
+function exhausted(): never {
+	throw new RangeError('BitBuffer exhausted');
+}
+
 export class BitBuffer {
-	private static readonly BitMask = bitMask;
 	private static readonly _stringDecoder = new TextDecoder('utf-8');
 	private static readonly _stringScratch = new Uint8Array(4096);
 	public _bitsAvail = 0;
 	public _buf = 0;
 	private _pointer: Uint8Array;
 	_byteOffset = 0;
-	private _uintbuffer: Buffer;
-	private _bufArray: Uint8Array;
-	private _bufArrayView: DataView;
 	private _pointerView: DataView;
 
 	constructor(pointer: Uint8Array) {
 		this._pointer = pointer;
 		this._pointerView = new DataView(this._pointer.buffer);
-		this._uintbuffer = Buffer.alloc(8);
-		this._bufArray = new Uint8Array(4);
-		this._bufArrayView = new DataView(this._bufArray.buffer);
 		this.FetchNext();
 	}
 
@@ -50,16 +47,19 @@ export class BitBuffer {
 	}
 
 	public readString() {
-		const scratch = BitBuffer._stringScratch;
-		const maxLen = scratch.length;
+		let scratch = BitBuffer._stringScratch;
 		let len = 0;
 		let c: number;
 		while ((c = this.ReadByte()) !== 0) {
-			if (len < maxLen) scratch[len] = c;
-			len++;
+			if (len === scratch.length) {
+				const grown = new Uint8Array(scratch.length * 2);
+				grown.set(scratch);
+				scratch = grown;
+			}
+			scratch[len++] = c;
 		}
 		if (len === 0) return '';
-		return BitBuffer._stringDecoder.decode(scratch.subarray(0, Math.min(len, maxLen)));
+		return BitBuffer._stringDecoder.decode(scratch.subarray(0, len));
 	}
 
 	public get RemainingBytes() {
@@ -109,6 +109,13 @@ export class BitBuffer {
 		return ((this._buf | (next << avail)) & 0x1ffff) >>> 0;
 	}
 
+	/** Zero-padded 8-bit primary Huffman lookup; consumption checks the actual code length. */
+	public peekHuffmanPrefix(): number {
+		const avail = this._bitsAvail;
+		if (avail >= 8) return this._buf & 0xff;
+		return ((avail ? this._buf : 0) | ((this._pointer[this._byteOffset] ?? 0) << avail)) & 0xff;
+	}
+
 	public PeekUBitsWithLog(numBits: number): number {
 		if (this._bitsAvail >= numBits) {
 			return (this._buf & MASK[numBits]!) >>> 0;
@@ -134,7 +141,7 @@ export class BitBuffer {
 		}
 	}
 
-	/** Lightweight consume after PeekUBitsWithLog — advances by numBits without returning a value. */
+	/** Consume an integer width of 0-32 bits; no prior peek is required. Exhaustion leaves the cursor unchanged. */
 	public consumePeeked(numBits: number): void {
 		if (this._bitsAvail >= numBits) {
 			this._bitsAvail -= numBits;
@@ -144,18 +151,13 @@ export class BitBuffer {
 				this.FetchNext();
 			}
 		} else {
-			// Slow path: consume spans current buffer + next chunk
-			const bitsFromNext = numBits - this._bitsAvail;
-			const remainingBytes = this._pointer.length - this._byteOffset;
-			const nextChunkBits = Math.min(remainingBytes, 4) * 8;
-			this.UpdateBuffer();
-			this._bitsAvail = nextChunkBits - bitsFromNext;
-			this._buf >>>= bitsFromNext;
+			this._readUBitsSlow(numBits);
 		}
 	}
+	/** Read an integer width of 0-32 bits. Exhaustion throws before consuming any bits. */
 	public ReadUBits(numBits: number) {
 		if (this._bitsAvail >= numBits) {
-			const ret = numBits === 32 ? this._buf >>> 0 : this._buf & BitBuffer.BitMask[numBits]!;
+			const ret = this._buf & MASK[numBits]!;
 			this._bitsAvail -= numBits;
 			if (this._bitsAvail !== 0) {
 				this._buf >>>= numBits;
@@ -173,6 +175,7 @@ export class BitBuffer {
 
 		const remainingBytes = this._pointer.length - this._byteOffset;
 		const nextChunkBits = Math.min(remainingBytes, 4) * 8;
+		if (numBits > nextChunkBits) exhausted();
 
 		this.UpdateBuffer();
 
@@ -183,7 +186,7 @@ export class BitBuffer {
 		return ret >>> 0;
 	}
 	public readBoolean() {
-		if (this._bitsAvail <= 0) this.FetchNext();
+		if (this._bitsAvail === 0) exhausted();
 		const ret = this._buf & 1;
 		this._bitsAvail--;
 		if (this._bitsAvail !== 0) {
@@ -214,11 +217,10 @@ export class BitBuffer {
 
 	private UpdateBuffer() {
 		if (this._pointer.length - this._byteOffset < 4) {
-			for (let i = 0; i < 4; ++i) {
-				this._bufArray[i] =
-					i < this._pointer.length - this._byteOffset ? this._pointer[this._byteOffset + i]! : 0;
+			this._buf = 0;
+			for (let i = 0; i < this._pointer.length - this._byteOffset; ++i) {
+				this._buf |= this._pointer[this._byteOffset + i]! << (i * 8);
 			}
-			this._buf = this._bufArrayView.getUint32(0, true);
 			this._byteOffset = this._pointer.length;
 		} else {
 			this._buf = this._pointerView.getUint32(this._pointer.byteOffset + this._byteOffset, true);
@@ -226,7 +228,7 @@ export class BitBuffer {
 		}
 	}
 
-	readBytes = (outputBuffer: Buffer | Uint8Array<ArrayBuffer>) => {
+	readBytes = (outputBuffer: Uint8Array) => {
 		this._readBytesInto(outputBuffer, outputBuffer.length);
 	};
 
@@ -236,6 +238,10 @@ export class BitBuffer {
 	};
 
 	private _readBytesInto(out: Uint8Array, size: number) {
+		if (!Number.isSafeInteger(size) || size < 0 || size > out.length) {
+			throw new RangeError('Invalid byte copy size');
+		}
+		if (size > this.RemainingBytes) exhausted();
 		let written = 0;
 
 		// Phase 1: drain whole bytes from current bit buffer
@@ -252,12 +258,9 @@ export class BitBuffer {
 
 		if (this._bitsAvail === 0) {
 			// Phase 2a: byte-aligned — direct memcpy from source
-			const direct = Math.min(size - written, this._pointer.length - this._byteOffset);
-			if (direct > 0) {
-				out.set(this._pointer.subarray(this._byteOffset, this._byteOffset + direct), written);
-				written += direct;
-				this._byteOffset += direct;
-			}
+			const direct = size - written;
+			out.set(this._pointer.subarray(this._byteOffset, this._byteOffset + direct), written);
+			this._byteOffset += direct;
 			this.FetchNext();
 		} else {
 			// Phase 2b: non-byte-aligned — shift-copy loop
@@ -265,17 +268,28 @@ export class BitBuffer {
 			const shift = this._bitsAvail; // 1-7 bits in carry
 			const invShift = 8 - shift;
 			let carry = this._buf; // low 'shift' bits are valid
-			const bytesNeeded = size - written;
-			const available = this._pointer.length - this._byteOffset;
-			const count = Math.min(bytesNeeded, available);
+			const count = size - written;
 
-			for (let i = 0; i < count; i++) {
+			let i = 0;
+			if (count >= 16) {
+				// Word loads with byte stores avoid alignment restrictions and an output DataView allocation.
+				const sourceOffset = this._pointer.byteOffset + this._byteOffset;
+				for (; i + 4 <= count; i += 4) {
+					const word = this._pointerView.getUint32(sourceOffset + i, true);
+					const value = carry | (word << shift);
+					out[written + i] = value;
+					out[written + i + 1] = value >>> 8;
+					out[written + i + 2] = value >>> 16;
+					out[written + i + 3] = value >>> 24;
+					carry = word >>> (32 - shift);
+				}
+			}
+			for (; i < count; i++) {
 				const src = this._pointer[this._byteOffset + i]!;
 				out[written + i] = (carry | (src << shift)) & 0xff;
 				carry = src >>> invShift;
 			}
 
-			written += count;
 			this._byteOffset += count;
 			this._buf = carry;
 			// _bitsAvail stays the same (shift bits in carry)
@@ -283,6 +297,8 @@ export class BitBuffer {
 	}
 
 	skipBytesBetter = (bytes: number) => {
+		if (!Number.isSafeInteger(bytes) || bytes < 0) throw new RangeError('Invalid byte skip size');
+		if (bytes > this.RemainingBytes) exhausted();
 		const bitsToSkip = bytes * 8;
 
 		if (bitsToSkip <= this._bitsAvail) {
@@ -299,7 +315,7 @@ export class BitBuffer {
 		// Compute new absolute bit position and jump
 		const currentBitPos = this._byteOffset * 8 - this._bitsAvail;
 		const newBitPos = currentBitPos + bitsToSkip;
-		const alignedByteOffset = (newBitPos >>> 5) << 2; // floor(newBitPos/32)*4
+		const alignedByteOffset = Math.floor(newBitPos / 32) * 4;
 		const bitsIntoChunk = newBitPos & 31;
 
 		this._byteOffset = alignedByteOffset;
@@ -374,46 +390,39 @@ export class BitBuffer {
 	}
 	readVarInt32() {
 		const val = this.ReadUVarInt32();
-		const x = val | 0; // Convert to 32-bit signed integer (equivalent to truncate + bitcast)
-		let mut = x >> 1;
-
-		if ((x & 1) !== 0) {
-			mut = ~mut;
-		}
-
-		return mut;
+		return (val >>> 1) ^ -(val & 1);
 	}
 	readUVarInt64() {
-		let result = 0n; // Use BigInt for 64-bit precision
-		let count = 0;
-		let b = 0;
-		let s = 0n;
-		while (true) {
-			b = this.ReadUBits(8);
-
-			if (b < 0x80) {
-				if (count > 9 || (count === 9 && b > 1)) {
-					throw new Error('MALFORMED U64');
-				}
-				return result | (BigInt(b) << s);
+		let low = 0;
+		let high = 0;
+		for (let count = 0; ; count++) {
+			const b = this.ReadByte();
+			if (count < 4) {
+				low |= (b & 0x7f) << (count * 7);
+			} else if (count === 4) {
+				// The fifth byte straddles the two 32-bit words.
+				low |= (b & 0x0f) << 28;
+				high = (b & 0x70) >>> 4;
+			} else {
+				if (count === 9 && b > 1) throw new Error('MALFORMED U64');
+				high |= (b & 0x7f) << (count * 7 - 32);
 			}
-
-			result |= BigInt(b & 127) << s;
-			count = count + 1;
-
 			if ((b & 0x80) === 0) {
-				break;
+				if (high === 0) return BigInt(low >>> 0);
+				_u64Reinterpret.setUint32(0, low, true);
+				_u64Reinterpret.setUint32(4, high, true);
+				return _u64Reinterpret.getBigUint64(0, true);
 			}
-
-			s = s + 7n;
 		}
-
-		return result;
 	}
 	decudeUint64() {
-		const bytes = this._uintbuffer;
-		this.readBytes(bytes);
-		return bytes.readBigUInt64LE(0);
+		if (this._bitsAvail === 32 && this.RemainingBytes >= 8) {
+			_u64Reinterpret.setUint32(0, this.ReadUBits(32), true);
+			_u64Reinterpret.setUint32(4, this.ReadUBits(32), true);
+		} else {
+			this.readBytes(_u64ReinterpretBytes);
+		}
+		return _u64Reinterpret.getBigUint64(0, true);
 	}
 	decode_noscale() {
 		return this.ReadUBits(32);

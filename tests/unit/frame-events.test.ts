@@ -73,6 +73,22 @@ describe('demo frame events', () => {
 		expect(events).toEqual(['info', 'end']);
 	});
 
+	test('every truncated trailer reports the same consumed bytes for buffers and streams', async () => {
+		for (let size = 0; size <= info.length; size++) {
+			const bytes = demoFile(stop, info.subarray(0, size));
+			const totals: number[] = [];
+			for (const source of [bytes, Readable.from([bytes])]) {
+				const reader = new DemoReader();
+				reader.on('DEM_FileInfo', () => {});
+				let progress = 0;
+				reader.on('progress', value => (progress = value));
+				expect(await reader.parseDemo(source)).toEqual({ incomplete: false });
+				totals.push(progress);
+			}
+			expect(totals).toEqual([16 + stop.length + (size === info.length ? size : 0), totals[0]!]);
+		}
+	});
+
 	test('without a trailer subscription DEM_Stop finishes before stream EOF', async () => {
 		const source = new Readable({ read() {} });
 		const reader = new DemoReader();

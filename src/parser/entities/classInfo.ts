@@ -102,7 +102,7 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 
 	const size = reader.ReadUVarInt32();
 
-	const msg = Buffer.allocUnsafe(size);
+	const msg = new Uint8Array(size);
 	reader.readBytes(msg);
 
 	(sendTables as any) = null;

@@ -1,4 +1,4 @@
-import type { DemoReader } from '../parser/index.js';
+import type { BaseDemoReader as DemoReader } from '../parser/base.js';
 import type { Vector } from './playerPawn.js';
 import { EntityHelper } from './entityHelper.js';
 import { decodeSmokeVoxelJournal, getSmokeOccupancyAt, voxelToWorld, type SmokeVoxel } from './smokeVoxel.js';

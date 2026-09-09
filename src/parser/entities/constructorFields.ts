@@ -1,6 +1,6 @@
 import type { BitBuffer } from '../ubitreader.js';
 import { generateEnum, type GetEnumType } from './brandedEnum.js';
-import { decodeQfloat, getQuantalizedFloat, qfMapper } from './quantizedFloat.js';
+import { decodeQfloat, getQuantalizedFloat, type QuantalizedFloat } from './quantizedFloat.js';
 type FieldType = {
 	baseType: string;
 	genericType: FieldType | null;
@@ -136,11 +136,14 @@ const D_GAME_MODE_RULES = 21;
 const D_BINARY_BLOCK = 22;
 const D_CTRANSFORM = 23;
 
-export type QuantalizedFloatDecoder = { type: typeof D_QUANTALIZED_FLOAT; decoder: number };
+export type QuantalizedFloatDecoder = {
+	type: typeof D_QUANTALIZED_FLOAT;
+	/** Parameters owned by the schema and shared by its cloned fields. */
+	decoder: Readonly<QuantalizedFloat>;
+};
 export type Decoder = number | QuantalizedFloatDecoder;
 
 export const Decoders = {
-	QuantalizedFloatDecoder: { type: D_QUANTALIZED_FLOAT, decoder: 0 } as QuantalizedFloatDecoder,
 	VectorNormalDecoder: D_VECTOR_NORMAL,
 	VectorNoscaleDecoder: D_VECTOR_NOSCALE,
 	VectorFloatCoordDecoder: D_VECTOR_FLOAT_COORD,
@@ -550,12 +553,10 @@ export const constructorFieldHelper = {
 			return Decoders.NoscaleDecoder;
 		}
 
-		const qf = getQuantalizedFloat(field.bitcount, field.encodeFlags, field.lowValue, field.highValue);
-		const idx = qfMapper.idx;
-		qfMapper.map[idx] = qf;
-		qfMapper.idx++;
-
-		return { type: D_QUANTALIZED_FLOAT, decoder: idx } as QuantalizedFloatDecoder;
+		return {
+			type: D_QUANTALIZED_FLOAT,
+			decoder: getQuantalizedFloat(field.bitcount, field.encodeFlags, field.lowValue, field.highValue)
+		};
 	},
 	findUintDecoder: (field: ConstructorField): Decoder => {
 		if (field.encoder === 'fixed64') return Decoders.Fixed64Decoder;
@@ -631,6 +632,7 @@ export const constructorFieldHelper = {
 				return reader.ReadUBits(7);
 			case D_BINARY_BLOCK: {
 				const length = reader.ReadUVarInt32();
+				if (length > reader.RemainingBytes) throw new RangeError('Truncated binary block');
 				const out = new Uint8Array(length);
 				reader.readBytes(out);
 				return out;
@@ -645,6 +647,83 @@ export const constructorFieldHelper = {
 				);
 			default:
 				throw Error('unknown decoder');
+		}
+	},
+	/** Consume an unused value without allocating its array, bigint, string or binary output. */
+	skip: (reader: BitBuffer, decoder: Decoder): void => {
+		// Keep the switch numeric and cheap scalar reads out of its allocating-decoder fallback.
+		if (typeof decoder === 'object') {
+			decodeQfloat(reader, decoder.decoder);
+			return;
+		}
+		if (decoder === D_UNSIGNED) {
+			reader.ReadUVarInt32();
+			return;
+		}
+		if (decoder === D_BOOLEAN) {
+			reader.readBoolean();
+			return;
+		}
+		if (decoder === D_NOSCALE) {
+			reader.consumePeeked(32);
+			return;
+		}
+		switch (decoder) {
+			case D_VECTOR_NOSCALE:
+			case D_QANGLE3:
+			case D_QANGLE_PITCH_YAW:
+				// Keep component read boundaries so truncation leaves the same cursor as decode.
+				reader.consumePeeked(32);
+				reader.consumePeeked(32);
+				reader.consumePeeked(32);
+				return;
+			case D_FIXED64:
+				reader.skipBytesBetter(8);
+				return;
+			case D_VECTOR_NORMAL: {
+				const hasX = reader.readBoolean();
+				const hasY = reader.readBoolean();
+				if (hasX) reader.decodeNormal();
+				if (hasY) reader.decodeNormal();
+				reader.readBoolean();
+				return;
+			}
+			case D_VECTOR_FLOAT_COORD:
+				reader.readBitCoord();
+				reader.readBitCoord();
+				reader.readBitCoord();
+				return;
+			case D_QANGLE_VAR: {
+				const flags = reader.ReadUBits(3);
+				if (flags & 1) reader.readBitCoord();
+				if (flags & 2) reader.readBitCoord();
+				if (flags & 4) reader.readBitCoord();
+				return;
+			}
+			case D_QANGLE_PRES: {
+				const flags = reader.ReadUBits(3);
+				if (flags & 1) reader.ReadUBits(20);
+				if (flags & 2) reader.ReadUBits(20);
+				if (flags & 4) reader.ReadUBits(20);
+				return;
+			}
+			case D_UNSIGNED64: {
+				// Match readUVarInt64's wire validation without constructing a bigint.
+				for (let count = 0; ; count++) {
+					const byte = reader.ReadByte();
+					if (count === 9 && byte > 1) throw new Error('MALFORMED U64');
+					if (byte < 0x80) return;
+				}
+			}
+			case D_STRING:
+				while (reader.ReadByte() !== 0) {}
+				return;
+			case D_BINARY_BLOCK:
+				reader.skipBytesBetter(reader.ReadUVarInt32());
+				return;
+			default:
+				// Numeric values are cheap; reuse their decode and unsupported-format errors.
+				constructorFieldHelper.decode(reader, decoder);
 		}
 	},
 	findDecoder: (field: ConstructorField): Decoder => {

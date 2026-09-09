@@ -3,15 +3,15 @@ import type {
 	CMsgSource1LegacyGameEventList_descriptor_t
 } from '../../ts-proto/gameevents.js';
 import type { _GameEventsArguments, EventWithName, GameEventsArguments } from './eventTypes.js';
-import type { DemoReader } from './../index.js';
+import type { BaseDemoReader as DemoReader } from '../base.js';
 import { annotateGameEvent } from '../../helpers/eventAnnotation.js';
 import { EntityMode } from '../entities/types.js';
 import type { WinRoundReason } from '../../helpers/gameRules.js';
-import EventEmitter from 'events';
+import { TypedEventEmitter } from './typedEmitter.js';
 
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
-export class GameEvents extends EventEmitter<GameEventsArguments> {
+export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 	_eventDescriptors: Record<number, CMsgSource1LegacyGameEventList_descriptor_t> = {};
 	private _demoReader!: DemoReader;
 
@@ -47,8 +47,8 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 			if (this._entityMode !== EntityMode.NONE && SYNTHETIC_EVENTS.has(descriptor.name)) return;
 
 			if (
-				!this.eventNames().includes(descriptor.name as keyof _GameEventsArguments) &&
-				!this.eventNames().includes('gameEvent')
+				this.listenerCount(descriptor.name as keyof _GameEventsArguments) === 0 &&
+				this.listenerCount('gameEvent') === 0
 			) {
 				return;
 			}
@@ -72,7 +72,7 @@ export class GameEvents extends EventEmitter<GameEventsArguments> {
 				this.emit(event.event_name as keyof GameEventsArguments, event);
 				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event);
 			}
-			this.eventQueue = [];
+			this.eventQueue.length = 0;
 
 			if (this._entityMode !== EntityMode.NONE) {
 				this._checkSyntheticRoundEvents();

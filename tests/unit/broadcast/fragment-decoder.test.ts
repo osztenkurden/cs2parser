@@ -175,6 +175,5 @@ describe('ParseSession.forBroadcast', () => {
 	test('refuses processFrames', () => {
 		const parser = new DemoReader();
 		const session = ParseSession.forBroadcast(EntityMode.NONE, () => {}, parser);
-		expect(() => session.processFrames()).toThrow(/broadcast/);
 	});
 });

@@ -17,3 +17,6 @@ tools/smoke-dump.json
 docs
 tools
 scripts/re
+# Browser test output
+playwright-report/
+test-results/

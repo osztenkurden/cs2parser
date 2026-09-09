@@ -40,6 +40,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: npm run build
+      - run: npm run test:node
 
       # Cache demo fixtures to avoid repeated downloads
       - name: Cache test fixtures
@@ -52,8 +53,13 @@ jobs:
       - name: Download test fixtures
         if: steps.fixture-cache.outputs.cache-hit != 'true'
         run: |
-          gh release download test-fixtures/v2 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }} || echo "No test fixtures release found, skipping integration tests"
+          gh release download test-fixtures/v2 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - run: test -s tests/fixtures/demo.dem
       - run: bun run test
+
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx tsc -p tests/browser/tsconfig.json
+      - run: npx playwright test

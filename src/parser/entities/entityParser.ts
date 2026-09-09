@@ -5,7 +5,8 @@ import {
 	constructorFieldHelper,
 	Decoders,
 	FieldTypeEnum,
-	getInnerExt,
+	type Decoder,
+	type Field,
 	type PropInfo,
 	type SerializerN,
 	type TypedArray
@@ -47,87 +48,59 @@ const getEntityType = (name: string) => {
 	return EntityTypeEnum.Normal;
 };
 
-// Reusable result object to avoid allocation per field
-const _fieldResult = {
-	decoder: 0 as any,
-	propId: 0,
-	hasInfo: false,
-	arrayIndex: -1,
-	isResize: false
+type FieldPlan = {
+	decoder: Decoder;
+	propId: number;
+	isResize: boolean;
+	indexDepth: number;
+	children: (FieldPlan | null)[] | null;
+	element: FieldPlan | null;
+	pathError: string;
 };
 
-// Combined findField + getPropInfo + getDecoderFromField in one pass
-const findFieldAndDecode = (fp: FieldPath, ser: SerializerN) => {
-	const f = ser.fields[fp.path[0]];
-	if (!f) throw 'Noo field';
-
-	// Fast path: depth-0 Value field (most common case). Must NOT take this for
-	// Vector at depth 0 (that's a resize) or Array (shouldn't appear bare here).
-	if (fp.last === 0 && f.type === FieldTypeEnum.Value) {
-		const v = f.value as any;
-		_fieldResult.decoder = v.decoder;
-		_fieldResult.propId = v.prop_id;
-		_fieldResult.hasInfo = true;
-		_fieldResult.arrayIndex = -1;
-		_fieldResult.isResize = false;
-		return _fieldResult;
-	}
-
-	// Traverse to leaf field. Capture the outermost array/vector element index
-	// from the path slot immediately after a container.
-	let field = f;
-	let arrayIndex = -1;
-	for (let depth = 1; depth <= fp.last; depth++) {
-		if (field.type === FieldTypeEnum.Vector || field.type === FieldTypeEnum.Array) {
-			if (arrayIndex === -1) arrayIndex = fp.path[depth]!;
+// Each serializer's cloned fields carry class-local prop IDs. Plans never hold entity storage.
+const planField = (field: Field, depth: number, indexDepth: number): FieldPlan => {
+	const plan: FieldPlan = {
+		decoder: Decoders.UnsignedDecoder,
+		propId: -1,
+		isResize: false,
+		indexDepth: -1,
+		children: null,
+		element: null,
+		pathError: 'ILLEGAL PATH #3'
+	};
+	switch (field.type) {
+		case FieldTypeEnum.Value: {
+			const value = (field as Field<typeof FieldTypeEnum.Value>).value;
+			plan.decoder = value.decoder;
+			plan.propId = value.prop_id;
+			plan.indexDepth = indexDepth;
+			break;
 		}
-		field = getInnerExt(field!, fp.path[depth]!);
-	}
-
-	const type = field!.type;
-
-	if (type === FieldTypeEnum.Value) {
-		const v = field.value as any;
-		_fieldResult.decoder = v.decoder;
-		_fieldResult.propId = v.prop_id;
-		_fieldResult.hasInfo = true;
-		_fieldResult.arrayIndex = arrayIndex;
-		_fieldResult.isResize = false;
-		return _fieldResult;
-	}
-
-	if (type === FieldTypeEnum.Vector) {
-		// Path stopped AT the vector field → resize message (UVarInt32 new length).
-		// PropId points at the inner element so we know which container to resize.
-		_fieldResult.decoder = Decoders.UnsignedDecoder;
-		const inner = getInnerExt(field, 0);
-		if (inner.type === FieldTypeEnum.Value) {
-			const v = inner.value as any;
-			_fieldResult.propId = v.prop_id;
-			_fieldResult.hasInfo = true;
-			_fieldResult.arrayIndex = -1;
-			_fieldResult.isResize = true;
-		} else {
-			_fieldResult.hasInfo = false;
-			_fieldResult.arrayIndex = -1;
-			_fieldResult.isResize = false;
+		case FieldTypeEnum.Array:
+		case FieldTypeEnum.Vector: {
+			const value = (field as Field<typeof FieldTypeEnum.Array | typeof FieldTypeEnum.Vector>).value;
+			// Nested containers retain the existing outermost-element indexing behavior.
+			plan.element = planField(value.field_enum, depth + 1, indexDepth === -1 ? depth + 1 : indexDepth);
+			if (field.type === FieldTypeEnum.Vector && value.field_enum.type === FieldTypeEnum.Value) {
+				plan.propId = plan.element.propId;
+				plan.isResize = true;
+			}
+			break;
 		}
-		return _fieldResult;
+		case FieldTypeEnum.Serializer:
+		case FieldTypeEnum.Pointer: {
+			const value = (field as Field<typeof FieldTypeEnum.Serializer | typeof FieldTypeEnum.Pointer>).value;
+			plan.children = value.serializer.fields.map(child =>
+				child ? planField(child, depth + 1, indexDepth) : null
+			);
+			plan.pathError = field.type === FieldTypeEnum.Pointer ? 'ILLEGAL PATH #2x' : 'ILLEGAL PATH #1';
+			if (field.type === FieldTypeEnum.Pointer)
+				plan.decoder = (field as Field<typeof FieldTypeEnum.Pointer>).value.decoder;
+			break;
+		}
 	}
-
-	if (type === FieldTypeEnum.Pointer) {
-		_fieldResult.decoder = (field.value as any).decoder;
-		_fieldResult.hasInfo = false;
-		_fieldResult.arrayIndex = -1;
-		_fieldResult.isResize = false;
-		return _fieldResult;
-	}
-
-	_fieldResult.decoder = Decoders.UnsignedDecoder;
-	_fieldResult.hasInfo = false;
-	_fieldResult.arrayIndex = -1;
-	_fieldResult.isResize = false;
-	return _fieldResult;
+	return plan;
 };
 
 const GROWTH_FALLBACK = 32;
@@ -173,6 +146,7 @@ const writeToContainer = (props: Record<string, unknown>, info: PropInfo, arrayI
 	} else {
 		(arr as unknown[])[arrayIndex] = value;
 	}
+	return arr;
 };
 
 const resizeContainer = (props: Record<string, unknown>, info: PropInfo, newLen: number) => {
@@ -200,8 +174,9 @@ const resizeContainer = (props: Record<string, unknown>, info: PropInfo, newLen:
  *                       (with `meta.subKey` for vector-of-serializer sub-fields)
  *   - scalar write    → assign `props[meta.name]`
  *
- * Used by both the direct-write decode loop and the `entityupdated` event
- * listener so the two paths can't drift apart.
+ * Shared by direct updates and the `entityupdated` listener. Consecutive direct
+ * container writes have an update-local fast path; allocation and growth still
+ * go through writeToContainer.
  */
 export const applyPropUpdate = (
 	props: Record<string, unknown>,
@@ -220,7 +195,13 @@ export const applyPropUpdate = (
 };
 
 export class EntityParser {
-	private paths: FieldPath[];
+	private updates: FieldPlan[] = [];
+	private arrayIndices: number[] = [];
+	private plans = new WeakMap<SerializerN, (FieldPlan | null)[]>();
+	private planSerializer: SerializerN | null = null;
+	private planRoots: (FieldPlan | null)[] = [];
+	/** Scratch path; resolved plans and full-width indices are saved before reading any values. */
+	public fieldPath: FieldPath = { path: [-1, 0, 0, 0, 0, 0, 0], last: 0 };
 	private entities: { [EntityId: number]: number }; // Record<number, Entity>;
 	private cachedBitBuffer = new BitBuffer(new Uint8Array(0));
 	private cachedBitBuffer2 = new BitBuffer(new Uint8Array(0));
@@ -238,14 +219,6 @@ export class EntityParser {
 		private enqueueEvent: emit
 	) {
 		this.classIdBits = classInfo.classIdBits;
-		const paths = [] as FieldPath[];
-		for (let i = 0; i < 8192; i++) {
-			paths.push({
-				path: [0, 0, 0, 0, 0, 0, 0],
-				last: 0
-			});
-		}
-		this.paths = paths;
 		this.entities = {};
 	}
 
@@ -261,8 +234,7 @@ export class EntityParser {
 			throw 'No class';
 		}
 
-		const serializer = cls.serializer;
-		const paths = this.paths;
+		const updates = this.updates;
 		const directEntities = this.directEntities;
 		// Hoist per-entity lookups outside the hot loop: entityId is constant for this
 		// call, so directEntities[entityId] cannot change between iterations.
@@ -271,28 +243,48 @@ export class EntityParser {
 		const propNameById = this.classInfo.propNameById;
 		const propInfoById = this.directPropInfoById;
 		const emitEntityUpdates = !directEntities; // emit only when no direct-write target
+		// Update-local only: callers can replace properties or arrays between entity updates.
+		let containerKey: string | undefined;
+		let container: unknown[] | TypedArray | undefined;
 
 		let i = 0;
 		while (i < nUpdates) {
-			const path = paths[i]!;
-
-			const info = findFieldAndDecode(path, serializer);
-			const result = constructorFieldHelper.decode(reader, info.decoder);
-			if (info.hasInfo) {
-				if (entProps) {
-					const meta = propInfoById![info.propId];
-					if (meta !== undefined) {
-						applyPropUpdate(entProps, meta, result, info.arrayIndex, info.isResize);
+			const info = updates[i]!;
+			const arrayIndex = this.arrayIndices[i]!;
+			const meta = info.propId !== -1 && entProps ? propInfoById![info.propId] : undefined;
+			if (meta !== undefined) {
+				const result = constructorFieldHelper.decode(reader, info.decoder);
+				if (meta.containerKey !== undefined && arrayIndex !== -1 && !info.isResize) {
+					if (
+						containerKey !== meta.containerKey ||
+						container === undefined ||
+						(meta.elementCtor && meta.fixedLength === undefined && arrayIndex >= container.length)
+					) {
+						container = writeToContainer(entProps!, meta, arrayIndex, result);
+						containerKey = meta.containerKey;
+					} else if (meta.subKey !== undefined) {
+						const elements = container as Record<string, unknown>[];
+						let element = elements[arrayIndex];
+						if (!element) elements[arrayIndex] = element = {};
+						element[meta.subKey] = result;
+					} else {
+						(container as unknown[])[arrayIndex] = result;
 					}
-				} else if (emitEntityUpdates && propNameById[info.propId] !== undefined) {
-					this.enqueueEvent('entityupdated', {
-						entityId,
-						propId: info.propId,
-						value: result,
-						arrayIndex: info.arrayIndex === -1 ? undefined : info.arrayIndex,
-						isResize: info.isResize ? true : undefined
-					});
+				} else {
+					containerKey = undefined;
+					applyPropUpdate(entProps!, meta, result, arrayIndex, info.isResize);
 				}
+			} else if (info.propId !== -1 && emitEntityUpdates && propNameById[info.propId] !== undefined) {
+				const result = constructorFieldHelper.decode(reader, info.decoder);
+				this.enqueueEvent('entityupdated', {
+					entityId,
+					propId: info.propId,
+					value: result,
+					arrayIndex: arrayIndex === -1 ? undefined : arrayIndex,
+					isResize: info.isResize ? true : undefined
+				});
+			} else {
+				constructorFieldHelper.skip(reader, info.decoder);
 			}
 
 			i++;
@@ -306,20 +298,27 @@ export class EntityParser {
 		return getEntityType(cls.name);
 	};
 
-	writeFp(fp_src: FieldPath, idx: number) {
-		const target = this.paths[idx]!;
-		const last = fp_src.last;
-		target.last = last;
-		target.path[0] = fp_src.path[0];
-		if (last >= 1) {
-			target.path[1] = fp_src.path[1];
-			if (last >= 2) {
-				target.path[2] = fp_src.path[2];
-				if (last >= 3) {
-					for (let i = 3; i <= last; i++) target.path[i] = fp_src.path[i]!;
-				}
+	writeFp(fp_src: FieldPath, idx: number, serializer: SerializerN) {
+		if (idx >= 8192) throw new Error('Too many entity field paths');
+		if (this.planSerializer !== serializer) {
+			let roots = this.plans.get(serializer);
+			if (!roots) {
+				roots = serializer.fields.map(field => (field ? planField(field, 0, -1) : null));
+				this.plans.set(serializer, roots);
 			}
+			this.planSerializer = serializer;
+			this.planRoots = roots;
 		}
+		const root = this.planRoots[fp_src.path[0]];
+		if (!root) throw 'Noo field';
+		let plan: FieldPlan = root;
+		for (let depth = 1; depth <= fp_src.last; depth++) {
+			const child: FieldPlan | null | undefined = plan.element ?? plan.children?.[fp_src.path[depth]!];
+			if (!child) throw plan.pathError;
+			plan = child;
+		}
+		this.updates[idx] = plan;
+		this.arrayIndices[idx] = plan.indexDepth === -1 ? -1 : fp_src.path[plan.indexDepth]!;
 	}
 
 	createEntity = (reader: BitBuffer, entityId: number, baselines: Uint8Array[]) => {
@@ -360,7 +359,11 @@ export class EntityParser {
 	};
 
 	updateEntity = (reader: BitBuffer, entityId: number) => {
-		const nUpdates = parsePaths(reader, this);
+		const classId = this.entities[entityId];
+		if (classId === undefined) throw new Error(`No entiy with id ${entityId}`);
+		const cls = this.classInfo.classes[classId];
+		if (!cls) throw 'No class';
+		const nUpdates = parsePaths(reader, this, cls.serializer);
 		this.decodeEntityUpdate(reader, entityId, nUpdates);
 	};
 
