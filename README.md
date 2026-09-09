@@ -88,7 +88,7 @@ The original decoder source is `wasm/snappy.c`. After changing it, run `npm run 
 
 ### Migration
 
-All three metadata helpers now return promises, including on the server: add `await` to existing calls. `progress` now reports cumulative bytes parsed, rather than a fraction of the current buffer. Ordinary parsing stops at `DEM_Stop`, so unread trailer bytes can keep `bytesParsed / file.size` below 1. The server's `stream: false` option now reads larger chunks through the shared asynchronous stream loop.
+`parseHeader`, `parseServerInfo`, and `parseFileInfo` return promises, including on the server: add `await` to existing calls, or use the explicit server-only `*Sync` variants below. `progress` now reports cumulative bytes parsed, rather than a fraction of the current buffer. Ordinary parsing stops at `DEM_Stop`, so unread trailer bytes can keep `bytesParsed / file.size` below 1. The server's `stream: false` option now reads larger chunks through the shared asynchronous stream loop.
 
 Treat byte payloads, including string-table values, as `Uint8Array`, not as Node `Buffer`. Use `TextDecoder` for text rather than Buffer-specific methods. Both exports use the portable `events` package: common listener ordering, removal, prepend, once, and meta-event behavior is preserved, but Node-specific `errorMonitor`, `captureRejections`, global emitter defaults, and native `EventEmitter instanceof` checks are not supported. Async listener failures should be handled by the listener.
 
@@ -126,6 +126,25 @@ if (info) {
 ```
 
 Returns `null` if server info cannot be found. Reads only the demo's signon section (the setup frames at the start, before gameplay begins) instead of the whole file, so it stays fast and low-memory on demos of any size.
+
+## Synchronous Metadata
+
+The server export provides synchronous metadata methods for batch processes and worker threads:
+
+```ts
+import { DemoReader } from 'cs2parser';
+
+const header = DemoReader.parseHeaderSync('demo.dem');
+const serverInfo = DemoReader.parseServerInfoSync('demo.dem');
+const fileInfo = DemoReader.parseFileInfoSync('demo.dem');
+
+// Buffer and Uint8Array inputs also work without promises or filesystem access.
+const bufferedHeader = DemoReader.parseHeaderSync(bytes);
+```
+
+These methods return the metadata object or `null` for absent/truncated metadata, and throw synchronously on I/O or malformed-data errors. They accept file paths, `Buffer`, and `Uint8Array`, not Blob/File or streams. File reads are limited to relevant frame headers/bodies; unrelated payloads are skipped, and file-info reads seek directly to the trailer. Each call closes its file and releases decoder storage before returning.
+
+Synchronous file I/O and decoding block the calling thread. Keep the existing asynchronous methods when event-loop responsiveness matters, or when reading Blob/File inputs. The browser export and `parseDemo()` remain asynchronous; neither gains a synchronous variant.
 
 ## parseDemo
 

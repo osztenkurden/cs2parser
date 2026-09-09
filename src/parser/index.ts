@@ -4,6 +4,7 @@ import { Readable } from 'node:stream';
 import { BaseDemoReader, type DemoInput, type ParseOptions } from './base.js';
 import { SnappyDecoder } from '../compression/wasm.js';
 import { parseHeader, parseServerInfo, parseFileInfo, type MetadataInput } from './metadata.js';
+import { parseMetadataSync } from './metadataSync.js';
 
 const metadataSource = async (source: string | MetadataInput) => {
 	if (typeof source !== 'string') return source;
@@ -28,6 +29,21 @@ export class DemoReader extends BaseDemoReader {
 
 	static async parseFileInfo(source: string | MetadataInput) {
 		return parseFileInfo(await metadataSource(source), new SnappyDecoder());
+	}
+
+	/** Synchronously read the header from a file path or bytes. Blocks the calling thread. */
+	static parseHeaderSync(source: string | Uint8Array) {
+		return parseMetadataSync(source, 'header');
+	}
+
+	/** Synchronously scan signon metadata from a file path or bytes. Blocks the calling thread. */
+	static parseServerInfoSync(source: string | Uint8Array) {
+		return parseMetadataSync(source, 'serverInfo');
+	}
+
+	/** Synchronously read the file-info trailer from a file path or bytes. Blocks the calling thread. */
+	static parseFileInfoSync(source: string | Uint8Array) {
+		return parseMetadataSync(source, 'fileInfo');
 	}
 
 	override parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {

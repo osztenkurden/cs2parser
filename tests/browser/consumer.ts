@@ -27,6 +27,12 @@ async function checkBrowserAPI(file: File, bytes: Uint8Array, stream: ReadableSt
 	await new DemoReader().parseDemo(bytes, { stream: false });
 	// @ts-expect-error Metadata accepts bytes and Blob/File, not filesystem paths.
 	await DemoReader.parseHeader('demo.dem');
+	// @ts-expect-error Synchronous metadata is available only from the server export.
+	DemoReader.parseHeaderSync(bytes);
+	// @ts-expect-error Synchronous metadata is available only from the server export.
+	DemoReader.parseServerInfoSync(bytes);
+	// @ts-expect-error Synchronous metadata is available only from the server export.
+	DemoReader.parseFileInfoSync(bytes);
 }
 
 void checkBrowserAPI;
