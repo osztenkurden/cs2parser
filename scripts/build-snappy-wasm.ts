@@ -22,6 +22,7 @@ if (process.argv.includes('--check')) {
 			[
 				'--target=wasm32',
 				'-O3',
+				'-mbulk-memory', // Lower literal memcpy to memory.copy without libc imports.
 				'-nostdlib',
 				'-fno-builtin',
 				'-Wl,--no-entry',

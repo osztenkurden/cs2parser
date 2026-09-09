@@ -5,6 +5,7 @@ import { DemoReader } from '../../src/browser.js';
 import { EDemoCommands } from '../../src/ts-proto/demo.js';
 import { demoFile, demoFrame, bytesField, varint, networkPacket } from '../helpers/demo.js';
 import { SVC_Messages } from '../../src/ts-proto/netmessages.js';
+import { buildFragment } from './broadcast/helpers.js';
 
 const stop = demoFrame(EDemoCommands.DEM_Stop);
 const streamOf = (chunks: Uint8Array[]) =>
@@ -57,7 +58,7 @@ test('nested compressed string tables and entries leave the outer packet intact'
 	const reader = new DemoReader();
 	let retained: Uint8Array | undefined;
 	let map: string | undefined;
-	reader.on('createstringtable', table => (retained = table?.table.data[0]?.value));
+	reader.on('createstringtable', table => (retained = table?.table.data[0]?.value ?? undefined));
 	reader.on('serverinfo', info => (map = info.map_name));
 	expect(await reader.parseDemo(demoFile(frame, frame, stop))).toEqual({ incomplete: false });
 	expect(map).toBe('de_nuke');
@@ -148,7 +149,7 @@ test('compressed event bytes survive reuse of the WASM frame buffer', async () =
 	);
 	const other = demoFrame(
 		EDemoCommands.DEM_ConsoleCmd | EDemoCommands.DEM_IsCompressed,
-		snappy.compressSync(bytesField(1, new Uint8Array(1024).fill(65)))
+		snappy.compressSync(bytesField(1, new Uint8Array(3).fill(65)))
 	);
 	await reader.parseDemo(streamOf([demoFile(custom), other, stop]));
 	expect(retained).toEqual(Uint8Array.of(1, 2, 3));
@@ -225,4 +226,71 @@ test('starting another demo or broadcast does not interrupt an active parse', as
 	expect(reader.hasEnded).toBe(false);
 	reader.cancel();
 	expect((await pending).reason).toBe('cancelled');
+});
+
+test.each(['complete', 'error', 'cancel'])('decoder storage is released after %s', async outcome => {
+	const reader = new DemoReader();
+	const release = reader._snappy.release!.bind(reader._snappy);
+	let releases = 0;
+	reader._snappy.release = () => {
+		releases++;
+		release();
+	};
+	const header = demoFrame(
+		EDemoCommands.DEM_FileHeader | EDemoCommands.DEM_IsCompressed,
+		snappy.compressSync(bytesField(5, new TextEncoder().encode('de_nuke')))
+	);
+	if (outcome === 'cancel') reader.on('header', () => reader.cancel());
+	const result = await reader.parseDemo(
+		demoFile(header, outcome === 'error' ? demoFrame(EDemoCommands.DEM_FileHeader, Uint8Array.of(10, 255)) : stop)
+	);
+	expect(releases).toBe(1);
+	if (outcome === 'complete') expect(result).toEqual({ incomplete: false });
+	if (outcome === 'error') expect(result.error).toBeInstanceOf(Error);
+	if (outcome === 'cancel') expect(result.reason).toBe('cancelled');
+});
+
+test('broadcast cancellation stops later commands from recreating decoder storage', async () => {
+	const reader = new DemoReader();
+	let decodes = 0;
+	let released = false;
+	const decode = reader._snappy.uncompressFrame.bind(reader._snappy);
+	const release = reader._snappy.release!.bind(reader._snappy);
+	reader._snappy.uncompressFrame = bytes => {
+		expect(released).toBe(false);
+		decodes++;
+		return decode(bytes);
+	};
+	reader._snappy.release = () => {
+		released = true;
+		release();
+	};
+	reader.on('tickstart', tick => {
+		if (tick === 100) reader.cancel();
+	});
+	let reason: string | undefined;
+	reader.on('end', end => (reason = end.reason));
+	const compressed = snappy.compressSync(new Uint8Array(0));
+	const fragment = buildFragment(
+		[100, 101].map(tick => ({
+			cmd: EDemoCommands.DEM_Packet,
+			tick,
+			payload: compressed,
+			isCompressed: true
+		}))
+	);
+	await reader.parseHttpBroadcast('https://unused.invalid/', {
+		fetcher: {
+			async json<T>() {
+				return { tick: 100, rtdelay: 0, rcvage: 0, fragment: 5, signup_fragment: 0, tps: 64, protocol: 5 } as T;
+			},
+			async bytes(path) {
+				return { ok: true, data: path === '0/start' ? new Uint8Array(0) : fragment };
+			}
+		}
+	});
+	expect(decodes).toBe(1);
+	expect(released).toBe(true);
+	expect(reason).toBe('cancelled');
+	expect(reader.currentTick).toBe(100);
 });

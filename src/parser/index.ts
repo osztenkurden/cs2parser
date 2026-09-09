@@ -12,23 +12,6 @@ const metadataSource = async (source: string | MetadataInput) => {
 	return openAsBlob(source);
 };
 
-/** Forward owned Node chunks without Readable.toWeb's per-chunk Buffer copy. */
-const toWebStream = (source: Readable): ReadableStream<Uint8Array> => {
-	const iterator = source[Symbol.asyncIterator]();
-	return new ReadableStream<Uint8Array>({
-		async pull(controller) {
-			const { done, value } = await iterator.next();
-			if (done) controller.close();
-			else controller.enqueue(value);
-		},
-		async cancel() {
-			// Destroy first: iterator.return() alone can wait forever on a pending read.
-			source.destroy();
-			await iterator.return?.();
-		}
-	});
-};
-
 /** Server entry: shared parsing with native Snappy and Node file/stream inputs. */
 export class DemoReader extends BaseDemoReader {
 	constructor() {
@@ -54,7 +37,19 @@ export class DemoReader extends BaseDemoReader {
 			source = createReadStream(source, { highWaterMark: opts.stream === false ? 4 * 1024 * 1024 : 64 * 1024 });
 		}
 		if (source instanceof Readable) {
-			source = toWebStream(source);
+			const stream = source;
+			return this.parseSource(() => {
+				const iterator = stream[Symbol.asyncIterator]();
+				return {
+					read: () => iterator.next(),
+					async cancel(reason?: unknown) {
+						// Destroy first: iterator.return() alone can wait forever on a pending read.
+						// An error also wakes iterators whose stream disables the close event.
+						stream.destroy(reason instanceof Error ? reason : undefined);
+						await iterator.return?.();
+					}
+				};
+			}, opts);
 		}
 		return super.parseDemo(source, opts);
 	}

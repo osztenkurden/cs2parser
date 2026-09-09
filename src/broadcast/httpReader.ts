@@ -386,6 +386,7 @@ export class HttpBroadcastReader {
 
 		try {
 			const { ended } = this.session.pushBroadcastFragment(bytes, tickOffset);
+			if (this._aborted()) return true;
 			if (ended) {
 				this._terminate('stop');
 				return true;

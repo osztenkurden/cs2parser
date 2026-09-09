@@ -1,11 +1,12 @@
-import { doOp, type FieldPath } from './fieldPathOps.js';
+import { doOp } from './fieldPathOps.js';
 import type { EntityParser } from './entityParser.js';
 import type { BitBuffer } from '../ubitreader.js';
+import type { SerializerN } from './constructorFields.js';
 
 // Constants
 const STOP_READING_SYMBOL = 39;
-const HUFFMAN_CODE_MAXLEN = 17;
-const LUT_SIZE = 1 << HUFFMAN_CODE_MAXLEN; // 131072
+const HUFFMAN_PREFIX_BITS = 8;
+const LUT_SIZE = 1 << HUFFMAN_PREFIX_BITS;
 
 interface TreeNode {
 	value: number;
@@ -72,18 +73,21 @@ const getHuffmanTree = () => {
 
 const huffmanTree = getHuffmanTree();
 
-// Build Huffman lookup table at module init
-const huffmanSymbol = new Uint8Array(LUT_SIZE);
-const huffmanLength = new Uint8Array(LUT_SIZE);
+// Common codes fit in a 512-byte primary table. Rare long codes use the remaining tree.
+const huffmanCodes = new Uint16Array(LUT_SIZE);
+const huffmanLongRoots: (TreeNode | undefined)[] = [];
 
 function buildLUT(node: TreeNode, code: number, depth: number) {
 	if (node.leaf) {
-		const count = 1 << (HUFFMAN_CODE_MAXLEN - depth);
+		const count = 1 << (HUFFMAN_PREFIX_BITS - depth);
 		for (let i = 0; i < count; i++) {
 			const idx = code | (i << depth);
-			huffmanSymbol[idx] = node.value;
-			huffmanLength[idx] = depth;
+			huffmanCodes[idx] = (depth << 6) | node.value;
 		}
+		return;
+	}
+	if (depth === HUFFMAN_PREFIX_BITS) {
+		huffmanLongRoots[code] = node;
 		return;
 	}
 	buildLUT(node.left!, code, depth + 1);
@@ -91,18 +95,12 @@ function buildLUT(node: TreeNode, code: number, depth: number) {
 }
 buildLUT(huffmanTree, 0, 0);
 
-/**
- * Scratch field path, reused across calls.
- *
- * `parsePaths` runs once per entity update — millions of times on a full demo —
- * and used to allocate a fresh object with a 7-element array literal each time.
- * The value never escapes: `writeFp` copies it into the parser's own path table
- * before the next iteration overwrites it.
- */
-const scratchPath: FieldPath = { path: [-1, 0, 0, 0, 0, 0, 0], last: 0 };
-
-export const parsePaths = (reader: BitBuffer, entityParser: EntityParser) => {
-	const fieldPath = scratchPath;
+export const parsePaths = (
+	reader: BitBuffer,
+	entityParser: Pick<EntityParser, 'fieldPath' | 'writeFp'>,
+	serializer: SerializerN
+) => {
+	const fieldPath = entityParser.fieldPath;
 	const p = fieldPath.path;
 	p[0] = -1;
 	p[1] = 0;
@@ -115,16 +113,26 @@ export const parsePaths = (reader: BitBuffer, entityParser: EntityParser) => {
 	let idx = 0;
 
 	while (true) {
-		const peeked = reader.peekHuffmanCode();
-		const symbol = huffmanSymbol[peeked]!;
-		const codeLen = huffmanLength[peeked]!;
-		reader.consumePeeked(codeLen);
+		const prefix = reader.peekHuffmanPrefix();
+		let code = huffmanCodes[prefix]!;
+		if (code === 0) {
+			// Do not consume the prefix separately: a truncated code must fail atomically.
+			let node = huffmanLongRoots[prefix]!;
+			const peeked = reader.peekHuffmanCode();
+			let depth = HUFFMAN_PREFIX_BITS;
+			while (!node.leaf) node = (peeked >>> depth++) & 1 ? node.right! : node.left!;
+			code = (depth << 6) | node.value;
+		}
+		const symbol = code & 63;
+		reader.consumePeeked(code >>> 6);
 
 		if (symbol === STOP_READING_SYMBOL) break;
 
-		doOp(symbol, reader, fieldPath);
+		if (symbol < 4) p[fieldPath.last]! += symbol + 1;
+		else if (symbol === 4) p[fieldPath.last]! += reader.readUbitVarFp() + 5;
+		else doOp(symbol, reader, fieldPath);
 
-		entityParser.writeFp(fieldPath, idx);
+		entityParser.writeFp(fieldPath, idx, serializer);
 
 		idx++;
 	}

@@ -6,6 +6,7 @@ import { buildFragment } from '../tests/unit/broadcast/helpers.js';
 import { EDemoCommands } from '../src/ts-proto/demo.js';
 import { EBaseGameEvents } from '../src/ts-proto/gameevents.js';
 import { loadBundledEventDescriptors } from '../src/broadcast/defaultEventDescriptors.js';
+import { captureParity, PARITY_MODES, type ParityMode, type ParityResult } from '../tests/helpers/parity.js';
 
 const built = await Bun.build({ entrypoints: ['tests/browser/entry.ts'], target: 'browser' });
 if (!built.success) throw new AggregateError(built.logs, 'Browser package bundle failed');
@@ -37,26 +38,21 @@ function encodeVarint(value: number): number[] {
 	return bytes;
 }
 
-let expected: Promise<unknown> | undefined;
-async function nativeResult() {
+const expected: Partial<Record<ParityMode, Promise<ParityResult>>> = {};
+async function nativeResult(mode: ParityMode) {
 	const reader = new DemoReader();
-	let deaths = 0;
-	reader.gameEvents.on('player_death', () => deaths++);
-	const result = await reader.parseDemo(fixturePath, { entities: EntityMode.ALL });
+	const capture = captureParity(reader, mode);
+	const result = await reader.parseDemo(fixturePath, { entities: EntityMode[mode] });
 	if (result.incomplete || result.error) throw new Error('Native fixture parse failed');
-	return {
-		tick: reader.currentTick,
-		entities: reader.entities.filter(Boolean).length,
-		deaths,
-		map: reader.header?.map_name
-	};
+	return capture.finish();
 }
 
 Bun.serve({
 	hostname: '127.0.0.1',
 	port: 4178,
 	async fetch(request) {
-		const path = new URL(request.url).pathname;
+		const url = new URL(request.url);
+		const path = url.pathname;
 		// Deliberately omit COOP/COEP. The decoder must work on ordinary pages.
 		if (path === '/')
 			return new Response('<!doctype html><title>cs2parser browser tests</title>', {
@@ -64,8 +60,13 @@ Bun.serve({
 			});
 		if (path === '/bundle.mjs') return new Response(bundle, { headers: { 'Content-Type': 'text/javascript' } });
 		if (path === '/fixture.dem') return new Response(Uint8Array.from(demo));
-		if (path === '/real.dem' && existsSync(fixturePath)) return new Response(Bun.file(fixturePath));
-		if (path === '/expected' && existsSync(fixturePath)) return Response.json(await (expected ??= nativeResult()));
+		if (path === '/real.dem' && existsSync(fixturePath))
+			return new Response(Bun.file(fixturePath), { headers: { 'Cache-Control': 'no-store' } });
+		if (path === '/expected' && existsSync(fixturePath)) {
+			const mode = PARITY_MODES.find(mode => mode === url.searchParams.get('mode'));
+			if (!mode) return new Response('Invalid entity mode', { status: 400 });
+			return Response.json(await (expected[mode] ??= nativeResult(mode)));
+		}
 		if (path === '/broadcast/sync')
 			return Response.json({
 				tick: 100,

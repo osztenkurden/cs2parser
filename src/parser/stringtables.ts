@@ -19,7 +19,7 @@ export const parseStringTable = (
 	const players: CMsgPlayerInfo[] = [];
 	let idx = -1;
 	const keys: string[] = [];
-	const items: { idx: number; key: string; value: any }[] = [];
+	const items: { idx: number; key: string; value: Uint8Array | null }[] = [];
 	for (let i = 0; i < numEntries; i++) {
 		let key = '';
 		let value: Uint8Array | null = null;
@@ -82,7 +82,9 @@ export const parseStringTable = (
 				}
 			}
 
-			value = new Uint8Array(bits % 8 === 0 ? bits / 8 : 0);
+			if (bits > bitreader.RemainingBits) throw new RangeError('Truncated string-table value');
+			if (bits % 8 !== 0) throw new Error('Non-byte-aligned string-table values are not supported');
+			value = new Uint8Array(bits / 8);
 
 			bitreader.readBytes(value);
 

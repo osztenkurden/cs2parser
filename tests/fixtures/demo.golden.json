@@ -1,0 +1,535 @@
+{
+	"version": 1,
+	"source": {
+		"commit": "57d79fc358203ef384fe61ed3b7f478bd91f8357",
+		"entry": "src/index.ts",
+		"input": "path-stream"
+	},
+	"fixture": {
+		"release": "test-fixtures/v2",
+		"asset": "demo.dem",
+		"bytes": 329136562,
+		"sha256": "143eb78444727c7a8afa29d807272076d14044fc9d7c233035d0b9a176e70f60"
+	},
+	"checkpointTicks": [1, 1024, 16384, 32768, 65536, 98304, 131072, 163840, 180000],
+	"reviewedCorrections": {
+		"reason": "Signed ZigZag int32: MASTER sign-extended the uint32 before shifting. These hashes were derived from MASTER snapshots by changing only the listed property to the independently decoded wire value, not regenerated from current production.",
+		"mode": "ALL",
+		"className": "CPlantedC4",
+		"property": "CPlantedC4.m_nSourceSoundscapeHash",
+		"snapshots": [
+			{
+				"tick": 98304,
+				"entityId": 218,
+				"masterValue": 393233553,
+				"value": -1754250095,
+				"wireVarint": [221, 237, 253, 136, 13],
+				"entitiesSha256": "a8a6034e0e0558ea17dbc77d619d7b7f221535fbf544966974a68a965fa68e5d"
+			},
+			{
+				"tick": 131072,
+				"entityId": 471,
+				"masterValue": -392516401,
+				"value": 1754967247,
+				"wireVarint": [158, 179, 213, 137, 13],
+				"entitiesSha256": "189ecc1b1f6f0bf4a0d789fd5610990456db171b26a787a8dcacbbffa919cb14"
+			},
+			{
+				"tick": 180000,
+				"entityId": 375,
+				"masterValue": 393233553,
+				"value": -1754250095,
+				"wireVarint": [221, 237, 253, 136, 13],
+				"entitiesSha256": "e04048e8fbb10cb1bed78755dcf375edfaf961516f5420c21ac4d9551811e293"
+			}
+		]
+	},
+	"modes": {
+		"NONE": {
+			"headerSha256": "72136ae23c77ee2bcd3d2e3c94dbb65a8bf8ac6d226b54923979353f74e0d134",
+			"tickCount": 185922,
+			"checkpoints": [
+				{
+					"tick": 1,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "4017d9151e2ef98ea8dd9440f9ee0f99561564eaac6f8fba204eeec63981b743"
+					}
+				},
+				{
+					"tick": 1024,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 16384,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 32768,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 65536,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 98304,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 131072,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 163840,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 180000,
+					"entities": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"gameRules": {
+						"count": 0,
+						"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				}
+			],
+			"final": {
+				"tick": 185922,
+				"entities": {
+					"count": 0,
+					"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+				},
+				"gameRules": {
+					"count": 0,
+					"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+				},
+				"players": { "count": 11, "sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789" }
+			},
+			"rawGameEvents": {
+				"count": 19836,
+				"sha256": "6de4287ea4ef3d0a8f373fe05ae0c6a62b21357b722e84277fc0cd5fed04283c"
+			},
+			"syntheticRoundEvents": {
+				"starts": 0,
+				"ends": 0,
+				"sha256": "377a0f672f66d9c1f778275404da357c06dc59f7c06c3f31d82b864cd366bdb8"
+			}
+		},
+		"ONLY_GAME_RULES": {
+			"headerSha256": "72136ae23c77ee2bcd3d2e3c94dbb65a8bf8ac6d226b54923979353f74e0d134",
+			"tickCount": 185922,
+			"checkpoints": [
+				{
+					"tick": 1,
+					"entities": {
+						"count": 1,
+						"sha256": "7584f1457dacfd1b49e053170698b5e92128fddaaa45c83cb197a6b6130c2f40"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "7584f1457dacfd1b49e053170698b5e92128fddaaa45c83cb197a6b6130c2f40"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "4017d9151e2ef98ea8dd9440f9ee0f99561564eaac6f8fba204eeec63981b743"
+					}
+				},
+				{
+					"tick": 1024,
+					"entities": {
+						"count": 1,
+						"sha256": "a723b9705c5f49715245e384b1c84605b8cf3e01e7868e16167871184b5e5874"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "a723b9705c5f49715245e384b1c84605b8cf3e01e7868e16167871184b5e5874"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 16384,
+					"entities": {
+						"count": 1,
+						"sha256": "77f8a2fc6c215c919181f191611812484c78def2f0eb9fe845bec9e0953bbd75"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "77f8a2fc6c215c919181f191611812484c78def2f0eb9fe845bec9e0953bbd75"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 32768,
+					"entities": {
+						"count": 1,
+						"sha256": "07ff9014daee95b303ac87740d9932778fbda96950d1582108ef471d6b70fd87"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "07ff9014daee95b303ac87740d9932778fbda96950d1582108ef471d6b70fd87"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 65536,
+					"entities": {
+						"count": 1,
+						"sha256": "cf20e4ccc4fe89e6098e450a13bb8e4b9295eb6567500d7fa90602c6d62e2cd0"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "cf20e4ccc4fe89e6098e450a13bb8e4b9295eb6567500d7fa90602c6d62e2cd0"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 98304,
+					"entities": {
+						"count": 1,
+						"sha256": "152c638a2e4f0c4c3150c63af874eb25c9d7dde79b089c96761df0b88f1aa0ee"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "152c638a2e4f0c4c3150c63af874eb25c9d7dde79b089c96761df0b88f1aa0ee"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 131072,
+					"entities": {
+						"count": 1,
+						"sha256": "41e178c31e5f45c064659b297d09d3bdeb3bcfa27d1bd827419a66d29c365339"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "41e178c31e5f45c064659b297d09d3bdeb3bcfa27d1bd827419a66d29c365339"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 163840,
+					"entities": {
+						"count": 1,
+						"sha256": "37771d63fb43906cfcffd08d4e91a953e45d03b4d0fbda1e1e98636ae6c3023d"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "37771d63fb43906cfcffd08d4e91a953e45d03b4d0fbda1e1e98636ae6c3023d"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 180000,
+					"entities": {
+						"count": 1,
+						"sha256": "af0b6f389a2706ed00bac8de5e892784c2d40c3832dd09ea3bffbcd16a25c139"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "af0b6f389a2706ed00bac8de5e892784c2d40c3832dd09ea3bffbcd16a25c139"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				}
+			],
+			"final": {
+				"tick": 185922,
+				"entities": {
+					"count": 1,
+					"sha256": "ffff8914b2d15bd302caf08ebf5e14807f0083f1e5e6d5ded02a05585e4cce5a"
+				},
+				"gameRules": {
+					"count": 1,
+					"sha256": "ffff8914b2d15bd302caf08ebf5e14807f0083f1e5e6d5ded02a05585e4cce5a"
+				},
+				"players": { "count": 11, "sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789" }
+			},
+			"rawGameEvents": {
+				"count": 19836,
+				"sha256": "6de4287ea4ef3d0a8f373fe05ae0c6a62b21357b722e84277fc0cd5fed04283c"
+			},
+			"syntheticRoundEvents": {
+				"starts": 30,
+				"ends": 30,
+				"sha256": "602a294ab624eaed4510ce76b8b72ee7efd5daa4b7b083b0a67886b231449ef9"
+			}
+		},
+		"ALL": {
+			"headerSha256": "72136ae23c77ee2bcd3d2e3c94dbb65a8bf8ac6d226b54923979353f74e0d134",
+			"tickCount": 185922,
+			"checkpoints": [
+				{
+					"tick": 1,
+					"entities": {
+						"count": 194,
+						"sha256": "f4ecc77ac708383eecf68faf89f530790ffcc23fe66e2571b6813909f6e70589"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "7584f1457dacfd1b49e053170698b5e92128fddaaa45c83cb197a6b6130c2f40"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "4017d9151e2ef98ea8dd9440f9ee0f99561564eaac6f8fba204eeec63981b743"
+					}
+				},
+				{
+					"tick": 1024,
+					"entities": {
+						"count": 193,
+						"sha256": "c395e29460517b44cbd5050dfd93a61c6ac2c0cebe236b9b8902cfe08e87e675"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "a723b9705c5f49715245e384b1c84605b8cf3e01e7868e16167871184b5e5874"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 16384,
+					"entities": {
+						"count": 193,
+						"sha256": "8285bdbeed31c0e1e6dfb617cc779a88f7dbcdccdc8f2ead15123454e244aa98"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "77f8a2fc6c215c919181f191611812484c78def2f0eb9fe845bec9e0953bbd75"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 32768,
+					"entities": {
+						"count": 207,
+						"sha256": "9fee10c23f31accc99ad00c41e6ad63f79949d144166621c2b953395d7428f30"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "07ff9014daee95b303ac87740d9932778fbda96950d1582108ef471d6b70fd87"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 65536,
+					"entities": {
+						"count": 212,
+						"sha256": "e781294088dec31b11d5394b789c6aa1092bd98d9e1b16b957326085b157410f"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "cf20e4ccc4fe89e6098e450a13bb8e4b9295eb6567500d7fa90602c6d62e2cd0"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 98304,
+					"entities": {
+						"count": 189,
+						"sha256": "59ab6104b5f8cfe1242640080e298b48ebbf3802cf3c043d87bef55f79408f0d"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "152c638a2e4f0c4c3150c63af874eb25c9d7dde79b089c96761df0b88f1aa0ee"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 131072,
+					"entities": {
+						"count": 201,
+						"sha256": "9f5a25fedfb3c794607d1ba099ccd2b61050683743a686e89b7f4161ba3c8c08"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "41e178c31e5f45c064659b297d09d3bdeb3bcfa27d1bd827419a66d29c365339"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 163840,
+					"entities": {
+						"count": 222,
+						"sha256": "dd1e6ead535daadf21c2761148cd6d2b25d8f8bf44c158860b288d19a4205ee0"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "37771d63fb43906cfcffd08d4e91a953e45d03b4d0fbda1e1e98636ae6c3023d"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				},
+				{
+					"tick": 180000,
+					"entities": {
+						"count": 196,
+						"sha256": "bf93d41c24cabba1ffaca9acc0a21cfa11494b2384ae6be14f6da3e351cb22be"
+					},
+					"gameRules": {
+						"count": 1,
+						"sha256": "af0b6f389a2706ed00bac8de5e892784c2d40c3832dd09ea3bffbcd16a25c139"
+					},
+					"players": {
+						"count": 11,
+						"sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789"
+					}
+				}
+			],
+			"final": {
+				"tick": 185922,
+				"entities": {
+					"count": 202,
+					"sha256": "b7d9612bb772caa6ca2cf379b53fbf11013a75d14778ec952acbd076c789385a"
+				},
+				"gameRules": {
+					"count": 1,
+					"sha256": "ffff8914b2d15bd302caf08ebf5e14807f0083f1e5e6d5ded02a05585e4cce5a"
+				},
+				"players": { "count": 11, "sha256": "cc1fdf60175742a10babc3ac90211fd6188ad7a0eb24607b6bbb254bff0d4789" }
+			},
+			"rawGameEvents": {
+				"count": 19836,
+				"sha256": "6de4287ea4ef3d0a8f373fe05ae0c6a62b21357b722e84277fc0cd5fed04283c"
+			},
+			"syntheticRoundEvents": {
+				"starts": 30,
+				"ends": 30,
+				"sha256": "602a294ab624eaed4510ce76b8b72ee7efd5daa4b7b083b0a67886b231449ef9"
+			}
+		}
+	}
+}

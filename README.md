@@ -79,15 +79,20 @@ const decoder = new SnappyDecoder();
 const output = new Uint8Array(snappyUncompressedLength(compressed));
 const decoded = decoder.uncompress(compressed, output);
 // Reuse output on later calls when it is large enough. decoded is a view into output.
+decoder.release(); // Drop internal WASM/scratch storage; decoded remains valid.
 ```
 
-Omitting `output` allocates an owned result. Supplying an undersized buffer throws `RangeError`; malformed blocks throw an error. WASM memory grows as needed and is reused, with copies into WASM memory and into the destination. A restrictive Content Security Policy must [allow WebAssembly compilation](https://www.w3.org/TR/CSP3/#can-compile-wasm-bytes) (for example, `script-src 'self' 'wasm-unsafe-eval'`). The server export continues to use native Snappy.
+Omitting `output` allocates an owned result. Supplying an undersized buffer throws `RangeError`; malformed blocks throw an error. Impossible expansion lengths are rejected before allocating output or growing WASM memory. `snappyUncompressedLength()` reads only the prefix, not block validity; do not use it to allocate unbounded output from untrusted input. WASM memory grows as needed and is reused, with copies into WASM memory and into the destination. `DemoReader` releases decoder storage on completion, failure, and cancellation; standalone decoders can call `release()` and be reused afterward. A restrictive Content Security Policy must [allow WebAssembly compilation](https://www.w3.org/TR/CSP3/#can-compile-wasm-bytes) (for example, `script-src 'self' 'wasm-unsafe-eval'`). Modern WebAssembly bulk-memory support is required. The server export continues to use native Snappy.
 
 The original decoder source is `wasm/snappy.c`. After changing it, run `npm run build:snappy` with Clang and `wasm-ld` installed. Normal package builds use the checked-in embedded bytes and need no C compiler.
 
 ### Migration
 
 All three metadata helpers now return promises, including on the server: add `await` to existing calls. `progress` now reports cumulative bytes parsed, rather than a fraction of the current buffer. Ordinary parsing stops at `DEM_Stop`, so unread trailer bytes can keep `bytesParsed / file.size` below 1. The server's `stream: false` option now reads larger chunks through the shared asynchronous stream loop.
+
+Treat byte payloads, including string-table values, as `Uint8Array`, not as Node `Buffer`. Use `TextDecoder` for text rather than Buffer-specific methods. Both exports use the portable `events` package: common listener ordering, removal, prepend, once, and meta-event behavior is preserved, but Node-specific `errorMonitor`, `captureRejections`, global emitter defaults, and native `EventEmitter instanceof` checks are not supported. Async listener failures should be handled by the listener.
+
+The optimization audit and measured comparisons with `master` and the original browser branch are recorded in [PERFORMANCE.md](PERFORMANCE.md). Existing benchmark tables below describe their original machine and fixture, not these browser-branch measurements.
 
 ## parseHeader
 
@@ -161,7 +166,7 @@ if (error) {
 | Mode                         | Entities        | Round events | Speed                |
 | ---------------------------- | --------------- | ------------ | -------------------- |
 | `EntityMode.NONE`            | none            | no           | fastest              |
-| `EntityMode.ONLY_GAME_RULES` | game rules only | yes          | ~20% faster than ALL |
+| `EntityMode.ONLY_GAME_RULES` | game rules only | yes          | skips unused values |
 | `EntityMode.ALL`             | all             | yes          | full parsing         |
 
 `ONLY_GAME_RULES` parses the entity bitstream but only stores `CCSGameRulesProxy` properties. This enables synthetic `round_start`/`round_end` events without populating the full entities array.

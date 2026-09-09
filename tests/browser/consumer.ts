@@ -1,8 +1,10 @@
 import { DemoReader, EntityMode, SnappyDecoder, type ParseOptions } from 'cs2parser/browser';
+import { captureParity, chunkedDemo, type ParityResult } from '../helpers/parity.js';
 
 async function checkBrowserAPI(file: File, bytes: Uint8Array, stream: ReadableStream<Uint8Array>) {
 	const reader = new DemoReader();
 	const opts: ParseOptions = { entities: EntityMode.ALL };
+	const parity = captureParity(reader, 'ALL');
 	reader.gameEvents.on('player_death', event => {
 		event.player?.name;
 	});
@@ -10,6 +12,9 @@ async function checkBrowserAPI(file: File, bytes: Uint8Array, stream: ReadableSt
 		message.audio?.voice_data;
 	});
 	await reader.parseDemo(stream, opts);
+	const snapshot: ParityResult = await parity.finish();
+	snapshot.final.entities.sha256;
+	await new DemoReader().parseDemo(chunkedDemo(bytes, 4093), opts);
 	await new DemoReader().parseDemo(bytes);
 	await new DemoReader().parseDemo(file.stream());
 	(await DemoReader.parseHeader(file))?.map_name;

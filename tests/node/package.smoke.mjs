@@ -24,21 +24,24 @@ try {
 		assert.equal(reader.header.map_name, 'de_nuke');
 	}
 	assert.deepEqual(await new DemoReader().parseDemo(path, { stream: false }), { incomplete: false });
-	let requested;
-	const reading = new Promise(resolve => {
-		requested = resolve;
-	});
-	const stalled = new Readable({
-		read() {
-			requested();
-		}
-	});
-	const cancelled = new DemoReader();
-	const pending = cancelled.parseDemo(stalled);
-	await reading;
-	cancelled.cancel();
-	assert.deepEqual(await pending, { incomplete: true, reason: 'cancelled' });
-	assert.equal(stalled.destroyed, true);
+	for (const emitClose of [false, true]) {
+		let requested;
+		const reading = new Promise(resolve => {
+			requested = resolve;
+		});
+		const stalled = new Readable({
+			emitClose,
+			read() {
+				requested();
+			}
+		});
+		const cancelled = new DemoReader();
+		const pending = cancelled.parseDemo(stalled);
+		await reading;
+		cancelled.cancel();
+		assert.deepEqual(await pending, { incomplete: true, reason: 'cancelled' });
+		assert.equal(stalled.destroyed, true);
+	}
 	let sent = false;
 	const withoutEOF = new Readable({
 		read() {

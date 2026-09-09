@@ -29,7 +29,6 @@ import { parseClassInfo } from './classInfo.js';
 import { EntityParser } from './entityParser.js';
 import type { BaseDemoReader as DemoReader } from '../base.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
-import { createAllocator } from './allocator.js';
 
 /**
  * Per-message decode overrides, one optional boolean per network message name.
@@ -53,11 +52,15 @@ const DERIVED_EVENTS: readonly [event: string, sources: readonly number[]][] = [
 	['chat', [EBaseUserMessages.UM_SayText, EBaseUserMessages.UM_SayText2]]
 ];
 
+// Only outer-frame availability can request a refill. Payload decoder errors are terminal.
+const NEED_MORE_INPUT = Symbol('Need more demo input');
+
 export class ParseSession {
-	// Module-level singletons (shared across sessions)
-	private static readonly PACKET_TEMP_BUFFER = new Uint8Array(new ArrayBuffer(2 ** 18));
-	private static readonly entityAllocator = createAllocator();
 	private static readonly CARRY_INITIAL_SIZE = 1 * 1024 * 1024; // 1 MB
+	private packetBuffer = new Uint8Array(0);
+	private entityBuffer = new Uint8Array(0);
+	private readonly gameEventQueue: CMsgSource1LegacyGameEvent[] = [];
+	private readonly packetEntitiesQueue: CSVCMsg_PacketEntities[] = [];
 
 	// Buffer state (replaces ByteBuffer for zero-overhead frame reading)
 	private _frameBuf: Uint8Array;
@@ -167,10 +170,6 @@ export class ParseSession {
 
 	// --- Inline frame buffer helpers (replaces ByteBuffer) ---
 
-	private _frameRemaining(): number {
-		return this._frameLimit - this._frameOffset;
-	}
-
 	private _frameReadVarint32(): number {
 		const buf = this._frameBuf;
 		let offset = this._frameOffset;
@@ -182,8 +181,9 @@ export class ParseSession {
 			result |= (b & 0x7f) << shift;
 			shift += 7;
 		} while ((b & 0x80) !== 0 && shift < 35);
+		if (shift === 35 && b > 15) throw new Error('Invalid frame varint');
 		this._frameOffset = offset;
-		return result;
+		return result >>> 0;
 	}
 
 	private _frameSkip(n: number): void {
@@ -196,11 +196,11 @@ export class ParseSession {
 		for (let shift = 0; shift < 35; shift += 7) {
 			this.ensureRemaining(1);
 			const byte = this._frameBuf[this._frameOffset++]!;
-			if (shift === 28 && byte > 15) throw new RangeError('Invalid frame varint');
+			if (shift === 28 && byte > 15) throw new Error('Invalid frame varint');
 			value |= (byte & 127) << shift;
 			if ((byte & 128) === 0) return value >>> 0;
 		}
-		throw new RangeError('Invalid frame varint');
+		throw new Error('Invalid frame varint');
 	}
 
 	// === Public API ===
@@ -238,7 +238,7 @@ export class ParseSession {
 						await new Promise<void>(resolve => setTimeout(resolve, 0));
 					}
 				} catch (e) {
-					if (e instanceof RangeError && readNextChunk) {
+					if (e === NEED_MORE_INPUT && readNextChunk) {
 						// Incremental stream input may stop in the middle of a frame. Restore
 						// the frame boundary before appending more bytes and trying again.
 						this._frameOffset = Math.max(0, this._frameMarked);
@@ -267,7 +267,7 @@ export class ParseSession {
 						continue;
 					}
 
-					if (e instanceof RangeError) {
+					if (e === NEED_MORE_INPUT) {
 						this.enqueueEvent('end', { incomplete: true });
 					} else {
 						const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
@@ -294,31 +294,6 @@ export class ParseSession {
 			throw new Error('pushChunk is not supported on broadcast sessions; use pushBroadcastFragment');
 		}
 		this.chunks.push(chunk);
-	}
-
-	/**
-	 * Process all available frames from buffered data.
-	 * Returns false when parsing is complete, true when waiting for more data.
-	 * A trailer subscription completes at EOF; otherwise DEM_Stop ends the parse.
-	 */
-	processFrames(inputEnded = false): boolean {
-		if (this._broadcastMode) {
-			throw new Error('processFrames is not supported on broadcast sessions; use pushBroadcastFragment');
-		}
-		while (this._frameRemaining() > 0 || this.chunks.length > 0 || inputEnded) {
-			this._frameMarked = this._frameOffset;
-			try {
-				if (!this.readFrame(!inputEnded)) return false;
-			} catch (e) {
-				if (e instanceof RangeError) {
-					// Not enough data — reset to frame start and wait for more chunks
-					this._frameOffset = Math.max(0, this._frameMarked);
-					return true;
-				}
-				throw e;
-			}
-		}
-		return true;
 	}
 
 	/**
@@ -355,7 +330,7 @@ export class ParseSession {
 			return v;
 		};
 
-		while (off < len) {
+		while (off < len && !this.parser.hasEnded) {
 			const command = readUVarInt32();
 			const rawTick = readLEUInt32() | 0; // sign-extend 32 bits
 			if (off >= len) throw new RangeError('Truncated broadcast fragment (reserved byte)');
@@ -498,19 +473,19 @@ export class ParseSession {
 
 	private ensureRemaining(bytes: number): void {
 		if (!this.tryEnsureRemaining(bytes)) {
-			throw new RangeError(`Not enough data to continue parsing. ${bytes} bytes needed`);
+			throw NEED_MORE_INPUT;
 		}
 	}
 
-	private decompressIfNeeded(size: number, isCompressed: boolean) {
+	private decompressIfNeeded(size: number, isCompressed: boolean, owned = false) {
 		const bytes = this._frameBuf.subarray(this._frameOffset, this._frameOffset + size);
 		this._frameOffset += size;
 
 		if (isCompressed) {
-			return this.parser._snappy.uncompressFrame(bytes);
+			return owned ? this.parser._snappy.uncompress(bytes) : this.parser._snappy.uncompressFrame(bytes);
 		}
 
-		return bytes;
+		return owned ? Uint8Array.from(bytes) : bytes;
 	}
 
 	private baseParse<T extends Decoders[DecoderKeys]['decode']>(
@@ -546,6 +521,7 @@ export class ParseSession {
 		if (tick === 0xffffffff) {
 			tick = -1;
 		}
+		this.ensureRemaining(size);
 
 		if (this.currentTick !== tick) {
 			if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
@@ -553,14 +529,11 @@ export class ParseSession {
 			this.enqueueEvent('tickstart', this.currentTick);
 		}
 
-		this.ensureRemaining(size);
-
 		const commandType = commandBase & ~EDemoCommands.DEM_IsCompressed;
 		if (commandType === EDemoCommands.DEM_Stop) {
 			this._frameSkip(size);
 			this._readingTrailer =
-				(this.parser?.listenerCount('DEM_FileInfo') ?? 0) > 0 ||
-				(this.parser?.listenerCount('DEM_SpawnGroups') ?? 0) > 0;
+				this.parser.listenerCount('DEM_FileInfo') > 0 || this.parser.listenerCount('DEM_SpawnGroups') > 0;
 			return this._readingTrailer || this.finishDemo();
 		}
 
@@ -601,7 +574,8 @@ export class ParseSession {
 			}
 			return true;
 		} catch (error) {
-			if (!(error instanceof RangeError) || allowPartial) throw error;
+			if (error !== NEED_MORE_INPUT || allowPartial) throw error;
+			this._frameOffset = this._frameMarked;
 			return this.finishDemo();
 		}
 	}
@@ -696,11 +670,9 @@ export class ParseSession {
 			default: {
 				// Every other frame command is listenable by its EDemoCommands name and
 				// decoded only when someone is listening.
-				if ((this.parser?.listenerCount(decoder.name) ?? 0) > 0) {
-					const bytes = this.decompressIfNeeded(size, isCompressed);
-					// Both input and decompression buffers may be reused. Give emitted
-					// protobuf bytes their own storage before exposing them to listeners.
-					const data = decoder.decode(Uint8Array.from(bytes));
+				if (this.parser.listenerCount(decoder.name) > 0) {
+					// Owned decompression avoids copying already-owned native output twice.
+					const data = decoder.decode(this.decompressIfNeeded(size, isCompressed, true));
 					this.enqueueEvent(decoder.name as 'debug', data as never);
 				} else {
 					this._frameSkip(size);
@@ -858,118 +830,139 @@ export class ParseSession {
 
 	// === Packet-level parsing ===
 
+	private readPacketBytes(reader: BitBuffer, size: number): Uint8Array {
+		if (this.packetBuffer.length < size) {
+			this.packetBuffer = new Uint8Array(Math.max(size, this.packetBuffer.length * 2, 4096));
+		}
+		return reader.readBytesToSlice(this.packetBuffer, size);
+	}
+
 	private parsePacket(packet: CDemoPacket): void {
 		if (!packet.data) return;
 
 		this.refreshSubscriptions();
 
 		const reader = this.cachedBitBuffer.setTo(packet.data);
-		const gameEventQueue = [] as CMsgSource1LegacyGameEvent[];
-		const packetEntitiesQueue = [] as CSVCMsg_PacketEntities[];
-		const allocated = [] as Uint8Array[];
+		const gameEventQueue = this.gameEventQueue;
+		const packetEntitiesQueue = this.packetEntitiesQueue;
+		let entityOffset = 0;
 
-		while (reader.RemainingBits > 8) {
-			const cmd = reader.readUbitVar();
-			const size = reader.ReadUVarInt32();
-			const command = messageById[cmd];
+		try {
+			while (reader.RemainingBits > 8) {
+				const cmd = reader.readUbitVar();
+				const size = reader.ReadUVarInt32();
+				// Validate before any allocation, including optional messages and scratch growth.
+				if (size > reader.RemainingBytes) throw new RangeError('Truncated packet message');
+				const command = messageById[cmd];
 
-			if (!command || !command.core) {
-				// Non-core (or unknown) message: decode it only if something wants it.
-				this.handleOptionalCommand(command, cmd, reader, size);
-				continue;
-			}
+				if (!command || !command.core) {
+					// Non-core (or unknown) message: decode it only if something wants it.
+					this.handleOptionalCommand(command, cmd, reader, size);
+					continue;
+				}
 
-			switch (command.id) {
-				case SVC_Messages.svc_PacketEntities: {
-					if (this.entityMode === EntityMode.NONE) {
-						reader.skipBytesBetter(size);
-						continue;
+				switch (command.id) {
+					case SVC_Messages.svc_PacketEntities: {
+						if (this.entityMode === EntityMode.NONE) {
+							reader.skipBytesBetter(size);
+							continue;
+						}
+						if (entityOffset + size > this.entityBuffer.length) {
+							// Earlier messages keep their old segment alive until the packet drains.
+							this.entityBuffer = new Uint8Array(
+								Math.max(size, this.entityBuffer.length * 2, 128 * 1024)
+							);
+							entityOffset = 0;
+						}
+						const msgContent = this.entityBuffer.subarray(entityOffset, entityOffset + size);
+						entityOffset += size;
+						reader.readBytes(msgContent);
+						this.binaryR2.setTo(msgContent);
+						packetEntitiesQueue.push(CSVCMsg_PacketEntities.decode(this.binaryR2));
+						break;
 					}
-					const msgContent = ParseSession.entityAllocator.alloc(size);
-					allocated.push(msgContent);
-					reader.readBytes(msgContent);
-					packetEntitiesQueue.push(CSVCMsg_PacketEntities.decode(msgContent));
-					break;
-				}
-				case SVC_Messages.svc_ServerInfo: {
-					// Fresh buffer: CSVCMsg_ServerInfo retains `bytes` views (game_session_manifest,
-					// game_session_config.data) that must survive past the next message's buffer reuse.
-					const msgContent = new Uint8Array(size);
-					reader.readBytes(msgContent);
-					const serverInfo = CSVCMsg_ServerInfo.decode(msgContent);
-					this.enqueueEvent('serverinfo', serverInfo);
-					break;
-				}
-				case EBaseGameEvents.GE_Source1LegacyGameEventList: {
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
-					this.binaryR2.setTo(msgContent);
-					const eventlist = CMsgSource1LegacyGameEventList.decode(this.binaryR2);
-					this.enqueueEvent('gameeventlist', eventlist);
-					break;
-				}
-				case EBaseGameEvents.GE_Source1LegacyGameEvent: {
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
-					this.binaryR2.setTo(msgContent);
-					gameEventQueue.push(CMsgSource1LegacyGameEvent.decode(this.binaryR2));
-					break;
-				}
-				case SVC_Messages.svc_CreateStringTable: {
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
-					const tableCreatedData = createStringTable(
-						CSVCMsg_CreateStringTable.decode(msgContent),
-						this.baselines,
-						this.parser._snappy
-					);
-					this._stringTables.push(tableCreatedData?.table ?? null);
-					this.enqueueEvent('createstringtable', tableCreatedData || null);
-					break;
-				}
-				case SVC_Messages.svc_UpdateStringTable: {
-					const msgContent = reader.readBytesToSlice(ParseSession.PACKET_TEMP_BUFFER, size);
-					const updateMsg = CSVCMsg_UpdateStringTable.decode(msgContent);
-					if ('table_id' in updateMsg) {
-						const tableCData = updateStringTable(
-							updateMsg,
-							this._stringTables,
+					case SVC_Messages.svc_ServerInfo: {
+						// Fresh buffer: CSVCMsg_ServerInfo retains `bytes` views (game_session_manifest,
+						// game_session_config.data) that must survive past the next message's buffer reuse.
+						const msgContent = new Uint8Array(size);
+						reader.readBytes(msgContent);
+						const serverInfo = CSVCMsg_ServerInfo.decode(msgContent);
+						this.enqueueEvent('serverinfo', serverInfo);
+						break;
+					}
+					case EBaseGameEvents.GE_Source1LegacyGameEventList: {
+						const msgContent = this.readPacketBytes(reader, size);
+						this.binaryR2.setTo(msgContent);
+						const eventlist = CMsgSource1LegacyGameEventList.decode(this.binaryR2);
+						this.enqueueEvent('gameeventlist', eventlist);
+						break;
+					}
+					case EBaseGameEvents.GE_Source1LegacyGameEvent: {
+						const msgContent = this.readPacketBytes(reader, size);
+						this.binaryR2.setTo(msgContent);
+						gameEventQueue.push(CMsgSource1LegacyGameEvent.decode(this.binaryR2));
+						break;
+					}
+					case SVC_Messages.svc_CreateStringTable: {
+						const msgContent = this.readPacketBytes(reader, size);
+						this.binaryR2.setTo(msgContent);
+						const tableCreatedData = createStringTable(
+							CSVCMsg_CreateStringTable.decode(this.binaryR2),
 							this.baselines,
 							this.parser._snappy
 						);
-						if (tableCData) {
-							// Deliberately does not touch `_stringTables`. That array is indexed
-							// by table_id — i.e. creation order — so only svc_CreateStringTable
-							// may append to it, and the only thing we read back is the decoding
-							// metadata fixed at creation. Pushing here (as this used to) grew the
-							// array past every valid id and retained a parsed table per update.
-							this.enqueueEvent('updatestringtable', tableCData);
-						}
+						this._stringTables.push(tableCreatedData?.table ?? null);
+						this.enqueueEvent('createstringtable', tableCreatedData || null);
+						break;
 					}
-					break;
+					case SVC_Messages.svc_UpdateStringTable: {
+						const msgContent = this.readPacketBytes(reader, size);
+						this.binaryR2.setTo(msgContent);
+						const updateMsg = CSVCMsg_UpdateStringTable.decode(this.binaryR2);
+						if ('table_id' in updateMsg) {
+							const tableCData = updateStringTable(
+								updateMsg,
+								this._stringTables,
+								this.baselines,
+								this.parser._snappy
+							);
+							if (tableCData) {
+								// Deliberately does not touch `_stringTables`. That array is indexed
+								// by table_id — i.e. creation order — so only svc_CreateStringTable
+								// may append to it, and the only thing we read back is the decoding
+								// metadata fixed at creation. Pushing here (as this used to) grew the
+								// array past every valid id and retained a parsed table per update.
+								this.enqueueEvent('updatestringtable', tableCData);
+							}
+						}
+						break;
+					}
+					case SVC_Messages.svc_ClearAllStringTables:
+						reader.skipBytesBetter(size);
+						// Drop the tables and the instance baselines derived from them. Without
+						// this, tables recreated after a clear are appended past the stale entries
+						// and `table_id` stops indexing them, so later updates resolve against the
+						// wrong table.
+						this._stringTables.length = 0;
+						this.baselines.length = 0;
+						this.enqueueEvent('clearallstringtables');
+						break;
+					default:
+						// Unreachable: `core` is exactly the set of ids cased above.
+						reader.skipBytesBetter(size);
+						break;
 				}
-				case SVC_Messages.svc_ClearAllStringTables:
-					reader.skipBytesBetter(size);
-					// Drop the tables and the instance baselines derived from them. Without
-					// this, tables recreated after a clear are appended past the stale entries
-					// and `table_id` stops indexing them, so later updates resolve against the
-					// wrong table.
-					this._stringTables.length = 0;
-					this.baselines.length = 0;
-					this.enqueueEvent('clearallstringtables');
-					break;
-				default:
-					// Unreachable: `core` is exactly the set of ids cased above.
-					reader.skipBytesBetter(size);
-					break;
 			}
-		}
 
-		for (const queueElement of packetEntitiesQueue) {
-			this.entityParser?.parseEntityPacket(queueElement, this.baselines);
-		}
-		for (const allocatedElement of allocated) {
-			ParseSession.entityAllocator.free(allocatedElement);
-		}
-		for (const event of gameEventQueue) {
-			this.enqueueEvent('gameevent', event);
+			for (const queueElement of packetEntitiesQueue) {
+				this.entityParser?.parseEntityPacket(queueElement, this.baselines);
+			}
+			for (const event of gameEventQueue) {
+				this.enqueueEvent('gameevent', event);
+			}
+		} finally {
+			packetEntitiesQueue.length = 0;
+			gameEventQueue.length = 0;
 		}
 	}
 

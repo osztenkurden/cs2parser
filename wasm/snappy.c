@@ -1,9 +1,28 @@
 /* Raw Snappy block decoder. No libc, allocator, WASI, threads, or imports.
  * Format: https://github.com/google/snappy/blob/main/format_description.txt
- * The caller owns both ranges. Return 0 for success, -1 for malformed input.
+ * The caller owns disjoint input/output ranges. Return 0 for success, -1 for malformed input.
  */
 typedef unsigned char u8;
 typedef unsigned int u32;
+typedef unsigned long long u64;
+
+/* Fixed-size memcpy permits unaligned loads without C aliasing UB. Each load
+ * precedes its store: overlapping backrefs need at least eight bytes of history. */
+static void copy_wide(u8 *dst, const u8 *src, u32 length) {
+    u32 i = 0;
+    for (; length - i >= 8; i += 8) {
+        u64 word;
+        __builtin_memcpy(&word, src + i, 8);
+        __builtin_memcpy(dst + i, &word, 8);
+    }
+    if (length - i >= 4) {
+        u32 word;
+        __builtin_memcpy(&word, src + i, 4);
+        __builtin_memcpy(dst + i, &word, 4);
+        i += 4;
+    }
+    for (; i < length; i++) dst[i] = src[i];
+}
 
 int snappy_uncompress(const u8 *src, u32 src_len, u8 *dst, u32 dst_len) {
     u32 ip = 0, op = 0, expected = 0;
@@ -29,7 +48,9 @@ int snappy_uncompress(const u8 *src, u32 src_len, u8 *dst, u32 dst_len) {
             /* Check len-1 before adding 1, which could overflow uint32. */
             if (length >= dst_len - op || length >= src_len - ip) return -1;
             length++;
-            for (u32 i = 0; i < length; i++) dst[op + i] = src[ip + i];
+            /* Short literals avoid the runtime overhead of a bulk memory.copy. */
+            if (length >= 64) __builtin_memcpy(dst + op, src + ip, length);
+            else copy_wide(dst + op, src + ip, length);
             op += length;
             ip += length;
             continue;
@@ -47,8 +68,12 @@ int snappy_uncompress(const u8 *src, u32 src_len, u8 *dst, u32 dst_len) {
             for (u32 i = 0; i < count; i++) offset |= (u32)src[ip++] << (8 * i);
         }
         if (!offset || offset > op || length > dst_len - op) return -1;
-        /* Forward copying is intentional: Snappy permits overlapping copies. */
-        for (u32 i = 0; i < length; i++) dst[op + i] = dst[op + i - offset];
+        if (offset >= 8) {
+            copy_wide(dst + op, dst + op - offset, length);
+        } else {
+            /* Forward copying is intentional, not memmove's original bytes. */
+            for (u32 i = 0; i < length; i++) dst[op + i] = dst[op + i - offset];
+        }
         op += length;
     }
     return op == dst_len ? 0 : -1;

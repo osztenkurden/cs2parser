@@ -1,10 +1,5 @@
 import type { BitBuffer } from '../ubitreader.js';
 
-export const qfMapper = {
-	idx: 0,
-	map: [] as QuantalizedFloat[]
-};
-
 export type QuantalizedFloat = {
 	low: number;
 	high: number;
@@ -174,9 +169,7 @@ const validateFlags = (qf: QuantalizedFloat) => {
 	}
 };
 
-export const decodeQfloat = (reader: BitBuffer, qfIndex: number) => {
-	const qf = qfMapper.map[qfIndex]!;
-
+export const decodeQfloat = (reader: BitBuffer, qf: Readonly<QuantalizedFloat>) => {
 	if (qf.flags !== 0) {
 		if ((qf.flags & QFF_ROUNDDOWN) !== 0 && reader.readBoolean()) {
 			return qf.low;

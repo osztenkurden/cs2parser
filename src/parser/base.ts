@@ -30,6 +30,11 @@ const steamIdToAccountId = (steamId: bigint | number): number => {
 
 export type DemoInput = Uint8Array | ReadableStream<Uint8Array>;
 export type ParseOptions = { entities?: EntityMode } & ParseSettings;
+interface DemoStreamReader {
+	read(): Promise<{ done?: boolean; value?: Uint8Array }>;
+	cancel(reason?: unknown): Promise<unknown>;
+	releaseLock?(): void;
+}
 
 /** Runtime-independent parsing, entities, events, and broadcast support. */
 export abstract class BaseDemoReader extends TypedEventEmitter<
@@ -41,7 +46,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	header: CDemoFileHeader | null = null;
 	private _hasEnded = false;
 	private _endResult!: OutputEvents['end'];
-	private _reader: Pick<ReadableStreamDefaultReader<Uint8Array>, 'read' | 'cancel' | 'releaseLock'> | null = null;
+	private _reader: DemoStreamReader | null = null;
 	private _parsing = false;
 
 	entities: AnyEntity[];
@@ -298,6 +303,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 			this._endResult = result;
 			this._hasEnded = true;
 			this._parsing = false;
+			this._snappy.release?.();
 			this.emit(
 				'debug',
 				`[${this.currentTick}] Parsed demo in ${Math.round(performance.now() - this._parseStartTime)}ms`
@@ -398,9 +404,8 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	propIdToInfo: Record<number, PropInfo> = {};
 
 	private _emitQueue: EmitQueue = queue => {
-		if (this._hasEnded) return;
 		for (const element of queue) {
-			if (this._hasEnded) return;
+			if (this._hasEnded) break;
 			// Errors are also included in the end result; an error listener is optional.
 			if (element[0] === 'error' && this.listenerCount('error') === 0) continue;
 			this.emit(element[0], element[1] as any);
@@ -419,12 +424,21 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		if (!(source instanceof Uint8Array) && (source == null || typeof source.getReader !== 'function')) {
 			throw new TypeError('Expected a Uint8Array or ReadableStream<Uint8Array>');
 		}
+		return this.parseSource(source instanceof Uint8Array ? source : () => source.getReader(), opts);
+	}
+
+	/** Runtime adapters supply a reader directly, without an extra Web Stream queue. */
+	protected parseSource(source: Uint8Array | (() => DemoStreamReader), opts: ParseOptions) {
+		this.assertCanParse();
 		this._parsing = true;
 		this._parseStartTime = performance.now();
 		return this._parse(source, opts);
 	}
 
-	private async _parse(source: DemoInput, opts: ParseOptions): Promise<OutputEvents['end']> {
+	private async _parse(
+		source: Uint8Array | (() => DemoStreamReader),
+		opts: ParseOptions
+	): Promise<OutputEvents['end']> {
 		const entityMode = opts.entities ?? EntityMode.NONE;
 		this._directWriteMode = true;
 		this.gameEvents.entityMode = entityMode;
@@ -435,7 +449,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 			if (source instanceof Uint8Array) {
 				initial = source;
 			} else {
-				const reader = source.getReader();
+				const reader = source();
 				this._reader = reader;
 				readNextChunk = async () => {
 					while (!this._hasEnded) {
@@ -482,7 +496,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 				} catch {
 					/* Keep the original parse result. */
 				}
-				reader.releaseLock();
+				reader.releaseLock?.();
 			}
 			this._directWriteMode = false;
 			this._parsing = false;
@@ -494,7 +508,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		if (this._hasEnded) throw new Error('Demo has already been parsed');
 		this._hasEnded = true;
 		// cancel() settles a pending read immediately, unlike merely releasing its lock.
-		void this._reader?.cancel().catch(() => {});
+		void this._reader?.cancel(new Error('Demo parsing cancelled')).catch(() => {});
 		this.emit('cancel');
 		this.emit('end', { incomplete: true, reason: 'cancelled' });
 	}

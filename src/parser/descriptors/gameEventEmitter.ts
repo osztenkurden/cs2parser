@@ -47,8 +47,8 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 			if (this._entityMode !== EntityMode.NONE && SYNTHETIC_EVENTS.has(descriptor.name)) return;
 
 			if (
-				!this.eventNames().includes(descriptor.name as keyof _GameEventsArguments) &&
-				!this.eventNames().includes('gameEvent')
+				this.listenerCount(descriptor.name as keyof _GameEventsArguments) === 0 &&
+				this.listenerCount('gameEvent') === 0
 			) {
 				return;
 			}
@@ -72,7 +72,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 				this.emit(event.event_name as keyof GameEventsArguments, event);
 				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event);
 			}
-			this.eventQueue = [];
+			this.eventQueue.length = 0;
 
 			if (this._entityMode !== EntityMode.NONE) {
 				this._checkSyntheticRoundEvents();

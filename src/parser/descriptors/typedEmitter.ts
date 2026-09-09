@@ -8,7 +8,7 @@ export type EmitterMetaEvents = {
 	removeListener: [eventName: string | symbol, listener: Listener];
 };
 
-/** Node-compatible event semantics with declarations that need no Node types. */
+/** Portable events-package semantics with declarations that need no Node types. */
 export interface TypedEventEmitter<T extends { [K in keyof T]: any[] }> {
 	on<K extends keyof T>(event: K, listener: (...args: T[K]) => void): this;
 	addListener<K extends keyof T>(event: K, listener: (...args: T[K]) => void): this;

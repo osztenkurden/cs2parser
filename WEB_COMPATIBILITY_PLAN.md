@@ -2,6 +2,10 @@
 
 Branch: `feat/browser-support`, based on `57d79fc`.
 
+The original implementation and measurements below are preserved as historical context.
+The follow-up optimization audit, current implementation differences, final comparison
+against both baselines, and verification limits are in [PERFORMANCE.md](PERFORMANCE.md).
+
 ## Approved decisions
 
 | Area | Decision |
