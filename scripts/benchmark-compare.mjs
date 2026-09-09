@@ -90,14 +90,20 @@ for (let repeat = 0; repeat < repeats; repeat++) {
 			);
 		}
 		const metrics = JSON.parse(result.stdout.trim());
+		// Average rates per run, not the reciprocal of the average duration.
+		const throughputMBps = stat.size / (metrics?.ms * 1000);
 		if (
 			measurements.some(k => !Number.isFinite(metrics?.[k]) || metrics[k] < 0) ||
+			metrics.ms <= 0 ||
+			!Number.isFinite(throughputMBps) ||
 			counts.some(k => !Number.isSafeInteger(metrics?.[k]) || (k !== 'tick' && metrics[k] < 0))
 		) {
 			throw new Error(`${c.name}: invalid or nonfinite metrics`);
 		}
-		runs.push({ ...metrics, name: c.name, repeat });
-		console.log(`${repeat + 1}/${repeats} ${c.name}: ${metrics.ms.toFixed(1)} ms`);
+		runs.push({ ...metrics, throughputMBps, name: c.name, repeat });
+		console.log(
+			`${repeat + 1}/${repeats} ${c.name}: ${throughputMBps.toFixed(1)} MB/s | ${metrics.ms.toFixed(1)} ms`
+		);
 	}
 }
 const stats = values => {
@@ -115,7 +121,7 @@ const summary = cases.map(c => {
 	if (counts.some(k => new Set(samples.map(r => r[k])).size !== 1)) throw new Error(`Unstable output: ${c.name}`);
 	return {
 		name: c.name,
-		...Object.fromEntries(measurements.map(k => [k, stats(samples.map(r => r[k]))])),
+		...Object.fromEntries(['throughputMBps', ...measurements].map(k => [k, stats(samples.map(r => r[k]))])),
 		...Object.fromEntries(counts.map(k => [k, samples[0][k]]))
 	};
 });
@@ -141,7 +147,6 @@ const cell = value =>
 	String(value)
 		.replaceAll('|', '\\|')
 		.replace(/[\r\n]/g, ' ');
-const format = s => `${s.mean.toFixed(1)} / ${s.median.toFixed(1)} [${s.min.toFixed(1)}, ${s.max.toFixed(1)}]`;
 const markdown = [
 	'# Benchmark Results',
 	'',
@@ -149,18 +154,22 @@ const markdown = [
 	`CPU: ${cell(result.cpu)}; ${result.platform}/${result.arch}; ${result.date}.`,
 	'',
 	'Times include input I/O, exclude imports/setup; OS cache is not reset. Sequential shuffled runs, seed 0x5eed.',
-	'Values: **mean / median [min, max]**. Memory is process-wide; peak RSS includes imports/setup.',
+	'Throughput: mean / **median**, higher is better; 1 MB = 1,000,000 bytes. Other columns show medians; full mean/min/max statistics are available with `--json`.',
+	'Memory is process-wide; peak RSS includes imports/setup.',
 	'`path-sync` uses `stream: false` (larger 4 MiB reads), not synchronous parsing.',
+	'',
+	'| Case | Throughput (MB/s) | Time (ms) | RSS (MiB) | Peak RSS (MiB) | Heap (MiB) | Entities |',
+	'| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
+	...summary.map(
+		s =>
+			`| ${cell(s.name)} | ${s.throughputMBps.mean.toFixed(1)} / **${s.throughputMBps.median.toFixed(1)}** | ${measurements.map(k => s[k].median.toFixed(1)).join(' | ')} | ${s.entities} |`
+	),
+	'',
+	'### Case Configuration',
 	'',
 	'| Case | Runtime | Entry | Method | Mode | Subscriptions |',
 	'| --- | --- | --- | --- | --- | --- |',
 	...cases.map(c => `| ${Object.values(c).map(cell).join(' | ')} |`),
-	'',
-	'| Case | Time (ms) | RSS (MiB) | Peak RSS (MiB) | Heap (MiB) | Entities | Deaths |',
-	'| --- | --- | --- | --- | --- | --- | --- |',
-	...summary.map(
-		s => `| ${cell(s.name)} | ${measurements.map(k => format(s[k])).join(' | ')} | ${s.entities} | ${s.deaths} |`
-	),
 	''
 ].join('\n');
 console.log(markdown);
