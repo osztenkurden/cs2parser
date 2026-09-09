@@ -80,12 +80,12 @@ class MetadataReader {
 	}
 }
 
-export async function parseHeader(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileHeader | null> {
+export async function parseHeaderAsync(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileHeader | null> {
 	const frame = await new MetadataReader(source, snappy).frame(16);
 	return frame?.type === EDemoCommands.DEM_FileHeader ? CDemoFileHeader.decode(await frame.bytes()) : null;
 }
 
-export async function parseFileInfo(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileInfo | null> {
+export async function parseFileInfoAsync(source: MetadataInput, snappy: SnappyDecoder): Promise<CDemoFileInfo | null> {
 	const reader = new MetadataReader(source, snappy);
 	const prefix = await reader.read(0, 16);
 	if (prefix.length < 16) return null;
@@ -95,7 +95,7 @@ export async function parseFileInfo(source: MetadataInput, snappy: SnappyDecoder
 	return frame?.type === EDemoCommands.DEM_FileInfo ? CDemoFileInfo.decode(await frame.bytes()) : null;
 }
 
-export async function parseServerInfo(
+export async function parseServerInfoAsync(
 	source: MetadataInput,
 	snappy: SnappyDecoder
 ): Promise<CSVCMsg_ServerInfo | null> {

@@ -19,11 +19,18 @@ test('published export parses File and fetch streams without Node globals or iso
 		const fileResult = await fromFile.parseDemo(file.stream());
 		const fromFetch = new DemoReader();
 		const fetchResult = await fromFetch.parseDemo((await fetch('/fixture.dem')).body!);
+		const header = DemoReader.parseHeaderAsync(file);
+		const serverInfo = DemoReader.parseServerInfoAsync(file);
+		const fileInfo = DemoReader.parseFileInfoAsync(file);
 		return {
 			fileResult,
 			fetchResult,
 			map: fromFile.header?.map_name,
-			header: (await DemoReader.parseHeader(file))?.map_name,
+			header: (await header)?.map_name,
+			serverInfo: await serverInfo,
+			fileInfo: await fileInfo,
+			metadataPromises: [header, serverInfo, fileInfo].every(result => result instanceof Promise),
+			hasSyncMetadata: ['parseHeader', 'parseServerInfo', 'parseFileInfo'].some(name => name in DemoReader),
 			isolated: crossOriginIsolated,
 			nodeGlobals: 'Buffer' in globalThis || 'process' in globalThis
 		};
@@ -33,6 +40,10 @@ test('published export parses File and fetch streams without Node globals or iso
 		fetchResult: { incomplete: false },
 		map: 'de_dust2',
 		header: 'de_dust2',
+		serverInfo: null,
+		fileInfo: null,
+		metadataPromises: true,
+		hasSyncMetadata: false,
 		isolated: false,
 		nodeGlobals: false
 	});

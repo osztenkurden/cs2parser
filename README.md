@@ -59,12 +59,12 @@ if (!response.ok || !response.body) throw new Error('Unable to fetch demo');
 await new DemoReader().parseDemo(response.body);
 
 // Metadata reads use only the relevant File/Blob slices.
-const header = await DemoReader.parseHeader(file);
-const serverInfo = await DemoReader.parseServerInfo(file);
-const fileInfo = await DemoReader.parseFileInfo(file);
+const header = await DemoReader.parseHeaderAsync(file);
+const serverInfo = await DemoReader.parseServerInfoAsync(file);
+const fileInfo = await DemoReader.parseFileInfoAsync(file);
 ```
 
-Browser `parseDemo` accepts `Uint8Array` and `ReadableStream<Uint8Array>`. Metadata helpers accept `Uint8Array` and `Blob` (including `File`). Filesystem paths, Node streams, and the `stream` option are available only from the server export.
+Browser `parseDemo` accepts `Uint8Array` and `ReadableStream<Uint8Array>`. Browser metadata helpers use the `Async` suffix and accept `Uint8Array` and `Blob` (including `File`). Filesystem paths, synchronous metadata, Node streams, and the `stream` option are available only from the server export.
 
 HTTP broadcasts use the same API: `await new DemoReader().parseHttpBroadcast(relayUrl)`. The relay must allow your page's origin through CORS, and HTTPS pages need an HTTPS relay.
 
@@ -92,10 +92,10 @@ Upgrading from 1.x? See the [migration guide](MIGRATION.md) for API changes and 
 
 ## parseHeader
 
-Static method that reads only the demo file header without parsing the full file. Fast and low-memory.
+Server-only synchronous method that reads the demo file header without parsing the full file. Fast and low-memory.
 
 ```ts
-const header = await DemoReader.parseHeader('path/to/demo.dem');
+const header = DemoReader.parseHeader('path/to/demo.dem');
 if (header) {
 	console.log(header.map_name); // e.g. "de_dust2"
 	console.log(header.server_name); // server name
@@ -105,14 +105,14 @@ if (header) {
 }
 ```
 
-Resolves to `null` if the header is absent or truncated. Reads the header frame's declared size, including headers larger than 4 KB. Metadata helpers reject on I/O or malformed-data errors. The server also accepts the browser metadata inputs (`Uint8Array` and `Blob`/`File`).
+Returns `null` if the header is absent or truncated, and throws on I/O or malformed-data errors. Accepts file paths, `Buffer`, and `Uint8Array`; reads the header's declared size, including headers larger than 4 KB. Use `parseHeaderAsync` for promise-based reads or Blob/File inputs.
 
 ## parseServerInfo
 
-Static method that reads server info from the first few packets without parsing the full demo. Fast and low-memory.
+Server-only synchronous method that reads server info from the first few packets without parsing the full demo. Fast and low-memory.
 
 ```ts
-const info = await DemoReader.parseServerInfo('path/to/demo.dem');
+const info = DemoReader.parseServerInfo('path/to/demo.dem');
 if (info) {
 	console.log(info.map_name); // e.g. "de_dust2"
 	console.log(info.server_name); // server name
@@ -123,24 +123,21 @@ if (info) {
 
 Returns `null` if server info cannot be found. Reads only the demo's signon section (the setup frames at the start, before gameplay begins) instead of the whole file, so it stays fast and low-memory on demos of any size.
 
-## Synchronous Metadata
+## Asynchronous Metadata
 
-The server export provides synchronous metadata methods for batch processes and worker threads:
+Use the `Async` suffix for promise-based metadata reads:
 
 ```ts
 import { DemoReader } from 'cs2parser';
 
-const header = DemoReader.parseHeaderSync('demo.dem');
-const serverInfo = DemoReader.parseServerInfoSync('demo.dem');
-const fileInfo = DemoReader.parseFileInfoSync('demo.dem');
-
-// Buffer and Uint8Array inputs also work without promises or filesystem access.
-const bufferedHeader = DemoReader.parseHeaderSync(bytes);
+const header = await DemoReader.parseHeaderAsync('demo.dem');
+const serverInfo = await DemoReader.parseServerInfoAsync('demo.dem');
+const fileInfo = await DemoReader.parseFileInfoAsync('demo.dem');
 ```
 
-These methods return the metadata object or `null` for absent/truncated metadata, and throw synchronously on I/O or malformed-data errors. They accept file paths, `Buffer`, and `Uint8Array`, not Blob/File or streams. File reads are limited to relevant frame headers/bodies; unrelated payloads are skipped, and file-info reads seek directly to the trailer. Each call closes its file and releases decoder storage before returning.
+These methods resolve to metadata or `null` for absent/truncated metadata, and reject on I/O or malformed-data errors. The server accepts paths, `Buffer`, `Uint8Array`, and Blob/File inputs. The browser exposes only the `Async` methods, accepting bytes or Blob/File. Both paths read only relevant frame headers/bodies and seek directly to file-info trailers.
 
-Synchronous file I/O and decoding block the calling thread. Keep the existing asynchronous methods when event-loop responsiveness matters, or when reading Blob/File inputs. The browser export and `parseDemo()` remain asynchronous; neither gains a synchronous variant.
+The server's unsuffixed `parseHeader`, `parseServerInfo`, and `parseFileInfo` methods accept paths, `Buffer`, or `Uint8Array` and block the calling thread. Use them in batch processes/workers; each call closes its file and releases decoder storage before returning. `parseDemo()` remains asynchronous.
 
 ## parseDemo
 
@@ -955,7 +952,7 @@ Other demo frames can be subscribed to by name, such as `DEM_CustomData`,
 ```ts
 parser.on('DEM_FileInfo', info => console.log(info.playback_time, info.playback_ticks));
 // Or read the file-info trailer without parsing the demo:
-const info = await DemoReader.parseFileInfo('demo.dem');
+const info = DemoReader.parseFileInfo('demo.dem');
 ```
 
 Listening for `DEM_FileInfo` or `DEM_SpawnGroups` reads past `DEM_Stop` through

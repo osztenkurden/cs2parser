@@ -11,9 +11,9 @@ import { SVC_Messages, type CSVCMsg_ServerInfo } from '../../src/ts-proto/netmes
 import { bytesField, demoFile, demoFrame, networkPacket } from '../helpers/demo.js';
 
 const methods = [
-	['parseHeaderSync', 'parseHeader'],
-	['parseServerInfoSync', 'parseServerInfo'],
-	['parseFileInfoSync', 'parseFileInfo']
+	['parseHeader', 'parseHeaderAsync'],
+	['parseServerInfo', 'parseServerInfoAsync'],
+	['parseFileInfo', 'parseFileInfoAsync']
 ] as const;
 const headerName = 'x'.repeat(8192);
 const packet = bytesField(
@@ -73,16 +73,16 @@ for (const fixture of fixtures) {
 			backing.subarray(5, 5 + fixture.bytes.length)
 		];
 		for (const source of sources) {
-			const header: CDemoFileHeader | null = DemoReader.parseHeaderSync(source);
-			const serverInfo: CSVCMsg_ServerInfo | null = DemoReader.parseServerInfoSync(source);
-			const fileInfo: CDemoFileInfo | null = DemoReader.parseFileInfoSync(source);
+			const header: CDemoFileHeader | null = DemoReader.parseHeader(source);
+			const serverInfo: CSVCMsg_ServerInfo | null = DemoReader.parseServerInfo(source);
+			const fileInfo: CDemoFileInfo | null = DemoReader.parseFileInfo(source);
 			expect(header?.map_name).toBe(headerName);
 			expect(serverInfo?.map_name).toBe('de_nuke');
 			expect(fileInfo?.playback_ticks).toBe(42);
 			for (const [result, async] of [
-				[header, 'parseHeader'],
-				[serverInfo, 'parseServerInfo'],
-				[fileInfo, 'parseFileInfo']
+				[header, 'parseHeaderAsync'],
+				[serverInfo, 'parseServerInfoAsync'],
+				[fileInfo, 'parseFileInfoAsync']
 			] as const) {
 				expect(result).not.toBeInstanceOf(Promise);
 				const pending = DemoReader[async](source);
@@ -110,9 +110,9 @@ for (const [sync] of methods) {
 		}
 		const fixture = fixtures[1]!;
 		const truncated =
-			sync === 'parseHeaderSync'
+			sync === 'parseHeader'
 				? demoFile(fixture.header.subarray(0, -1))
-				: sync === 'parseServerInfoSync'
+				: sync === 'parseServerInfo'
 					? demoFile(fixture.signon.subarray(0, -1))
 					: fixture.bytes.subarray(0, -1);
 		expect(DemoReader[sync](truncated)).toBeNull();
@@ -152,8 +152,8 @@ test('metadata reads skip unrelated megabyte payloads and seek directly to the t
 	}) as typeof fs.readSync);
 	try {
 		const path = join(directory, 'false.dem');
-		expect(DemoReader.parseHeaderSync(path)?.map_name).toBe(headerName);
-		expect(DemoReader.parseServerInfoSync(path)?.map_name).toBe('de_nuke');
+		expect(DemoReader.parseHeader(path)?.map_name).toBe(headerName);
+		expect(DemoReader.parseServerInfo(path)?.map_name).toBe('de_nuke');
 		expect(
 			reads.every(
 				read => read.offset + read.length <= fixture.skippedStart + 15 || read.offset >= fixture.skippedEnd
@@ -161,7 +161,7 @@ test('metadata reads skip unrelated megabyte payloads and seek directly to the t
 		).toBe(true);
 		expect(reads.reduce((n, read) => n + read.length, 0)).toBeLessThan(16 * 1024);
 		reads.length = 0;
-		expect(DemoReader.parseFileInfoSync(path)?.playback_ticks).toBe(42);
+		expect(DemoReader.parseFileInfo(path)?.playback_ticks).toBe(42);
 		expect(reads[0]).toEqual({ offset: 0, length: 16 });
 		expect(reads.slice(1).every(read => read.offset >= fixture.bytes.length - fixture.trailer.length)).toBe(true);
 		expect(reads.reduce((n, read) => n + read.length, 0)).toBeLessThan(100);
@@ -180,9 +180,9 @@ test('positioned reads handle short reads and early EOF', () => {
 		offset: number
 	) => original(fd, bytes, start, Math.min(3, length), offset)) as typeof fs.readSync);
 	try {
-		expect(DemoReader.parseHeaderSync(join(directory, 'true.dem'))?.map_name).toBe(headerName);
-		expect(DemoReader.parseServerInfoSync(join(directory, 'true.dem'))?.map_name).toBe('de_nuke');
-		expect(DemoReader.parseFileInfoSync(join(directory, 'true.dem'))?.playback_ticks).toBe(42);
+		expect(DemoReader.parseHeader(join(directory, 'true.dem'))?.map_name).toBe(headerName);
+		expect(DemoReader.parseServerInfo(join(directory, 'true.dem'))?.map_name).toBe('de_nuke');
+		expect(DemoReader.parseFileInfo(join(directory, 'true.dem'))?.playback_ticks).toBe(42);
 	} finally {
 		short.mockRestore();
 	}
@@ -196,7 +196,7 @@ test('positioned reads handle short reads and early EOF', () => {
 	) => (++calls === 2 ? 0 : original(fd, bytes, start, length, offset))) as typeof fs.readSync);
 	const close = spyOn(fs, 'closeSync');
 	try {
-		expect(DemoReader.parseHeaderSync(join(directory, 'true.dem'))).toBeNull();
+		expect(DemoReader.parseHeader(join(directory, 'true.dem'))).toBeNull();
 		expect(close).toHaveBeenCalledTimes(1);
 	} finally {
 		eof.mockRestore();
@@ -211,7 +211,7 @@ test.each(['fstatSync', 'readSync'] as const)('closes the descriptor when %s thr
 	});
 	const close = spyOn(fs, 'closeSync');
 	try {
-		expect(() => DemoReader.parseHeaderSync(join(directory, 'true.dem'))).toThrow(error);
+		expect(() => DemoReader.parseHeader(join(directory, 'true.dem'))).toThrow(error);
 		expect(close).toHaveBeenCalledTimes(1);
 	} finally {
 		fail.mockRestore();
@@ -229,7 +229,7 @@ test('malformed frame headers, protobuf, and Snappy throw without leaking file d
 		fs.writeFileSync(path, bytes);
 		const close = spyOn(fs, 'closeSync');
 		try {
-			expect(() => DemoReader.parseHeaderSync(path)).toThrow();
+			expect(() => DemoReader.parseHeader(path)).toThrow();
 			expect(close).toHaveBeenCalledTimes(1);
 		} finally {
 			close.mockRestore();
@@ -244,8 +244,8 @@ test('server-info search stops on truncation and at the end of signon', async ()
 		demoFrame(EDemoCommands.DEM_Packet, bytesField(3, new Uint8Array(0)), 0)
 	]) {
 		const bytes = demoFile(first, demoFrame(EDemoCommands.DEM_SignonPacket, packet, 0xffffffff));
-		expect(DemoReader.parseServerInfoSync(bytes)).toBeNull();
-		expect(await DemoReader.parseServerInfo(bytes)).toBeNull();
+		expect(DemoReader.parseServerInfo(bytes)).toBeNull();
+		expect(await DemoReader.parseServerInfoAsync(bytes)).toBeNull();
 	}
 });
 
@@ -261,7 +261,7 @@ test('file-info seeks support unsigned offsets beyond 2 GiB without reading the 
 	} finally {
 		fs.closeSync(fd);
 	}
-	const result = DemoReader.parseFileInfoSync(path);
+	const result = DemoReader.parseFileInfo(path);
 	expect(result?.playback_ticks).toBe(42);
-	expect(result).toEqual(await DemoReader.parseFileInfo(path));
+	expect(result).toEqual(await DemoReader.parseFileInfoAsync(path));
 });

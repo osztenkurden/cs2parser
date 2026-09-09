@@ -8,13 +8,13 @@ const demoAvailable = fs.existsSync(demoPath);
 describe.skipIf(!demoAvailable)('real demo metadata', () => {
 	test('real fields and all three synchronous path/Buffer helpers match async metadata', async () => {
 		const bytes = fs.readFileSync(demoPath);
-		const header = await DemoReader.parseHeader(demoPath);
-		const info = await DemoReader.parseServerInfo(demoPath);
-		const fileInfo = await DemoReader.parseFileInfo(demoPath);
+		const header = await DemoReader.parseHeaderAsync(demoPath);
+		const info = await DemoReader.parseServerInfoAsync(demoPath);
+		const fileInfo = await DemoReader.parseFileInfoAsync(demoPath);
 		for (const [sync, expected] of [
-			['parseHeaderSync', header],
-			['parseServerInfoSync', info],
-			['parseFileInfoSync', fileInfo]
+			['parseHeader', header],
+			['parseServerInfo', info],
+			['parseFileInfo', fileInfo]
 		] as const) {
 			expect(DemoReader[sync](demoPath)).toEqual(expected);
 			expect(DemoReader[sync](bytes)).toEqual(expected);

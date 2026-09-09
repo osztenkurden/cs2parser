@@ -42,15 +42,17 @@ for (const [entry, Reader] of [
 		data.writeUInt32LE(trailerOffset, 8);
 		const source = new TrackedBlob([Uint8Array.from(data)]);
 
-		expect((await Reader.parseHeader(source))?.map_name).toHaveLength(8192);
-		expect((await Reader.parseServerInfo(source))?.map_name).toBe('de_nuke');
+		const headerResult = Reader.parseHeaderAsync(source);
+		expect(headerResult).toBeInstanceOf(Promise);
+		expect((await headerResult)?.map_name).toHaveLength(8192);
+		expect((await Reader.parseServerInfoAsync(source))?.map_name).toBe('de_nuke');
 		// The unknown frame is skipped by size; only its header is read.
 		const skippedBody = 16 + header.length + skipped.length - 1024 * 1024;
 		expect(
 			source.reads.every(([start, end]) => end <= skippedBody + 15 || start >= skippedBody + 1024 * 1024)
 		).toBe(true);
 		source.reads = [];
-		expect((await Reader.parseFileInfo(source))?.playback_ticks).toBe(42);
+		expect((await Reader.parseFileInfoAsync(source))?.playback_ticks).toBe(42);
 		expect(source.reads[0]).toEqual([0, 16]);
 		expect(source.reads.slice(1).every(([start]) => start >= trailerOffset)).toBe(true);
 		expect(source.reads.reduce((sum, [start, end]) => sum + end - start, 0)).toBeLessThan(100);
@@ -58,11 +60,13 @@ for (const [entry, Reader] of [
 
 	test(`${entry} metadata returns null for incomplete data and rejects invalid frame varints`, async () => {
 		const header = demoFrame(EDemoCommands.DEM_FileHeader, bytesField(5, new TextEncoder().encode('de_nuke')));
-		expect(await Reader.parseHeader(new Uint8Array(10))).toBeNull();
-		expect(await Reader.parseHeader(demoFile(header).subarray(0, -1))).toBeNull();
-		expect(await Reader.parseServerInfo(new Uint8Array(10))).toBeNull();
+		expect(await Reader.parseHeaderAsync(new Uint8Array(10))).toBeNull();
+		expect(await Reader.parseHeaderAsync(demoFile(header).subarray(0, -1))).toBeNull();
+		expect(await Reader.parseServerInfoAsync(new Uint8Array(10))).toBeNull();
 		const malformed = demoFile(Uint8Array.of(255, 255, 255, 255, 16));
-		await expect(Reader.parseHeader(malformed)).rejects.toThrow('varint');
+		const rejected = Reader.parseHeaderAsync(malformed);
+		expect(rejected).toBeInstanceOf(Promise);
+		await expect(rejected).rejects.toThrow('varint');
 	});
 }
 
@@ -78,15 +82,19 @@ test('metadata handles Blob slices, compressed headers, view offsets, and missin
 	const padded = new Uint8Array(data.length + 10);
 	padded.set(data, 5);
 	for (const source of [padded.subarray(5, 5 + data.length), new Blob([Uint8Array.from(data)])]) {
-		expect((await DemoReader.parseHeader(source))?.map_name).toBe('de_nuke');
-		expect((await DemoReader.parseFileInfo(source))?.playback_ticks).toBe(400);
+		expect((await DemoReader.parseHeaderAsync(source))?.map_name).toBe('de_nuke');
+		expect((await DemoReader.parseFileInfoAsync(source))?.playback_ticks).toBe(400);
 	}
-	expect(await DemoReader.parseFileInfo(new Blob([Uint8Array.from(demoFile(header, stop))]))).toBeNull();
+	expect(await DemoReader.parseFileInfoAsync(new Blob([Uint8Array.from(demoFile(header, stop))]))).toBeNull();
 });
 
 test('all server metadata helpers reject missing files in Node and Bun', async () => {
 	const path = join(tmpdir(), `cs2parser-missing-${randomUUID()}.dem`);
-	for (const read of [ServerReader.parseHeader, ServerReader.parseServerInfo, ServerReader.parseFileInfo]) {
+	for (const read of [
+		ServerReader.parseHeaderAsync,
+		ServerReader.parseServerInfoAsync,
+		ServerReader.parseFileInfoAsync
+	]) {
 		await expect(read(path)).rejects.toThrow();
 	}
 });

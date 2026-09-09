@@ -2,19 +2,19 @@
 
 ## Metadata
 
-`parseHeader`, `parseServerInfo`, and `parseFileInfo` now return promises. Add `await`, or use the server-only synchronous counterparts:
+`parseHeader`, `parseServerInfo`, and `parseFileInfo` remain synchronous on the server. Opt into promises with the matching `Async` methods:
 
 ```ts
 import { DemoReader } from 'cs2parser';
 
 const path = 'demo.dem';
-const asyncHeader = await DemoReader.parseHeader(path);
-const header = DemoReader.parseHeaderSync(path); // Alternatively, keep synchronous callers.
-const serverInfo = DemoReader.parseServerInfoSync(path);
-const fileInfo = DemoReader.parseFileInfoSync(path);
+const header = DemoReader.parseHeader(path);
+const serverInfo = DemoReader.parseServerInfo(path);
+const fileInfo = DemoReader.parseFileInfo(path);
+const asyncHeader = await DemoReader.parseHeaderAsync(path);
 ```
 
-Sync methods accept paths, `Buffer`, or `Uint8Array`, return metadata or `null`, and throw errors synchronously. They block the calling thread; use them in batch jobs/workers. Blob/File inputs remain async. `parseDemo()` stays async; `stream: false` selects larger chunks, not synchronous parsing.
+Unsuffixed methods accept paths, `Buffer`, or `Uint8Array`, return metadata or `null`, and throw synchronously. They block the calling thread; use them in batch jobs/workers. Blob/File inputs require `*Async`, which rejects on errors. Browser metadata exposes only `*Async`. `parseDemo()` stays async; `stream: false` selects larger chunks, not synchronous parsing.
 
 ## Other Changes
 
@@ -26,7 +26,7 @@ Sync methods accept paths, `Buffer`, or `Uint8Array`, return metadata or `null`,
 
 ## Server Metadata Timings
 
-**Median milliseconds per 5,000 calls; async / sync.** Five fresh processes per case, 1,000 warmup calls, sequential shuffled runs. Same 329 MB `test-fixtures/v2/demo.dem`, warm filesystem cache, Linux ARM64; measured 2026-09-09 using the built **server** export. Imports, byte-buffer loading, and warmup are excluded; path timings include I/O.
+**Median milliseconds per 5,000 calls; `*Async` / unsuffixed (sync).** Five fresh processes per case, 1,000 warmup calls, sequential shuffled runs. Same 329 MB `test-fixtures/v2/demo.dem`, warm filesystem cache, Linux ARM64; measured 2026-09-09 using the built **server** export before this naming change. Imports, byte-buffer loading, and warmup are excluded; path timings include I/O. Decoding and I/O implementations are unchanged.
 
 | Runtime      | Helper            |       File Path | In-Memory Bytes |
 | ------------ | ----------------- | --------------: | --------------: |

@@ -62,21 +62,21 @@ try {
 	});
 	assert.deepEqual(await new DemoReader().parseDemo(withoutEOF), { incomplete: false });
 	assert.equal(withoutEOF.destroyed, true);
-	assert.equal((await DemoReader.parseHeader(path)).map_name, 'de_nuke');
+	assert.equal((await DemoReader.parseHeaderAsync(path)).map_name, 'de_nuke');
 	for (const source of [path, demo, Uint8Array.from(demo)]) {
-		assert.equal(DemoReader.parseHeaderSync(source).map_name, 'de_nuke');
-		assert.equal(DemoReader.parseServerInfoSync(source).map_name, 'de_nuke');
-		assert.equal(DemoReader.parseFileInfoSync(source).playback_ticks, 42);
-		assert.deepEqual(DemoReader.parseHeaderSync(source), await DemoReader.parseHeader(source));
-		assert.deepEqual(DemoReader.parseServerInfoSync(source), await DemoReader.parseServerInfo(source));
-		assert.deepEqual(DemoReader.parseFileInfoSync(source), await DemoReader.parseFileInfo(source));
+		assert.equal(DemoReader.parseHeader(source).map_name, 'de_nuke');
+		assert.equal(DemoReader.parseServerInfo(source).map_name, 'de_nuke');
+		assert.equal(DemoReader.parseFileInfo(source).playback_ticks, 42);
+		assert.deepEqual(DemoReader.parseHeader(source), await DemoReader.parseHeaderAsync(source));
+		assert.deepEqual(DemoReader.parseServerInfo(source), await DemoReader.parseServerInfoAsync(source));
+		assert.deepEqual(DemoReader.parseFileInfo(source), await DemoReader.parseFileInfoAsync(source));
 	}
-	for (const method of ['parseHeaderSync', 'parseServerInfoSync', 'parseFileInfoSync']) {
+	for (const method of ['parseHeader', 'parseServerInfo', 'parseFileInfo']) {
 		assert.equal(method in BrowserReader, false);
 		assert.throws(() => DemoReader[method](new Blob([demo])), TypeError);
 		assert.throws(() => DemoReader[method](join(directory, 'missing.dem')));
 	}
-	for (const read of [DemoReader.parseHeader, DemoReader.parseFileInfo, DemoReader.parseServerInfo]) {
+	for (const read of [DemoReader.parseHeaderAsync, DemoReader.parseFileInfoAsync, DemoReader.parseServerInfoAsync]) {
 		await assert.rejects(read(join(directory, 'missing.dem')));
 	}
 	const browser = new BrowserReader();
