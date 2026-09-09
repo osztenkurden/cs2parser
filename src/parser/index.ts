@@ -2,7 +2,7 @@ import { createReadStream, openAsBlob } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { BaseDemoReader, type DemoInput, type ParseOptions } from './base.js';
-import { nativeSnappy } from '../compression/native.js';
+import { SnappyDecoder } from '../compression/wasm.js';
 import { parseHeader, parseServerInfo, parseFileInfo, type MetadataInput } from './metadata.js';
 
 const metadataSource = async (source: string | MetadataInput) => {
@@ -12,22 +12,22 @@ const metadataSource = async (source: string | MetadataInput) => {
 	return openAsBlob(source);
 };
 
-/** Server entry: shared parsing with native Snappy and Node file/stream inputs. */
+/** Server entry: shared parsing with WASM Snappy and Node file/stream inputs. */
 export class DemoReader extends BaseDemoReader {
 	constructor() {
-		super(nativeSnappy);
+		super(new SnappyDecoder());
 	}
 
 	static async parseHeader(source: string | MetadataInput) {
-		return parseHeader(await metadataSource(source), nativeSnappy);
+		return parseHeader(await metadataSource(source), new SnappyDecoder());
 	}
 
 	static async parseServerInfo(source: string | MetadataInput) {
-		return parseServerInfo(await metadataSource(source), nativeSnappy);
+		return parseServerInfo(await metadataSource(source), new SnappyDecoder());
 	}
 
 	static async parseFileInfo(source: string | MetadataInput) {
-		return parseFileInfo(await metadataSource(source), nativeSnappy);
+		return parseFileInfo(await metadataSource(source), new SnappyDecoder());
 	}
 
 	override parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {

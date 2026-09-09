@@ -5,7 +5,7 @@
 
 # cs2parser
 
-A fast, typed CS2 demo parser for Node.js, Bun, and modern browsers.
+A fast, typed CS2 demo parser for Node.js, Bun, and modern browsers. Both exports use an embedded WASM Snappy decoder; production installs require no native addons.
 
 Parses `.dem` files and live HTTP GOTV broadcasts from Counter-Strike 2, providing typed access to entities, players, game events, and more.
 
@@ -82,7 +82,7 @@ const decoded = decoder.uncompress(compressed, output);
 decoder.release(); // Drop internal WASM/scratch storage; decoded remains valid.
 ```
 
-Omitting `output` allocates an owned result. Supplying an undersized buffer throws `RangeError`; malformed blocks throw an error. Impossible expansion lengths are rejected before allocating output or growing WASM memory. `snappyUncompressedLength()` reads only the prefix, not block validity; do not use it to allocate unbounded output from untrusted input. WASM memory grows as needed and is reused, with copies into WASM memory and into the destination. `DemoReader` releases decoder storage on completion, failure, and cancellation; standalone decoders can call `release()` and be reused afterward. A restrictive Content Security Policy must [allow WebAssembly compilation](https://www.w3.org/TR/CSP3/#can-compile-wasm-bytes) (for example, `script-src 'self' 'wasm-unsafe-eval'`). Modern WebAssembly bulk-memory support is required. The server export continues to use native Snappy.
+Omitting `output` allocates an owned result. Supplying an undersized buffer throws `RangeError`; malformed blocks throw an error. Impossible expansion lengths are rejected before allocating output or growing WASM memory. `snappyUncompressedLength()` reads only the prefix, not block validity; do not use it to allocate unbounded output from untrusted input. WASM memory grows as needed and is reused, with copies into WASM memory and into the destination. `DemoReader` releases decoder storage on completion, failure, and cancellation; standalone decoders can call `release()` and be reused afterward. A restrictive Content Security Policy must [allow WebAssembly compilation](https://www.w3.org/TR/CSP3/#can-compile-wasm-bytes) (for example, `script-src 'self' 'wasm-unsafe-eval'`). Modern WebAssembly bulk-memory support is required. The server uses the same decoder for demos, broadcasts, and metadata, while retaining filesystem and Node stream inputs. Native Snappy is a development-only dependency for fixture generation and differential tests.
 
 The original decoder source is `wasm/snappy.c`. After changing it, run `npm run build:snappy` with Clang and `wasm-ld` installed. Normal package builds use the checked-in embedded bytes and need no C compiler.
 

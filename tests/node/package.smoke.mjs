@@ -3,13 +3,13 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import snappy from 'snappy';
 import { DemoReader } from 'cs2parser';
 import { DemoReader as BrowserReader, SnappyDecoder } from 'cs2parser/browser';
 
 const directory = await mkdtemp(join(tmpdir(), 'cs2parser-package-'));
 try {
-	const header = snappy.compressSync(Buffer.from([42, 7, ...Buffer.from('de_nuke')]));
+	// Raw Snappy: nine output bytes, one nine-byte literal containing the protobuf header.
+	const header = Buffer.from([9, 32, 42, 7, ...Buffer.from('de_nuke')]);
 	const demo = Buffer.concat([
 		Buffer.from('PBDEMS2\0\0\0\0\0\0\0\0\0'),
 		Buffer.from([65, 0, header.length]),
@@ -20,6 +20,7 @@ try {
 	await writeFile(path, demo);
 	for (const source of [path, Uint8Array.from(demo), Readable.from([demo])]) {
 		const reader = new DemoReader();
+		assert(reader._snappy instanceof SnappyDecoder);
 		assert.deepEqual(await reader.parseDemo(source), { incomplete: false });
 		assert.equal(reader.header.map_name, 'de_nuke');
 	}

@@ -39,11 +39,11 @@ function encodeVarint(value: number): number[] {
 }
 
 const expected: Partial<Record<ParityMode, Promise<ParityResult>>> = {};
-async function nativeResult(mode: ParityMode) {
+async function serverResult(mode: ParityMode) {
 	const reader = new DemoReader();
 	const capture = captureParity(reader, mode);
 	const result = await reader.parseDemo(fixturePath, { entities: EntityMode[mode] });
-	if (result.incomplete || result.error) throw new Error('Native fixture parse failed');
+	if (result.incomplete || result.error) throw new Error('Server fixture parse failed');
 	return capture.finish();
 }
 
@@ -65,7 +65,7 @@ Bun.serve({
 		if (path === '/expected' && existsSync(fixturePath)) {
 			const mode = PARITY_MODES.find(mode => mode === url.searchParams.get('mode'));
 			if (!mode) return new Response('Invalid entity mode', { status: 400 });
-			return Response.json(await (expected[mode] ??= nativeResult(mode)));
+			return Response.json(await (expected[mode] ??= serverResult(mode)));
 		}
 		if (path === '/broadcast/sync')
 			return Response.json({

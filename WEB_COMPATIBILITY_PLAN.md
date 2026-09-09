@@ -5,6 +5,8 @@ Branch: `feat/browser-support`, based on `57d79fc`.
 The original implementation and measurements below are preserved as historical context.
 The follow-up optimization audit, current implementation differences, final comparison
 against both baselines, and verification limits are in [PERFORMANCE.md](PERFORMANCE.md).
+The subsequent `feat/server-wasm-snappy` branch also uses WASM on the server; the
+native-backend decisions and measurements below describe the earlier implementation.
 
 ## Approved decisions
 

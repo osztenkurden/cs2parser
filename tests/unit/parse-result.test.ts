@@ -5,6 +5,7 @@ import { join } from 'path';
 import { Readable } from 'stream';
 import { DemoReader } from '../../src/index.js';
 import { DemoReader as BrowserDemoReader } from '../../src/browser.js';
+import { SnappyDecoder } from '../../src/compression/wasm.js';
 import { EDemoCommands } from '../../src/ts-proto/demo.js';
 import { demoFile, demoFrame } from '../helpers/demo.js';
 
@@ -18,6 +19,14 @@ afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 const completeDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands.DEM_Stop, 1, 0, 0, 0, 0])]);
 // An invalid protobuf wire type triggers a parse error rather than truncated input.
 const invalidDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands.DEM_FileHeader, 1, 3, 0x0f, 0, 0])]);
+
+test('server readers own independent WASM decoders', () => {
+	const first = new DemoReader();
+	const second = new DemoReader();
+	expect(first._snappy).toBeInstanceOf(SnappyDecoder);
+	expect(second._snappy).toBeInstanceOf(SnappyDecoder);
+	expect(first._snappy).not.toBe(second._snappy);
+});
 
 for (const method of ['buffer', 'stream', 'path', 'chunked path'] as const) {
 	describe(`parseDemo result (${method})`, () => {

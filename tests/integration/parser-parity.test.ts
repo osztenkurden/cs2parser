@@ -186,7 +186,7 @@ const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 	let bytes: Buffer;
 	let releaseFixture: boolean;
-	const native = {} as Record<ParityMode, ParityResult>;
+	const server = {} as Record<ParityMode, ParityResult>;
 	const expectedRelease = structuredClone(golden.modes);
 	// Keep MASTER output intact. Only these audited, wire-proven leaf corrections change the oracle.
 	for (const correction of golden.reviewedCorrections.snapshots) {
@@ -205,32 +205,32 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			const capture = captureParity(reader, mode);
 			const result = await reader.parseDemo(demoPath, { entities: EntityMode[mode] });
 			expect(result).toEqual({ incomplete: false });
-			native[mode] = await capture.finish();
+			server[mode] = await capture.finish();
 		}
 	}, 300000);
 
 	for (const mode of PARITY_MODES) {
-		test(`${mode}: native path matches the independent release golden when applicable`, () => {
-			if (releaseFixture) expect(native[mode]).toEqual(expectedRelease[mode]);
+		test(`${mode}: server path matches the independent release golden when applicable`, () => {
+			if (releaseFixture) expect(server[mode]).toEqual(expectedRelease[mode]);
 			// For arbitrary demos the path result is the runtime reference, not the wrong release golden.
-			expect(native[mode].tickCount).toBe(native.NONE.tickCount);
-			expect(native[mode].headerSha256).toBe(native.NONE.headerSha256);
-			expect(native[mode].rawGameEvents).toEqual(native.NONE.rawGameEvents);
-			expect(native[mode].final.players).toEqual(native.NONE.final.players);
-			expect(native[mode].checkpoints.map(state => [state.tick, state.players])).toEqual(
-				native.NONE.checkpoints.map(state => [state.tick, state.players])
+			expect(server[mode].tickCount).toBe(server.NONE.tickCount);
+			expect(server[mode].headerSha256).toBe(server.NONE.headerSha256);
+			expect(server[mode].rawGameEvents).toEqual(server.NONE.rawGameEvents);
+			expect(server[mode].final.players).toEqual(server.NONE.final.players);
+			expect(server[mode].checkpoints.map(state => [state.tick, state.players])).toEqual(
+				server.NONE.checkpoints.map(state => [state.tick, state.players])
 			);
 		});
 
-		test(`${mode}: native Buffer matches native path`, async () => {
+		test(`${mode}: server Buffer matches server path`, async () => {
 			const reader = new DemoReader();
 			const capture = captureParity(reader, mode);
 			expect(await reader.parseDemo(bytes, { entities: EntityMode[mode] })).toEqual({ incomplete: false });
-			expect(await capture.finish()).toEqual(native[mode]);
+			expect(await capture.finish()).toEqual(server[mode]);
 		}, 300000);
 
 		for (const [runtime, Reader] of [
-			['native', DemoReader],
+			['server', DemoReader],
 			['browser', BrowserReader]
 		] as const) {
 			for (const chunkSize of [0, ...PARITY_CHUNK_SIZES]) {
@@ -243,7 +243,7 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 						incomplete: false
 					});
 					const actual = await capture.finish();
-					expect(actual).toEqual(native[mode]);
+					expect(actual).toEqual(server[mode]);
 					if (releaseFixture) expect(actual).toEqual(expectedRelease[mode]);
 				}, 300000);
 			}
@@ -251,11 +251,11 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 	}
 
 	test('skipping unused entities preserves full game-rule state and synthetic payloads', () => {
-		expect(native.NONE.final.entities.count).toBe(0);
-		expect(native.ONLY_GAME_RULES.final.entities).toEqual(native.ALL.final.gameRules);
-		expect(native.ONLY_GAME_RULES.checkpoints.map(state => [state.tick, state.entities])).toEqual(
-			native.ALL.checkpoints.map(state => [state.tick, state.gameRules])
+		expect(server.NONE.final.entities.count).toBe(0);
+		expect(server.ONLY_GAME_RULES.final.entities).toEqual(server.ALL.final.gameRules);
+		expect(server.ONLY_GAME_RULES.checkpoints.map(state => [state.tick, state.entities])).toEqual(
+			server.ALL.checkpoints.map(state => [state.tick, state.gameRules])
 		);
-		expect(native.ONLY_GAME_RULES.syntheticRoundEvents).toEqual(native.ALL.syntheticRoundEvents);
+		expect(server.ONLY_GAME_RULES.syntheticRoundEvents).toEqual(server.ALL.syntheticRoundEvents);
 	});
 });

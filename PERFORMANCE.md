@@ -3,6 +3,27 @@
 Measured September 8-9, 2026 against the uncommitted `feat/browser-support` worktree.
 The repository's primary branch is `master`; no `main` exists.
 
+## Server WASM Follow-Up
+
+`feat/server-wasm-snappy` switches the server to the same embedded decoder as the
+browser, including metadata and broadcasts. Native Snappy is now development-only.
+The original audit and native-baseline tables below remain historical measurements
+of `289240f`, not a description of the current server backend.
+
+A subsequent controlled comparison changed only the codec in the server parser,
+keeping the 64 KiB file-input path, fixture, and subscriptions identical. Five fresh
+processes per case, randomized sequential order on the same Linux arm64 host:
+
+| Runtime | NONE Time Reduction | ONLY_GAME_RULES Time Reduction | ALL Time Reduction |
+| --- | ---: | ---: | ---: |
+| Bun 1.3.14 | 14.7% | 3.2% | 2.8% |
+| Node 22.23.2 | 13.6% | 5.9% | 4.5% |
+| Node 24.20.0 | 17.8% | 7.4% | 5.1% |
+
+These gains are relative to the already-optimized native server, not master.
+Both codecs matched the complete corrected golden in all three runtimes. This
+remains a single-fixture ARM64 result, not a universal native-versus-WASM claim.
+
 ## Baselines And Method
 
 - Primary baseline: `master`, `57d79fc358203ef384fe61ed3b7f478bd91f8357`.
