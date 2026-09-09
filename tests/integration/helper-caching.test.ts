@@ -5,7 +5,7 @@ import fs from 'fs';
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 const demoAvailable = fs.existsSync(demoPath);
 
-describe.skipIf(!demoAvailable)('helper caching (reference equality)', () => {
+describe.skipIf(!demoAvailable)('helper caching and player lookup', () => {
 	let reader: DemoReader;
 
 	beforeAll(async () => {
@@ -18,19 +18,9 @@ describe.skipIf(!demoAvailable)('helper caching (reference equality)', () => {
 		await reader.parseDemo(demoPath, { entities: EntityMode.ALL });
 	});
 
-	test('parser.teams returns identical instances across calls', () => {
-		const a = reader.teams;
-		const b = reader.teams;
-		expect(a.length).toBeGreaterThan(0);
-		expect(a.length).toBe(b.length);
-		for (let i = 0; i < a.length; i++) {
-			expect(a[i]).toBe(b[i]!);
-		}
-	});
-
-	test('parser.playerControllers returns identical instances across calls', () => {
-		const a = reader.playerControllers;
-		const b = reader.playerControllers;
+	test.each(['teams', 'playerControllers'] as const)('parser.%s returns identical instances across calls', key => {
+		const a = reader[key];
+		const b = reader[key];
 		expect(a.length).toBeGreaterThan(0);
 		expect(a.length).toBe(b.length);
 		for (let i = 0; i < a.length; i++) {
@@ -59,13 +49,13 @@ describe.skipIf(!demoAvailable)('helper caching (reference equality)', () => {
 	});
 
 	test('player.team is identical to the matching entry in parser.teams', () => {
-		const player = reader.playerControllers.find(p => p.team !== null);
-		expect(player).toBeDefined();
-		const teamFromPlayer = player!.team;
-		const teamFromList = reader.teams.find(t => t.teamNumber === player!.teamNumber);
-		expect(teamFromPlayer).not.toBeNull();
-		expect(teamFromList).toBeDefined();
-		expect(teamFromPlayer).toBe(teamFromList!);
+		const players = reader.playerControllers.filter(p => p.team !== null);
+		expect(players.length).toBeGreaterThan(0);
+		for (const player of players) {
+			const teamFromList = reader.teams.find(t => t.teamNumber === player.teamNumber);
+			expect(teamFromList).toBeDefined();
+			expect(player.team).toBe(teamFromList!);
+		}
 	});
 
 	test('player.pawn is identical to parser.getPawn(player.pawnEntityId)', () => {
@@ -91,21 +81,21 @@ describe.skipIf(!demoAvailable)('helper caching (reference equality)', () => {
 		expect(a).toBe(b);
 	});
 
-	test('cached helpers are usable as Map keys', () => {
-		const player = reader.playerControllers[0]!;
-		const map = new Map<typeof player, number>();
-		map.set(player, 42);
-		const lookedUp = reader.getPlayer(player.entityId);
-		expect(lookedUp).not.toBeNull();
-		expect(map.get(lookedUp!)).toBe(42);
+	test('every non-bot player resolves to a Player with matching steamId', () => {
+		const nonBots = reader.players.filter(p => p?.steamid !== undefined && p?.steamid !== '0' && !p?.fakeplayer);
+		expect(nonBots.length).toBeGreaterThan(0);
+		for (const info of nonBots) {
+			const player = reader.getPlayerByInfo(info);
+			expect(player).not.toBeNull();
+			expect(player!.steamId).toBe(String(info?.steamid));
+		}
 	});
 
-	test('teams returned via player.team are usable as Set members', () => {
-		const teams = new Set(reader.teams);
-		for (const player of reader.playerControllers) {
-			if (player.team) {
-				expect(teams.has(player.team)).toBe(true);
-			}
+	test('getPlayerByInfo(player.userInfo) round-trips to the cached player', () => {
+		const controllers = reader.playerControllers.filter(pc => pc.userInfo);
+		expect(controllers.length).toBeGreaterThan(0);
+		for (const original of controllers) {
+			expect(reader.getPlayerByInfo(original.userInfo)).toBe(original);
 		}
 	});
 });

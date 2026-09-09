@@ -20,7 +20,8 @@
 	},
 	"files": [
 		"./dist",
-		"ACKNOWLEDGEMENTS"
+		"ACKNOWLEDGEMENTS",
+		"MIGRATION.md"
 	],
 	"types": "./dist/index.d.mts",
 	"exports": {
@@ -51,8 +52,7 @@
 		"generate:delta-schema:check": "bun scripts/generate-usercmd-delta-schema.ts --check",
 		"generate:messages:check": "bun scripts/generate-message-registry.ts --check",
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-message-registry.ts && bun scripts/generate-usercmd-delta-schema.ts && bun scripts/generate-entity-types.ts --snapshot",
-		"benchmark": "bun --expose-gc scripts/benchmark.ts",
-		"benchmark:readme": "bun scripts/benchmark-readme.ts",
+		"benchmark": "bun scripts/benchmark-compare.mjs",
 		"build:snappy": "bun scripts/build-snappy-wasm.ts",
 		"generate:broadcast-descriptors": "bun scripts/generate-broadcast-descriptors.ts",
 		"test:browser": "npm run build && tsc -p tests/browser/tsconfig.json && playwright test"

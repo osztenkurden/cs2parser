@@ -1,11 +1,13 @@
 import { expect, test } from 'bun:test';
 import { BinaryWriter } from '@bufbuild/protobuf/wire';
+import snappy from 'snappy';
 import { DemoReader, EntityMode } from '../../src/index.js';
+import { DemoReader as BrowserReader } from '../../src/browser.js';
 import { ParseSession } from '../../src/parser/entities/parseSession.js';
 import { EDemoCommands } from '../../src/ts-proto/demo.js';
 import { EBaseGameEvents } from '../../src/ts-proto/gameevents.js';
 import { SVC_Messages, CSVCMsg_PacketEntities } from '../../src/ts-proto/netmessages.js';
-import { bytesField, networkPacket, varint } from '../helpers/demo.js';
+import { bytesField, demoFile, demoFrame, networkPacket, varint } from '../helpers/demo.js';
 import { buildFragment } from './broadcast/helpers.js';
 
 const setup = (onEntity: (message: CSVCMsg_PacketEntities, baselines: Uint8Array[]) => void = () => {}) => {
@@ -27,6 +29,56 @@ const setup = (onEntity: (message: CSVCMsg_PacketEntities, baselines: Uint8Array
 		);
 	return { reader, session, send };
 };
+
+test('nested compressed string tables and entries leave the outer packet intact', async () => {
+	const value = Uint8Array.of(1, 2, 3, 4);
+	const compressed = snappy.compressSync(value);
+	const bits: number[] = [];
+	const write = (value: number, count: number) => {
+		for (let i = 0; i < count; i++) bits.push((value >>> i) & 1);
+	};
+	write(1, 1);
+	write(1, 1);
+	write(0, 1); // consecutive entry, key, no history
+	write(55, 8);
+	write(0, 8); // key "7"
+	write(1, 1);
+	write(1, 1); // value present and compressed
+	write(compressed.length, 17);
+	for (const byte of compressed) write(byte, 8);
+	const tableBytes = new Uint8Array(Math.ceil(bits.length / 8));
+	bits.forEach((bit, i) => (tableBytes[i >>> 3]! |= bit << (i & 7)));
+	const table = new BinaryWriter()
+		.uint32(10)
+		.string('instancebaseline')
+		.uint32(16)
+		.int32(1)
+		.uint32(48)
+		.int32(1)
+		.uint32(58)
+		.bytes(snappy.compressSync(tableBytes))
+		.uint32(72)
+		.bool(true)
+		.finish();
+	const packet = bytesField(
+		3,
+		networkPacket([
+			{ id: SVC_Messages.svc_CreateStringTable, body: table },
+			{ id: SVC_Messages.svc_ServerInfo, body: bytesField(15, new TextEncoder().encode('de_nuke')) }
+		])
+	);
+	const frame = demoFrame(EDemoCommands.DEM_Packet | EDemoCommands.DEM_IsCompressed, snappy.compressSync(packet));
+	const reader = new BrowserReader();
+	let retained: Uint8Array | undefined;
+	let map: string | undefined;
+	reader.on('createstringtable', table => (retained = table?.table.data[0]?.value ?? undefined));
+	reader.on('serverinfo', info => (map = info.map_name));
+	expect(await reader.parseDemo(demoFile(frame, frame, demoFrame(EDemoCommands.DEM_Stop)))).toEqual({
+		incomplete: false
+	});
+	expect(map).toBe('de_nuke');
+	expect(retained).toEqual(value);
+});
 
 test('queued entity payloads survive arena segments and later table changes', () => {
 	const values = [

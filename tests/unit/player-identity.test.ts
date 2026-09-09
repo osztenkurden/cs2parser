@@ -24,6 +24,12 @@ function userinfo(reader: DemoReader, event: 'createstringtable' | 'updatestring
 }
 
 describe('player identity', () => {
+	test('getPlayerByInfo returns null for missing info or identifiers', () => {
+		const reader = new DemoReader();
+		controller(reader, 0);
+		for (const info of [null, undefined, {}]) expect(reader.getPlayerByInfo(info)).toBeNull();
+	});
+
 	test.each(['0', '90071996842377308'])('bots resolve with userinfo steamid %s and duplicate names', steamid => {
 		const reader = new DemoReader();
 		const first = controller(reader, 2);

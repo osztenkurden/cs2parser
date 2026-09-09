@@ -9,6 +9,7 @@ import {
 } from '../../src/parser/descriptors/index.js';
 import { CORE_HANDLED } from '../../src/parser/descriptors/svc.js';
 import { DemoReader } from '../../src/index.js';
+import { DemoReader as BrowserReader } from '../../src/browser.js';
 import { SVC_Messages } from '../../src/ts-proto/netmessages.js';
 import { NET_Messages } from '../../src/ts-proto/networkbasetypes.js';
 import { EBaseUserMessages } from '../../src/ts-proto/usermessages.js';
@@ -130,6 +131,26 @@ describe('message registry', () => {
 });
 
 describe('listener epoch', () => {
+	test('browser emitter preserves meta-events, prepend ordering, once removal, and duplicate listeners', () => {
+		const reader = new BrowserReader();
+		const calls: string[] = [];
+		const removed: string[] = [];
+		reader.on('removeListener', name => removed.push(String(name)));
+		const listener = () => calls.push('regular');
+		reader.addListener('debug', listener).addListener('debug', listener);
+		reader.removeListener('debug', listener);
+		expect(reader.listenerCount('debug')).toBe(1);
+		const epoch = reader._listenerEpoch;
+		reader.prependOnceListener('debug', () => calls.push('first'));
+		reader.emit('debug', 'test');
+		expect(calls).toEqual(['first', 'regular']);
+		expect(reader._listenerEpoch).toBeGreaterThan(epoch + 1);
+		expect(removed.filter(name => name === 'debug')).toHaveLength(2);
+		reader.off('debug', listener);
+		expect(reader.listenerCount('debug')).toBe(0);
+		expect(reader.setMaxListeners(20).getMaxListeners()).toBe(20);
+	});
+
 	test('bumps when listeners are added and removed', () => {
 		const reader = new DemoReader();
 		const before = reader._listenerEpoch;

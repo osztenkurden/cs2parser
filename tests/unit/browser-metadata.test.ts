@@ -7,7 +7,7 @@ import { DemoReader } from '../../src/browser.js';
 import { DemoReader as ServerReader } from '../../src/index.js';
 import { EDemoCommands } from '../../src/ts-proto/demo.js';
 import { SVC_Messages } from '../../src/ts-proto/netmessages.js';
-import { demoFile, demoFrame, bytesField, networkPacket } from '../helpers/demo.js';
+import { demoFile, demoFrame, bytesField, networkPacket, varint } from '../helpers/demo.js';
 
 class TrackedBlob extends Blob {
 	reads: [number, number][] = [];
@@ -58,12 +58,31 @@ for (const [entry, Reader] of [
 
 	test(`${entry} metadata returns null for incomplete data and rejects invalid frame varints`, async () => {
 		const header = demoFrame(EDemoCommands.DEM_FileHeader, bytesField(5, new TextEncoder().encode('de_nuke')));
+		expect(await Reader.parseHeader(new Uint8Array(10))).toBeNull();
 		expect(await Reader.parseHeader(demoFile(header).subarray(0, -1))).toBeNull();
 		expect(await Reader.parseServerInfo(new Uint8Array(10))).toBeNull();
 		const malformed = demoFile(Uint8Array.of(255, 255, 255, 255, 16));
 		await expect(Reader.parseHeader(malformed)).rejects.toThrow('varint');
 	});
 }
+
+test('metadata handles Blob slices, compressed headers, view offsets, and missing trailers', async () => {
+	const header = demoFrame(
+		EDemoCommands.DEM_FileHeader | EDemoCommands.DEM_IsCompressed,
+		snappy.compressSync(bytesField(5, new TextEncoder().encode('de_nuke')))
+	);
+	const stop = demoFrame(EDemoCommands.DEM_Stop);
+	const trailer = demoFrame(EDemoCommands.DEM_FileInfo, Uint8Array.from([16, ...varint(400)]));
+	const data = demoFile(header, stop, trailer);
+	data.writeUInt32LE(data.length - trailer.length, 8);
+	const padded = new Uint8Array(data.length + 10);
+	padded.set(data, 5);
+	for (const source of [padded.subarray(5, 5 + data.length), new Blob([Uint8Array.from(data)])]) {
+		expect((await DemoReader.parseHeader(source))?.map_name).toBe('de_nuke');
+		expect((await DemoReader.parseFileInfo(source))?.playback_ticks).toBe(400);
+	}
+	expect(await DemoReader.parseFileInfo(new Blob([Uint8Array.from(demoFile(header, stop))]))).toBeNull();
+});
 
 test('all server metadata helpers reject missing files in Node and Bun', async () => {
 	const path = join(tmpdir(), `cs2parser-missing-${randomUUID()}.dem`);

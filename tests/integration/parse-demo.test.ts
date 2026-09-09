@@ -7,41 +7,23 @@ const demoAvailable = fs.existsSync(demoPath);
 
 describe.skipIf(!demoAvailable)('parse demo (full integration)', () => {
 	let reader: DemoReader;
-	let eventCounts: Record<string, number>;
+	let endCount = 0;
+	let tickStarts = 0;
+	const gameEventNames: string[] = [];
 
 	beforeAll(async () => {
 		reader = new DemoReader();
-		eventCounts = {};
-
-		reader.on('tickstart', () => {
-			eventCounts['tickstart'] = (eventCounts['tickstart'] ?? 0) + 1;
-		});
-		reader.on('end', () => {
-			eventCounts['end'] = (eventCounts['end'] ?? 0) + 1;
-		});
-
-		await reader.parseDemo(demoPath, { entities: EntityMode.ALL });
-	});
-
-	test('currentTick is positive after parsing', () => {
-		expect(reader.currentTick).toBeGreaterThan(0);
-	});
-
-	test('entities array is populated', () => {
-		const entityCount = reader.entities.filter(Boolean).length;
-		expect(entityCount).toBeGreaterThan(0);
-	});
-
-	test('players are available from userinfo', () => {
-		expect(reader.players.length).toBeGreaterThan(0);
+		reader.on('tickstart', () => tickStarts++);
+		reader.on('end', () => endCount++);
+		for (const name of ['round_end', 'player_death', 'round_start'] as const) {
+			reader.gameEvents.once(name, () => gameEventNames.push(name));
+		}
+		expect(await reader.parseDemo(demoPath, { entities: EntityMode.ALL })).toEqual({ incomplete: false });
+		expect(reader.header).not.toBeNull();
 	});
 
 	test('player controllers are available', () => {
 		expect(reader.playerControllers.length).toBeGreaterThan(0);
-	});
-
-	test('teams are available', () => {
-		expect(reader.teams.length).toBeGreaterThan(0);
 	});
 
 	test('teams are indexed by teamNumber', () => {
@@ -60,15 +42,12 @@ describe.skipIf(!demoAvailable)('parse demo (full integration)', () => {
 		expect(reader.gameRules).not.toBeNull();
 	});
 
-	test('tickstart events were emitted', () => {
-		expect(eventCounts['tickstart']).toBeGreaterThan(0);
+	test('tickstart events and exactly one end event are emitted', () => {
+		expect(tickStarts).toBeGreaterThan(0);
+		expect(endCount).toBe(1);
 	});
 
-	test('end event was emitted exactly once', () => {
-		expect(eventCounts['end']).toBe(1);
-	});
-
-	test('header property is filled', () => {
-		expect(reader.header).not.toBeNull();
+	test.each(['player_death', 'round_start', 'round_end'])('named %s subscription fires exactly once', name => {
+		expect(gameEventNames.filter(event => event === name)).toHaveLength(1);
 	});
 });

@@ -79,8 +79,11 @@ for (const fixture of fixtures) {
 			expect(header?.map_name).toBe(headerName);
 			expect(serverInfo?.map_name).toBe('de_nuke');
 			expect(fileInfo?.playback_ticks).toBe(42);
-			for (const [sync, async] of methods) {
-				const result = DemoReader[sync](source);
+			for (const [result, async] of [
+				[header, 'parseHeader'],
+				[serverInfo, 'parseServerInfo'],
+				[fileInfo, 'parseFileInfo']
+			] as const) {
 				expect(result).not.toBeInstanceOf(Promise);
 				const pending = DemoReader[async](source);
 				expect(pending).toBeInstanceOf(Promise);
@@ -258,6 +261,7 @@ test('file-info seeks support unsigned offsets beyond 2 GiB without reading the 
 	} finally {
 		fs.closeSync(fd);
 	}
-	expect(DemoReader.parseFileInfoSync(path)?.playback_ticks).toBe(42);
-	expect(DemoReader.parseFileInfoSync(path)).toEqual(await DemoReader.parseFileInfo(path));
+	const result = DemoReader.parseFileInfoSync(path);
+	expect(result?.playback_ticks).toBe(42);
+	expect(result).toEqual(await DemoReader.parseFileInfo(path));
 });

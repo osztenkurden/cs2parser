@@ -1,6 +1,6 @@
 {
 	"include": ["./src/**/*", "./examples/**/*", "./scripts/**/*", "./tests/**/*"],
-	"exclude": ["./examples/relay.ts", "./tests/browser/consumer.ts", "./tests/browser/entry.ts"],
+	"exclude": ["./tests/browser/consumer.ts", "./tests/browser/entry.ts"],
 	"compilerOptions": {
 		"types": ["node", "bun-types"],
 		/* Base Options: */

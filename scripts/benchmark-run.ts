@@ -1,22 +1,25 @@
-import fs from 'fs';
-// An explicit built entry lets the same child benchmark compare revisions and runtimes.
-const { DemoReader, EntityMode } = await import(
-	process.env.CS2_PARSER_ENTRY ?? new URL('../src/index.js', import.meta.url).href
-);
+import fs from 'node:fs';
 
-const demoPath = process.argv[2]!;
-const method = process.argv[3]!;
-const entityMode =
-	process.argv[4] === 'ALL'
-		? EntityMode.ALL
-		: process.argv[4] === 'ONLY_GAME_RULES'
-			? EntityMode.ONLY_GAME_RULES
-			: EntityMode.NONE;
+const [demoPath, method, mode] = process.argv.slice(2);
+if (process.argv.length !== 5 || !demoPath?.trim()) throw new Error('Expected DEMO METHOD MODE');
+if (!['path-stream', 'path-sync', 'buffer', 'stream', 'web-stream'].includes(method ?? '')) {
+	throw new Error(`Unknown parse method: ${method}`);
+}
+if (!mode || !['NONE', 'ONLY_GAME_RULES', 'ALL'].includes(mode)) throw new Error(`Unknown entity mode: ${mode}`);
+const subscriptions = process.env.CS2_BENCH_SUBSCRIPTIONS ?? 'none';
+if (!['none', 'death', 'all'].includes(subscriptions)) throw new Error(`Unknown subscriptions: ${subscriptions}`);
+// Explicit built entries allow comparisons across revisions without timing imports.
+const entry = process.env.CS2_PARSER_ENTRY ?? 'cs2parser';
+if (!entry.trim() || /[\0\r\n]/.test(entry)) throw new Error('Invalid parser entry');
+const { DemoReader, EntityMode } = await import(entry);
+if (typeof DemoReader !== 'function' || !Number.isFinite(EntityMode?.[mode])) {
+	throw new Error(`Invalid parser entry (expected DemoReader and EntityMode.${mode}): ${entry}`);
+}
+const entityMode = EntityMode[mode];
 
 const p = new DemoReader();
 let completed = false;
 let deaths = 0;
-const subscriptions = process.env.CS2_BENCH_SUBSCRIPTIONS ?? 'none';
 if (subscriptions !== 'none') p.gameEvents.on('player_death', () => deaths++);
 if (subscriptions === 'all') {
 	p.on('anymessage', () => {});
@@ -25,7 +28,7 @@ if (subscriptions === 'all') {
 }
 p.on('error', () => {}); // the end payload carries the failure for validation below
 p.on('end', (end: { incomplete: boolean; error?: unknown }) => {
-	completed = !end.incomplete && !end.error;
+	completed = end.incomplete === false && !end.error;
 });
 const start = performance.now();
 
@@ -34,6 +37,7 @@ switch (method) {
 		await p.parseDemo(demoPath, { entities: entityMode });
 		break;
 	case 'path-sync':
+		// This selects larger streamed reads, not synchronous parsing.
 		await p.parseDemo(demoPath, { entities: entityMode, stream: false });
 		break;
 	case 'buffer':
@@ -68,17 +72,14 @@ switch (method) {
 const ms = performance.now() - start;
 if (!completed) throw new Error('Benchmark parse failed or was incomplete');
 const mem = process.memoryUsage();
-console.log(
-	JSON.stringify({
-		time: (ms / 1000).toFixed(1) + 's',
-		ms,
-		rssMiB: mem.rss / 1024 / 1024,
-		peakRssMiB: process.resourceUsage().maxRSS / 1024,
-		heapMiB: mem.heapUsed / 1024 / 1024,
-		rss: (mem.rss / 1024 / 1024).toFixed(0) + 'MB',
-		heap: (mem.heapUsed / 1024 / 1024).toFixed(0) + 'MB',
-		entities: p.entities.filter(Boolean).length,
-		tick: p.currentTick,
-		deaths
-	})
-);
+const metrics = {
+	ms,
+	rssMiB: mem.rss / 1024 ** 2,
+	peakRssMiB: process.resourceUsage().maxRSS / 1024,
+	heapMiB: mem.heapUsed / 1024 ** 2,
+	entities: p.entities.filter(Boolean).length,
+	tick: p.currentTick,
+	deaths
+};
+if (!Object.values(metrics).every(Number.isFinite)) throw new Error('Nonfinite benchmark metrics');
+console.log(JSON.stringify(metrics));

@@ -3,11 +3,12 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { Readable } from 'stream';
+import snappy from 'snappy';
 import { DemoReader } from '../../src/index.js';
 import { DemoReader as BrowserDemoReader } from '../../src/browser.js';
 import { SnappyDecoder } from '../../src/compression/wasm.js';
 import { EDemoCommands } from '../../src/ts-proto/demo.js';
-import { demoFile, demoFrame } from '../helpers/demo.js';
+import { bytesField, demoFile, demoFrame } from '../helpers/demo.js';
 
 let tempDir: string;
 beforeAll(() => {
@@ -19,6 +20,7 @@ afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 const completeDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands.DEM_Stop, 1, 0, 0, 0, 0])]);
 // An invalid protobuf wire type triggers a parse error rather than truncated input.
 const invalidDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands.DEM_FileHeader, 1, 3, 0x0f, 0, 0])]);
+const stop = demoFrame(EDemoCommands.DEM_Stop);
 
 test('server readers own independent WASM decoders', () => {
 	const first = new DemoReader();
@@ -200,6 +202,103 @@ test('a corrupt complete frame cancels and unlocks a stalled Web Stream', async 
 	} finally {
 		clearTimeout(timeout);
 	}
+});
+
+test('Web cancellation unblocks a pending read and cancels the source exactly once', async () => {
+	let cancelled = 0;
+	const source = new ReadableStream<Uint8Array>({
+		cancel() {
+			cancelled++;
+		}
+	});
+	const reader = new BrowserDemoReader();
+	const ends: unknown[] = [];
+	reader.on('end', result => ends.push(result));
+	const parsed = reader.parseDemo(source);
+	reader.cancel();
+	const result = await parsed;
+	expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+	expect(ends).toEqual([result]);
+	expect(ends[0]).toBe(result);
+	expect(cancelled).toBe(1);
+	expect(source.locked).toBe(false);
+});
+
+test('early stop cancels unread Web input without waiting for EOF', async () => {
+	let controller!: ReadableStreamDefaultController<Uint8Array>;
+	let cancelled = 0;
+	const source = new ReadableStream<Uint8Array>({
+		start(c) {
+			controller = c;
+		},
+		cancel() {
+			cancelled++;
+		}
+	});
+	const parsed = new BrowserDemoReader().parseDemo(source);
+	controller.enqueue(demoFile(stop));
+	expect(await parsed).toEqual({ incomplete: false });
+	expect(cancelled).toBe(1);
+	expect(source.locked).toBe(false);
+});
+
+test('Web source failures and invalid chunks preserve terminal errors and release the lock', async () => {
+	for (const afterPrefix of [false, true]) {
+		const error = new Error('source failure');
+		let first = true;
+		const source = new ReadableStream<Uint8Array>({
+			pull(c) {
+				if (afterPrefix && first) {
+					first = false;
+					c.enqueue(demoFile());
+				} else c.error(error);
+			}
+		});
+		const result = await new BrowserDemoReader().parseDemo(source);
+		expect(result).toEqual({ incomplete: true, error });
+		expect(result.error).toBe(error);
+		expect(source.locked).toBe(false);
+	}
+	const source = new ReadableStream({
+		start(c) {
+			c.enqueue('invalid');
+		}
+	});
+	const result = await new BrowserDemoReader().parseDemo(source);
+	expect(result.error).toBeInstanceOf(TypeError);
+	expect(source.locked).toBe(false);
+});
+
+test('starting another demo or broadcast does not interrupt an active parse', async () => {
+	const reader = new BrowserDemoReader();
+	const pending = reader.parseDemo(new ReadableStream<Uint8Array>());
+	expect(() => reader.parseDemo(demoFile(stop))).toThrow('already in progress');
+	await expect(reader.parseHttpBroadcast('https://unused.invalid/')).rejects.toThrow('already in progress');
+	expect(reader.hasEnded).toBe(false);
+	reader.cancel();
+	expect((await pending).reason).toBe('cancelled');
+});
+
+test.each(['complete', 'error', 'cancel'])('decoder storage is released after %s', async outcome => {
+	const reader = new BrowserDemoReader();
+	const release = reader._snappy.release!.bind(reader._snappy);
+	let releases = 0;
+	reader._snappy.release = () => {
+		releases++;
+		release();
+	};
+	const header = demoFrame(
+		EDemoCommands.DEM_FileHeader | EDemoCommands.DEM_IsCompressed,
+		snappy.compressSync(bytesField(5, new TextEncoder().encode('de_nuke')))
+	);
+	if (outcome === 'cancel') reader.on('header', () => reader.cancel());
+	const result = await reader.parseDemo(
+		demoFile(header, outcome === 'error' ? demoFrame(EDemoCommands.DEM_FileHeader, Uint8Array.of(10, 255)) : stop)
+	);
+	expect(releases).toBe(1);
+	if (outcome === 'complete') expect(result).toEqual({ incomplete: false });
+	if (outcome === 'error') expect(result.error).toBeInstanceOf(Error);
+	if (outcome === 'cancel') expect(result.reason).toBe('cancelled');
 });
 
 test('overflowing frame varints fail in both the checked and lookahead paths', async () => {

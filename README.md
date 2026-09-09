@@ -88,11 +88,7 @@ The original decoder source is `wasm/snappy.c`. After changing it, run `npm run 
 
 ### Migration
 
-`parseHeader`, `parseServerInfo`, and `parseFileInfo` return promises, including on the server: add `await` to existing calls, or use the explicit server-only `*Sync` variants below. `progress` now reports cumulative bytes parsed, rather than a fraction of the current buffer. Ordinary parsing stops at `DEM_Stop`, so unread trailer bytes can keep `bytesParsed / file.size` below 1. The server's `stream: false` option now reads larger chunks through the shared asynchronous stream loop.
-
-Treat byte payloads, including string-table values, as `Uint8Array`, not as Node `Buffer`. Use `TextDecoder` for text rather than Buffer-specific methods. Both exports use the portable `events` package: common listener ordering, removal, prepend, once, and meta-event behavior is preserved, but Node-specific `errorMonitor`, `captureRejections`, global emitter defaults, and native `EventEmitter instanceof` checks are not supported. Async listener failures should be handled by the listener.
-
-The optimization audit and measured comparisons with `master` and the original browser branch are recorded in [PERFORMANCE.md](PERFORMANCE.md). Existing benchmark tables below describe their original machine and fixture, not these browser-branch measurements.
+Upgrading from 1.x? See the [migration guide](MIGRATION.md) for API changes and server-only sync/async metadata timings.
 
 ## parseHeader
 
@@ -222,7 +218,7 @@ await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, svc_UserCmds: fal
 
 ## HTTP Broadcast (live GOTV)
 
-`DemoReader` can parse a live CS2 GOTV broadcast over HTTP using the same event surface as `.dem` parsing. The broadcast feed is the protocol Valve's relays speak (`/sync` + `/{N}/start` + `/{N}/full` + `/{N}/delta`) — see [Valve's reference relay](https://github.com/SteamDatabase/SteamTracking/blob/master/CSGO/csgo/scripts/relay.js) and `examples/relay.ts` in this repo.
+`DemoReader` can parse a live CS2 GOTV broadcast over HTTP using the same event surface as `.dem` parsing. The broadcast feed is the protocol Valve's relays speak (`/sync` + `/{N}/start` + `/{N}/full` + `/{N}/delta`); see [Valve's reference relay](https://github.com/SteamDatabase/SteamTracking/blob/master/CSGO/csgo/scripts/relay.js).
 
 ### Quick start
 
@@ -335,11 +331,8 @@ Terminus reasons returned by `run()`:
 
 | Script                                                   | Purpose                                                                            |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `scripts/probe-broadcast.ts <url> [descriptors.bin]`     | Connect, log `/sync` and the first 10 game events, exit                            |
-| `scripts/capture-broadcast-fixture.ts <url> [outDir]`    | Save `sync.json` + `/start` + `/full` + a few `/delta`s to disk for offline replay |
+| `examples/broadcast.ts <url> [descriptors.bin]`          | Log sync/server info, sample the first 10 raw events, and parse until completion or cancellation |
 | `scripts/dump-event-descriptors.ts <demo.dem> [out.bin]` | Extract `CMsgSource1LegacyGameEventList` for `gameEventDescriptors`                |
-
-A reference relay implementation is provided in `examples/relay.ts` for local testing.
 
 ## Reader State
 
@@ -1008,28 +1001,26 @@ published. `bun run generate` regenerates everything in order.
 
 ## Performance
 
-CPU: Intel(R) Core(TM) Ultra 9 275HX
+Benchmark your own demo and hardware after building:
 
-Demo: `NEWEST.dem` (210 MB, 124,341 ticks)
+```sh
+npm run build
+bun run benchmark path/to/demo.dem --runs 5
+# Optional machine-readable samples and a Markdown report:
+bun run benchmark path/to/demo.dem --runs 5 --json benchmark.json --markdown benchmark.md
+```
 
-## Entity Mode Comparison
+The default matrix uses Bun and the built server export: all three entity modes with file streaming, then `ALL` with 4 MiB file chunks, a Buffer, and a Node stream. No optional event subscriptions are enabled. Each case runs in a fresh process, in deterministic shuffled order without overlapping runs. Results include mean, median, min/max times and memory; timing includes input I/O but excludes imports/setup, and does not reset the OS cache. No files are written unless requested.
 
-| Mode                         | Throughput | Time | RSS   | Heap | Entities |
-| ---------------------------- | ---------- | ---- | ----- | ---- | -------- |
-| `EntityMode.NONE`            | 312.6 MB/s | 0.7s | 139MB | 33MB | 0        |
-| `EntityMode.ONLY_GAME_RULES` | 81.2 MB/s  | 2.6s | 157MB | 19MB | 1        |
-| `EntityMode.ALL`             | 60.9 MB/s  | 3.4s | 164MB | 17MB | 617      |
+For cross-runtime/build comparisons, pass `--cases path/to/cases.json`. The file is an array of cases (or a prior JSON report's `.cases`), each with `name`, `runtime` (executable), `entry` (module specifier), `method`, `mode`, and optional `subscriptions`. Methods are `path-stream`, `path-sync` (4 MiB chunks, not synchronous parsing), `buffer`, `stream`, and `web-stream`; modes are `NONE`, `ONLY_GAME_RULES`, and `ALL`. Custom cases default to `subscriptions: "death"`; use `"none"` or `"all"` explicitly for other workloads. For example:
 
-`ONLY_GAME_RULES` parses entities but only stores game rules — enables synthetic `round_start`/`round_end` events without full entity tracking overhead.
+```json
+[{ "name": "Bun ALL", "runtime": "bun", "entry": "cs2parser", "method": "path-stream", "mode": "ALL", "subscriptions": "death" }]
+```
 
-## Parse Method Comparison (EntityMode.ALL)
+Node cases require a version capable of running the TypeScript benchmark worker. Use equivalent builds when comparing revisions. Historical optimization measurements and tradeoffs are retained in [PR #43](https://github.com/osztenkurden/cs2parser/pull/43) and [its recorded audit](https://github.com/osztenkurden/cs2parser/blob/289240f/PERFORMANCE.md), rather than duplicated benchmark snapshots in the current tree.
 
-| Method                             | Throughput | Time | RSS   | Heap  |
-| ---------------------------------- | ---------- | ---- | ----- | ----- |
-| `parseDemo(path)`                  | 60.8 MB/s  | 3.5s | 164MB | 18MB  |
-| `parseDemo(path, {stream: false})` | 66.3 MB/s  | 3.2s | 166MB | 37MB  |
-| `parseDemo(buffer)`                | 64.8 MB/s  | 3.2s | 408MB | 460MB |
-| `parseDemo(stream)`                | 61.5 MB/s  | 3.4s | 161MB | 17MB  |
+`scripts/benchmark-snappy.mjs` remains available for isolated codec comparisons; it verifies decompressed output against native Snappy before timing.
 
 ## Examples
 
@@ -1039,10 +1030,21 @@ The [`examples/`](examples/) directory contains runnable scripts:
 | --------------- | ---------------------------------------------------------------- |
 | `header.ts`     | `DemoReader.parseHeader` — fast metadata read                    |
 | `serverinfo.ts` | `DemoReader.parseServerInfo` — tick interval / map / max clients |
-| `stream.ts`     | Streaming a `.dem` file via `Readable`                           |
+| `stream.ts`     | Four input modes, game events, and player/team summaries         |
+| `chat.ts`       | Chat messages from a demo                                        |
 | `voicedata.ts`  | Opt-in `svc_VoiceData` parsing                                   |
-| `broadcast.ts`  | Live HTTP broadcast with preloaded `gameEventDescriptors`        |
-| `relay.ts`      | Reference HTTP relay (Valve protocol) for local testing          |
+| `broadcast.ts`  | Live HTTP broadcast, optional descriptors, and signal cancellation |
+
+```sh
+bun examples/header.ts path/to/demo.dem
+bun examples/serverinfo.ts path/to/demo.dem
+bun examples/stream.ts path-stream path/to/demo.dem
+bun examples/chat.ts path/to/demo.dem
+bun examples/voicedata.ts path/to/demo.dem
+bun examples/broadcast.ts https://relay.example.com/match/ [event-descriptors.bin]
+```
+
+The stream example accepts `path-stream`, `path-chunked` (`stream: false`), `buffer`, or `stream` as its first argument. Named message listeners enable their own decoding; no separate parse option is required.
 
 ## Acknowledgements
 

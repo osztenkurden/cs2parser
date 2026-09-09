@@ -1,5 +1,7 @@
 import { describe, test, expect } from 'bun:test';
+import snappy from 'snappy';
 import { DemoReader } from '../../../src/index.js';
+import { DemoReader as BrowserReader } from '../../../src/browser.js';
 import { HttpBroadcastReader } from '../../../src/broadcast/index.js';
 import { EDemoCommands } from '../../../src/ts-proto/demo.js';
 import { buildFragment } from '../../unit/broadcast/helpers.js';
@@ -275,6 +277,47 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 		// Immediately running run() should resolve with 'cancelled' since terminus is set
 		const terminus = await reader.run();
 		expect(terminus.reason).toBe('cancelled');
+	});
+
+	test('broadcast cancellation stops later commands from recreating decoder storage', async () => {
+		const reader = new BrowserReader();
+		let decodes = 0;
+		let releases = 0;
+		const decode = reader._snappy.uncompressFrame.bind(reader._snappy);
+		const release = reader._snappy.release!.bind(reader._snappy);
+		reader._snappy.uncompressFrame = bytes => {
+			expect(releases).toBe(0);
+			decodes++;
+			return decode(bytes);
+		};
+		reader._snappy.release = () => {
+			releases++;
+			release();
+		};
+		reader.on('tickstart', tick => {
+			if (tick === 100) reader.cancel();
+		});
+		const ends: { reason?: string }[] = [];
+		reader.on('end', end => ends.push(end));
+		const compressed = snappy.compressSync(new Uint8Array(0));
+		const fragment = buildFragment(
+			[100, 101].map(tick => ({
+				cmd: EDemoCommands.DEM_Packet,
+				tick,
+				payload: compressed,
+				isCompressed: true
+			}))
+		);
+		const fetcher = new MockBroadcastFetcher({
+			sync: { ...baseSync, rtdelay: 0 },
+			bytes: { '0/start': ok(new Uint8Array(0)), '5/full': ok(fragment), '5/delta': ok(endFrag()) }
+		});
+		await reader.parseHttpBroadcast('https://unused.invalid/', { fetcher });
+		expect(decodes).toBe(1);
+		expect(releases).toBe(1);
+		expect(ends).toHaveLength(1);
+		expect(ends[0]!.reason).toBe('cancelled');
+		expect(reader.currentTick).toBe(100);
 	});
 
 	test('emits broadcastsync event with the validated DTO', async () => {
