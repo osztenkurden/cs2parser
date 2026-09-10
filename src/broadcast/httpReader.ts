@@ -1,6 +1,7 @@
 import type { BaseDemoReader as DemoReader } from '../parser/base.js';
 import { ParseSession, type ParseSessionOptions } from '../parser/entities/parseSession.js';
-import { EntityMode, type EndReason } from '../parser/entities/types.js';
+import { EntityMode, type BroadcastOutcome } from '../parser/entities/types.js';
+import { asError } from '../parser/errors.js';
 import { CMsgSource1LegacyGameEventList } from '../ts-proto/gameevents.js';
 import { loadBundledEventDescriptors } from './defaultEventDescriptors.js';
 import { BroadcastFetchError } from './errors.js';
@@ -26,9 +27,9 @@ export interface HttpBroadcastOptions extends ParseSessionOptions {
 	 * interval instead of added on top. Default 1000.
 	 */
 	deltaThrottle?: number;
-	/** Max consecutive 404/405 retries on `/delta` before terminating with reason `'timeout'`. Default 10. */
+	/** Max consecutive 404/405 retries on `/delta` before returning status `'timeout'`. Default 10. */
 	maxDeltaRetries?: number;
-	/** Max consecutive 404/405 retries on `/full` before terminating with reason `'error'`. Default 5. */
+	/** Max consecutive 404/405 retries on `/full` before rejecting. Default 5. */
 	maxFullRetries?: number;
 	/** External cancellation signal. */
 	signal?: AbortSignal;
@@ -53,10 +54,7 @@ export interface HttpBroadcastOptions extends ParseSessionOptions {
 	gameEventDescriptors?: CMsgSource1LegacyGameEventList | Uint8Array | false;
 }
 
-export interface BroadcastTerminus {
-	reason: EndReason;
-	error?: unknown;
-}
+export type BroadcastStartOutcome = { status: 'ready' } | BroadcastOutcome;
 
 const DEFAULTS = {
 	deltaRetryInterval: 1000,
@@ -76,8 +74,8 @@ const DEFAULTS = {
  * parser.on('gameevent', e => console.log(e.event_name));
  *
  * const reader = new HttpBroadcastReader(parser, 'https://relay.example.com/match/');
- * await reader.start();
- * const { reason } = await reader.run();
+ * const started = await reader.start();
+ * const outcome = started.status === 'ready' ? await reader.run() : started;
  */
 export class HttpBroadcastReader {
 	private readonly parser: DemoReader;
@@ -91,7 +89,7 @@ export class HttpBroadcastReader {
 	private _started = false;
 	private _starting = false;
 	private _running = false;
-	private _terminus: BroadcastTerminus | null = null;
+	private _terminus: BroadcastOutcome | null = null;
 	private _prefix = '';
 	private _lastDeltaStartedAt = 0;
 
@@ -128,26 +126,37 @@ export class HttpBroadcastReader {
 
 	/**
 	 * Fetch `/sync`, the signup fragment, and the first `/full` fragment.
-	 * Also attempts the starting fragment's own delta. Sync/validation and
-	 * descriptor setup failures reject. Signup/full/initial-delta failures are
-	 * recorded for run() to return. Synchronous callback exceptions reject after
-	 * cleanup. Cancellation resolves; run() then returns reason 'cancelled'.
+	 * Also attempts the starting fragment's own delta. All fatal failures
+	 * reject after cleanup. Resolves ready, or a terminal
+	 * outcome if cancelled or an end marker is encountered during startup.
 	 */
-	async start(): Promise<void> {
+	async start(): Promise<BroadcastStartOutcome> {
 		if (this._started) throw new Error('HttpBroadcastReader.start() already called');
 		// Reserve the parser before I/O; a second reader must not terminate an active parse.
-		this.session = this.parser._attachBroadcastSession(this.opts, this._onParserCancel);
+		for (const key of ['deltaRetryInterval', 'deltaThrottle', 'maxDeltaRetries', 'maxFullRetries'] as const) {
+			const value = this.opts[key];
+			if (
+				value !== undefined &&
+				(!Number.isFinite(value) || value < 0 || (key.startsWith('max') && !Number.isInteger(value)))
+			) {
+				throw new RangeError(
+					`${key} must be a nonnegative ${key.startsWith('max') ? 'integer' : 'finite number'}`
+				);
+			}
+		}
+		this.session = this.parser._attachBroadcastSession(this.opts, this._onParserCancel, () =>
+			this._unhookListeners()
+		);
 		this._started = true;
 		this._starting = true;
 		try {
 			await this._start();
-			this.parser._throwCallbackError();
+			this._aborted();
+			this.parser._throwFailure();
+			return this._terminus ?? { status: 'ready' };
 		} catch (cause) {
-			try {
-				this._terminate('error', cause);
-			} catch {
-				/* Preserve the first exception if an end listener also throws. */
-			}
+			this.parser._fail(cause);
+			this.parser._throwFailure();
 			throw cause;
 		} finally {
 			this._starting = false;
@@ -163,17 +172,18 @@ export class HttpBroadcastReader {
 		}
 
 		this.parser.on('tickstart', this._onTickStart);
+		if (this._aborted()) return;
 
 		// /sync
 		let raw: unknown;
 		try {
 			raw = await this.fetcher.json('sync', this.abortController.signal);
 		} catch (e) {
-			if (this._isAbortError(e) || this.abortController.signal.aborted) {
+			if (this.abortController.signal.aborted) {
 				this._terminate('cancelled');
 				return;
 			}
-			throw e;
+			throw asError(e);
 		}
 		if (this._aborted()) return;
 
@@ -243,16 +253,16 @@ export class HttpBroadcastReader {
 	 * waiting for. Log it and start from the keyframe instead of failing the connect.
 	 */
 	private async _fetchInitialDelta(fragment: number): Promise<void> {
+		if (this._aborted()) return;
 		let result: FetchResult;
 		try {
 			result = await this.fetcher.bytes(`${this._prefix}${fragment}/delta`, this.abortController.signal);
 		} catch (e) {
-			if (this._isAbortError(e) || this.abortController.signal.aborted) {
+			if (this.abortController.signal.aborted) {
 				this._terminate('cancelled');
 				return;
 			}
-			this._terminate('error', e);
-			return;
+			throw asError(e);
 		}
 
 		if (this._aborted()) return;
@@ -274,16 +284,17 @@ export class HttpBroadcastReader {
 			this._terminate('cancelled');
 			return true;
 		}
-		return !!this._terminus && this._terminus.reason === 'cancelled';
+		return this._terminus?.status === 'cancelled';
 	}
 
 	/**
 	 * Loop: GET `{N}/delta` for `N` starting at `sync.fragment + 1`, processing
 	 * each, until end-of-stream marker, retry exhaustion, cancellation, or a
-	 * fragment parse error. Resolves with the terminal reason.
+	 * fragment parse error. Returns a nonfailure outcome or rejects on failure.
 	 */
-	async run(): Promise<BroadcastTerminus> {
+	async run(): Promise<BroadcastOutcome> {
 		if (!this._started || this._starting) throw new Error('start() must be awaited before run()');
+		this.parser._throwFailure();
 		if (this._terminus) return this._terminus;
 		if (this._running) throw new Error('HttpBroadcastReader.run() already in progress');
 		this._running = true;
@@ -319,11 +330,8 @@ export class HttpBroadcastReader {
 
 			return this._terminate('cancelled');
 		} catch (cause) {
-			try {
-				this._terminate('error', cause);
-			} catch {
-				/* Preserve the first exception if an end listener also throws. */
-			}
+			this.parser._fail(cause);
+			this.parser._throwFailure();
 			throw cause;
 		} finally {
 			this._running = false;
@@ -332,7 +340,7 @@ export class HttpBroadcastReader {
 
 	/** Abort the fetch loop and pending HTTP requests. Idempotent. */
 	stop(): void {
-		if (this._terminus) return;
+		if (this._terminus || (this._started && !this.session)) return;
 		this.abortController.abort();
 		if (this._started && !this._starting && !this._running) this._terminate('cancelled');
 	}
@@ -355,12 +363,11 @@ export class HttpBroadcastReader {
 			try {
 				result = await this.fetcher.bytes(path, this.abortController.signal);
 			} catch (e) {
-				if (this._isAbortError(e) || this.abortController.signal.aborted) {
+				if (this.abortController.signal.aborted) {
 					this._terminate('cancelled');
 					return null;
 				}
-				this._terminate('error', e);
-				return null;
+				throw asError(e);
 			}
 
 			if (this._aborted()) return null;
@@ -374,7 +381,7 @@ export class HttpBroadcastReader {
 						maxRetries === 0
 							? `${phase} fragment ${fragment} not available (HTTP ${result.status})`
 							: `${phase} fragment ${fragment}: HTTP ${result.status} after ${maxRetries} retries`;
-					this._terminate('error', new BroadcastFetchError(message, result.status, path));
+					throw new BroadcastFetchError(message, result.status, path);
 				}
 				return null;
 			}
@@ -394,22 +401,20 @@ export class HttpBroadcastReader {
 		phase: FragmentErrorContext['phase'],
 		fragment: number
 	): Promise<boolean> {
-		if (!this.session) {
-			this._terminate('error', new Error('session not attached'));
-			return true;
-		}
+		if (this._aborted()) return true;
+		if (!this.session) throw new Error('session not attached');
 
 		try {
 			const { ended } = this.session.pushBroadcastFragment(bytes, tickOffset);
 			if (this._aborted()) return true;
 			if (ended) {
-				this._terminate('stop');
+				this._terminate('complete');
 				return true;
 			}
 		} catch (err) {
 			// Listener failures finalize the parser and are not recoverable fragment errors.
 			if (this.parser.hasEnded) throw err;
-			const error = err instanceof Error ? err : new Error(String(err));
+			const error = asError(err);
 			const decision = this.opts.onFragmentError?.(error, {
 				fragment,
 				tickOffset,
@@ -425,29 +430,19 @@ export class HttpBroadcastReader {
 				}
 				return false;
 			}
-			this._terminate('error', error);
-			return true;
+			throw error;
 		}
 		return false;
 	}
 
-	private _terminate(reason: EndReason, error?: unknown): BroadcastTerminus {
+	private _terminate(status: BroadcastOutcome['status']): BroadcastOutcome {
+		const outcome: BroadcastOutcome = this._terminus ?? { status };
 		if (!this._terminus) {
-			this._terminus = error !== undefined ? { reason, error } : { reason };
-			// Surface a final 'end' event if the parser hasn't already ended
-			// (e.g. via parser.cancel(), which already emits its own 'end').
-			try {
-				this.parser._end({
-					incomplete: reason !== 'stop',
-					...(error !== undefined ? { error } : {}),
-					reason
-				});
-			} finally {
-				this._unhookListeners();
-			}
-			this.parser._throwCallbackError();
+			this._terminus = outcome;
+			this.parser._end(outcome);
 		}
-		return this._terminus;
+		this.parser._throwFailure();
+		return outcome;
 	}
 
 	private _unhookListeners(): void {
@@ -472,9 +467,5 @@ export class HttpBroadcastReader {
 			};
 			this.abortController.signal.addEventListener('abort', onAbort, { once: true });
 		});
-	}
-
-	private _isAbortError(e: unknown): boolean {
-		return e instanceof Error && e.name === 'AbortError';
 	}
 }

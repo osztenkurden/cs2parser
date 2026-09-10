@@ -3,15 +3,15 @@ import type { BroadcastFetcher, FetchResult } from '../../../src/broadcast/fetch
 export interface MockFetcherSpec {
 	sync?: unknown | ((req: { signal?: AbortSignal }) => unknown | Promise<unknown>);
 	/** Map of path → response or () => response. Path matches exactly (e.g. "5/full"). */
-	bytes?: Record<string, FragmentResponse | (() => FragmentResponse | Promise<FragmentResponse>)>;
+	bytes?: Record<
+		string,
+		FragmentResponse | ((req: { signal?: AbortSignal }) => FragmentResponse | Promise<FragmentResponse>)
+	>;
 	/** Default response for any byte path not explicitly listed. */
 	defaultBytes?: FragmentResponse | (() => FragmentResponse | Promise<FragmentResponse>);
 }
 
-export type FragmentResponse =
-	| { ok: true; data: Uint8Array }
-	| { ok: false; status: number }
-	| { error: Error };
+export type FragmentResponse = { ok: true; data: Uint8Array } | { ok: false; status: number } | { error: Error };
 
 export class MockBroadcastFetcher implements BroadcastFetcher {
 	calls: { path: string; kind: 'json' | 'bytes' }[] = [];
@@ -41,7 +41,7 @@ export class MockBroadcastFetcher implements BroadcastFetcher {
 		const entry = this.spec.bytes?.[path] ?? this.spec.defaultBytes;
 		if (!entry) throw new Error(`mock: no response configured for "${path}"`);
 
-		const resp = typeof entry === 'function' ? await entry() : entry;
+		const resp = typeof entry === 'function' ? await entry({ signal }) : entry;
 		if ('error' in resp) throw resp.error;
 		if (resp.ok) return { ok: true, data: resp.data };
 		return { ok: false, status: resp.status };

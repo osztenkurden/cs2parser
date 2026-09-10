@@ -2,7 +2,7 @@ export { EntityMode } from './parser/entities/types.js';
 export type { DemoInput, ParseOptions } from './parser/base.js';
 export type { MetadataInput } from './parser/metadata.js';
 export { decodeEncryptionKey, extractPublicEncryptionKey } from './encryption/replayKeys.js';
-export type { EndReason } from './parser/entities/types.js';
+export type { ParseOutcome, BroadcastOutcome, ParseEnd } from './parser/entities/types.js';
 export { Player } from './helpers/player.js';
 export { PlayerPawn, type Vector } from './helpers/playerPawn.js';
 export { Team, TeamNumber } from './helpers/team.js';
@@ -42,7 +42,7 @@ export {
 } from './broadcast/index.js';
 export type {
 	HttpBroadcastOptions,
-	BroadcastTerminus,
+	BroadcastStartOutcome,
 	FragmentErrorContext,
 	BroadcastSyncDto,
 	BroadcastFetcher,

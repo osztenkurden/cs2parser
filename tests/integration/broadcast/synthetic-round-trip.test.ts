@@ -139,7 +139,7 @@ describe.skipIf(!demoAvailable)('synthetic broadcast round-trip', () => {
 		await reader.start();
 		const terminus = await reader.run();
 
-		expect(terminus.reason).toBe('stop');
+		expect(terminus.status).toBe('complete');
 		expect(broadcastParser.currentTick).toBe(baselineTick);
 		expect(broadcastParser.entities.filter(Boolean).length).toBe(baselineEntities);
 		expect(broadcastEvents).toEqual(baselineEvents);

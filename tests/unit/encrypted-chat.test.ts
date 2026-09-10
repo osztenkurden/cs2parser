@@ -129,7 +129,7 @@ describe('encrypted chat event dispatch', () => {
 			demo(encryptedBody(chatCipher('First')), encryptedBody(chatCipher('Second'))),
 			{ decryptionKey: key }
 		);
-		expect(result).toEqual({ incomplete: false });
+		expect(result).toEqual({ status: 'complete' });
 		expect(texts).toEqual(['First', 'Second']);
 		expect(named).toEqual(texts);
 		expect(raw.map(m => m.id)).toEqual([78, 118, 78, 118]);
@@ -158,7 +158,7 @@ describe('encrypted chat event dispatch', () => {
 			let count = 0;
 			reader.on('chat', () => count++);
 			const result = await reader.parseDemo(demo(encryptedBody(chatCipher())), opts);
-			expect(result).toEqual({ incomplete: false });
+			expect(result).toEqual({ status: 'complete' });
 			expect(count).toBe(0);
 		}
 	);
@@ -174,7 +174,7 @@ describe('encrypted chat event dispatch', () => {
 			demo(encryptedBody(chatCipher('Private'), 1), corrupt, corrupt, malformed, encryptedBody(chatCipher('OK'))),
 			{ decryptionKey: key }
 		);
-		expect(result).toEqual({ incomplete: false });
+		expect(result).toEqual({ status: 'complete' });
 		expect(texts).toEqual(['OK']);
 		expect(debug.filter(m => m.includes('Unable to decrypt'))).toHaveLength(2);
 	});

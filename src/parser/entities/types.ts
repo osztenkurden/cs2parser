@@ -13,8 +13,12 @@ import type { OnDemandMessageName } from '../descriptors/svc.js';
 import type { createStringTable, updateStringTable } from '../stringtables.js';
 import type { EntityTypeEnum } from './entityParser.js';
 
-/** Why a parse session terminated. Set on the `end` event. */
-export type EndReason = 'stop' | 'timeout' | 'cancelled' | 'error';
+/** Nonfailure outcomes of parsing a demo. Failures reject the parsing promise. */
+export type ParseOutcome = { status: 'complete' } | { status: 'incomplete' } | { status: 'cancelled' };
+/** Broadcast retry exhaustion is distinct from an explicit end marker. */
+export type BroadcastOutcome = Exclude<ParseOutcome, { status: 'incomplete' }> | { status: 'timeout' };
+/** Observational terminal notification; the operation's promise is authoritative. */
+export type ParseEnd = ParseOutcome | BroadcastOutcome | { status: 'error'; error: unknown };
 
 export const EntityMode = {
 	NONE: 0,
@@ -104,9 +108,8 @@ export interface OutputEvents extends OnDemandEvents, DemoFrameEvents {
 	usercommand: UserCommand;
 	chat: ChatMessage;
 	progress: number;
-	/** 2.0 result contract: incomplete is not a success flag; inspect error too. */
-	end: { incomplete: boolean; error?: any; reason?: EndReason };
-	error: { error: Error };
+	end: ParseEnd;
+	error: { error: unknown };
 	tickstart: number;
 	tickend: number;
 	header: CDemoFileHeader;

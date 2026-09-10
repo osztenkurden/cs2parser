@@ -46,8 +46,8 @@ export class DemoReader extends BaseDemoReader {
 		return parseMetadataSync(source, 'fileInfo');
 	}
 
-	override parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {
-		this.assertCanParse();
+	override async parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {
+		this.assertCanParse(opts);
 		if (typeof source === 'string') {
 			// Keep the chunked path option while sharing the same parsing loop.
 			source = createReadStream(source, { highWaterMark: opts.stream === false ? 4 * 1024 * 1024 : 64 * 1024 });

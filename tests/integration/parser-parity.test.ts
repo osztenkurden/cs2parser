@@ -205,7 +205,7 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			const reader = new DemoReader();
 			const capture = captureParity(reader, mode);
 			const result = await reader.parseDemo(demoPath, { entities: EntityMode[mode] });
-			expect(result).toEqual({ incomplete: false });
+			expect(result).toEqual({ status: 'complete' });
 			server[mode] = await capture.finish();
 		}
 	}, 300000);
@@ -232,7 +232,7 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 				const capture = captureParity(reader, mode);
 				const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 				const source = chunkSize ? chunkedDemo(view, chunkSize) : view;
-				expect(await reader.parseDemo(source, { entities: EntityMode[mode] })).toEqual({ incomplete: false });
+				expect(await reader.parseDemo(source, { entities: EntityMode[mode] })).toEqual({ status: 'complete' });
 				expect(await capture.finish()).toEqual(server[mode]);
 			}, 300000);
 		}
@@ -248,7 +248,7 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			const reader = new DemoReader();
 			const capture = captureParity(reader, 'ALL');
 			expect(await reader.parseDemo(source(), { entities: EntityMode.ALL, ...options })).toEqual({
-				incomplete: false
+				status: 'complete'
 			});
 			expect(await capture.finish()).toEqual(server.ALL);
 		}, 300000);
@@ -283,7 +283,7 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 		expect(timerFinished).toBeDefined();
 		await timerFinished;
 		expect(timerFiredBeforeEnd).toBe(true);
-		expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+		expect(result).toEqual({ status: 'cancelled' });
 		expect(ends).toEqual([result]);
 	}, 300000);
 });

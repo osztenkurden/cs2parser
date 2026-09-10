@@ -19,7 +19,7 @@ test.each([117, 118])('chat from message %i includes userinfo without entities',
 			.finish();
 		return demoFrame(7, bytesField(3, networkPacket([{ id, body }])));
 	});
-	expect(await reader.parseDemo(demoFile(...packets, demoFrame(0)))).toEqual({ incomplete: false });
+	expect(await reader.parseDemo(demoFile(...packets, demoFrame(0)))).toEqual({ status: 'complete' });
 	expect(messages).toHaveLength(4);
 	expect(messages[0]!.playerInfo).toBe(info);
 	expect(messages.every(message => message.player === null && message.text === 'Hello')).toBe(true);

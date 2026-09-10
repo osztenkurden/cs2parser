@@ -48,13 +48,13 @@ describe('demo frame events', () => {
 				events.push('info');
 			});
 			reader.on('end', end => {
-				expect(end).toEqual({ incomplete: false });
+				expect(end).toEqual({ status: 'complete' });
 				events.push('end');
 			});
 			const result = await reader.parseDemo(
 				Readable.from([demoFile(stop, trailer.subarray(0, split)), trailer.subarray(split)])
 			);
-			expect(result).toEqual({ incomplete: false });
+			expect(result).toEqual({ status: 'complete' });
 			expect(events).toEqual(['info', 'end']);
 		}
 	});
@@ -67,9 +67,9 @@ describe('demo frame events', () => {
 			reader.on('DEM_FileInfo', () => infos++);
 			reader.on('end', end => ends.push(end));
 			const result = await reader.parseDemo(Readable.from([demoFile(stop), trailer]));
-			expect(result).toEqual({ incomplete: false });
+			expect(result).toEqual({ status: 'complete' });
 			expect(infos).toBe(0);
-			expect(ends).toEqual([{ incomplete: false }]);
+			expect(ends).toEqual([{ status: 'complete' }]);
 		}
 	});
 
@@ -83,7 +83,7 @@ describe('demo frame events', () => {
 		reader.on('end', () => events.push('end'));
 		expect(
 			await reader.parseDemo(source === 'buffer' ? demoFile(stop, info) : streamOf([demoFile(stop), info]))
-		).toEqual({ incomplete: false });
+		).toEqual({ status: 'complete' });
 		expect(events).toEqual(['info', 'end']);
 	});
 
@@ -96,7 +96,7 @@ describe('demo frame events', () => {
 				reader.on('DEM_FileInfo', () => {});
 				let progress = 0;
 				reader.on('progress', value => (progress = value));
-				expect(await reader.parseDemo(source)).toEqual({ incomplete: false });
+				expect(await reader.parseDemo(source)).toEqual({ status: 'complete' });
 				totals.push(progress);
 			}
 			expect(totals).toEqual([16 + stop.length + (size === info.length ? size : 0), totals[0]!]);
@@ -122,7 +122,7 @@ describe('demo frame events', () => {
 		for (let split = 0; split <= data.length; split++) {
 			const reader = new BrowserReader();
 			const source = streamOf([data.subarray(0, split), new Uint8Array(), data.subarray(split)]);
-			expect(await reader.parseDemo(source)).toEqual({ incomplete: false });
+			expect(await reader.parseDemo(source)).toEqual({ status: 'complete' });
 			expect(reader.header?.map_name).toBe('de_dust2');
 			expect(source.locked).toBe(false);
 		}

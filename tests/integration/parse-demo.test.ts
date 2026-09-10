@@ -18,7 +18,7 @@ describe.skipIf(!demoAvailable)('parse demo (full integration)', () => {
 		for (const name of ['round_end', 'player_death', 'round_start'] as const) {
 			reader.gameEvents.once(name, () => gameEventNames.push(name));
 		}
-		expect(await reader.parseDemo(demoPath, { entities: EntityMode.ALL })).toEqual({ incomplete: false });
+		expect(await reader.parseDemo(demoPath, { entities: EntityMode.ALL })).toEqual({ status: 'complete' });
 		expect(reader.header).not.toBeNull();
 	});
 

@@ -25,24 +25,30 @@ await parser.parseDemo(file.stream(), { entities: EntityMode.ALL });
 
 Parsing takes ownership of a supplied stream. Early completion, failure, and `cancel()` cancel unread input; cleanup releases the reader lock. Each `DemoReader` handles one demo or broadcast.
 
-For normal completion, input/decode failure, or cancellation, all input types resolve with the same object passed to the `end` event: `{ incomplete: boolean, error?: any, reason?: EndReason }`. Check the result without adding an `end` or `error` listener:
+All input types return `Promise<ParseOutcome>`. Failures reject; fulfilled outcomes have no error field:
 
 ```ts
-const { incomplete, error, reason } = await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
-if (error) {
+type ParseOutcome = { status: 'complete' } | { status: 'incomplete' } | { status: 'cancelled' };
+```
+
+`complete` means the demo ended normally; `incomplete` means input ended before a complete demo was available (including an empty input or a truncated frame); `cancelled` means parsing was explicitly stopped. Corruption inside a fully available frame is a failure, not incomplete input. No event listener is required to handle failures:
+
+```ts
+try {
+	const outcome = await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
+	if (outcome.status !== 'complete') console.warn('Parsing did not finish:', outcome.status);
+} catch (error) {
 	console.error('Parsing failed:', error);
-} else if (incomplete) {
-	console.warn('Parsing did not finish:', reason ?? 'incomplete demo');
 }
 ```
 
 ### Errors and callbacks
 
-The 2.0 result shape is unchanged. `incomplete` is not a success flag: a corrupt complete frame can produce `{ incomplete: false, error }`. Inspect `error` as well. File parsing normally omits `reason`; cancellation sets it to `'cancelled'`. Input/read errors and truncated input have `incomplete: true`. The optional `error` event carries `{ error }`, not a bare error, and is not required to handle decode failures.
+I/O, corrupt data, and decompression failures reject with the original `Error`; non-Error operational failures are normalized to `Error`. Async APIs also reject invalid arguments and reuse/concurrent-parse attempts rather than throwing before returning a promise. Synchronous metadata APIs and `cancel()` remain synchronous.
 
-Invalid input arguments and reuse/concurrent-parse attempts can throw synchronously. Put both the call and `await` inside `try` if you need to catch these as well as promise rejections.
+The `end` event carries the exported `ParseEnd` union: a nonfailure outcome (including broadcast `timeout`), or `{ status: 'error', error: unknown }`. The optional diagnostic `error` event carries `{ error: unknown }`. Events are observational; the returned promise is authoritative. On normal completion the fulfilled outcome is the same object as the end notification.
 
-Synchronous application listener exceptions (including game-event, `error`, `debug`, `cancel`, and `end` listeners) are not decode failures. They reject the active parse promise with the original thrown value after cleanup. A later terminal-listener exception does not replace an earlier callback exception. If a decode result was already queued, its original error remains in the `end` payload; the promise rejection reports the callback exception separately.
+Synchronous application listener exceptions (including game-event, `debug`, `cancel`, and `end` listeners) reject the active operation with the original thrown value, even `undefined`. First failure wins: when reporting an existing failure, exceptions from diagnostic `error` or terminal `end` listeners cannot replace it. An `end` or final `debug` listener can throw after a nonfailure end notification has been committed; the promise then rejects without a second end event.
 
 Terminal state and decoder release do not depend on public `end` listeners. Removing those listeners or prepending one that throws cannot bypass cleanup. Queued notifications are not replayed after a listener throws; undelivered notifications are discarded, except that terminal notification is attempted. Normal EventEmitter behavior still applies: a throwing listener prevents later listeners for that same emission from running. Cleanup does not roll back entity changes or application side effects.
 
@@ -60,11 +66,11 @@ Listeners are synchronous notifications. Returned promises from `async` listener
 
 | Input                          | Returns                    | Memory |
 | ------------------------------ | -------------------------- | ------ |
-| `string` path                  | Promise of the end payload | low    |
-| `string` path + `stream: false` | Promise of the end payload | low    |
-| `Readable` stream              | Promise of the end payload | low    |
-| `Uint8Array` / `Buffer`        | Promise of the end payload | high   |
-| `ReadableStream<Uint8Array>`   | Promise of the end payload | low    |
+| `string` path                  | `Promise<ParseOutcome>` | low    |
+| `string` path + `stream: false` | `Promise<ParseOutcome>` | low    |
+| `Readable` stream              | `Promise<ParseOutcome>` | low    |
+| `Uint8Array` / `Buffer`        | `Promise<ParseOutcome>` | high   |
+| `ReadableStream<Uint8Array>`   | `Promise<ParseOutcome>` | low    |
 
 ### Parse Settings
 
@@ -117,4 +123,4 @@ parser.on('tickend', () => {
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
 ```
 
-`cancel()` aborts an in-flight parse. It destroys the underlying stream (if any), emits a `'cancel'` event, and then an `'end'` event with `{ incomplete: true, reason: 'cancelled' }`. Calling `cancel()` or `parseDemo()` on a reader that has already ended throws. A synchronous cancellation listener exception is rethrown to the `cancel()` caller after terminal cleanup is attempted, and also rejects an active parse promise. When calling `cancel()` outside a parsing listener, handle both the synchronous call and the parse promise.
+`cancel()` aborts an in-flight parse. It destroys the underlying stream (if any), emits a `'cancel'` event, and then an `'end'` event with `{ status: 'cancelled' }`. Calling `cancel()` on a reader that has already ended throws; calling `parseDemo()` again returns a rejected promise. A synchronous cancellation listener exception is rethrown to the `cancel()` caller after terminal cleanup is attempted, and also rejects an active parse promise. When calling `cancel()` outside a parsing listener, handle both the synchronous call and the parse promise.

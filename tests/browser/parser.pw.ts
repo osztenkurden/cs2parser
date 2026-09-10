@@ -30,7 +30,7 @@ test('published browser export extracts a match key and decrypts public chat', a
 		},
 		{ demo: [...demo], info: [...info] }
 	);
-	expect(result).toEqual({ texts: ['Hello, world!'], end: { incomplete: false }, nodeGlobals: false });
+	expect(result).toEqual({ texts: ['Hello, world!'], end: { status: 'complete' }, nodeGlobals: false });
 });
 
 test('published export parses File and fetch streams without Node globals or isolation', async ({ page }) => {
@@ -60,8 +60,8 @@ test('published export parses File and fetch streams without Node globals or iso
 		};
 	});
 	expect(result).toEqual({
-		fileResult: { incomplete: false },
-		fetchResult: { incomplete: false },
+		fileResult: { status: 'complete' },
+		fetchResult: { status: 'complete' },
 		map: 'de_dust2',
 		header: 'de_dust2',
 		serverInfo: null,
@@ -83,13 +83,13 @@ test('HTTP broadcasts decode compressed packets using embedded event descriptors
 		let reason: string | undefined;
 		reader.gameEvents.on('player_death', () => deaths.push('player_death'));
 		reader.on('gameeventlist', list => (descriptorCount = list.descriptors.length));
-		reader.on('end', result => (reason = result.reason));
+		reader.on('end', result => (reason = result.status));
 		await reader.parseHttpBroadcast(new URL('/broadcast/', location.href).href, { deltaThrottle: 0 });
 		return { deaths, descriptorCount, reason };
 	});
 	expect(result.deaths).toEqual(['player_death']);
 	expect(result.descriptorCount).toBeGreaterThan(100);
-	expect(result.reason).toBe('stop');
+	expect(result.reason).toBe('complete');
 });
 
 test('cancellation settles a pending read and unlocks the input', async ({ page }) => {
@@ -110,7 +110,7 @@ test('cancellation settles a pending read and unlocks the input', async ({ page 
 		return { result: await pending, cancellations, ends, locked: source.locked };
 	});
 	expect(result).toEqual({
-		result: { incomplete: true, reason: 'cancelled' },
+		result: { status: 'cancelled' },
 		cancellations: 1,
 		ends: 1,
 		locked: false
@@ -131,7 +131,7 @@ test('the same export runs in a module worker', async ({ page }) => {
 			worker.terminate();
 		}
 	});
-	expect(result).toEqual({ result: { incomplete: false }, map: 'de_dust2' });
+	expect(result).toEqual({ result: { status: 'complete' }, map: 'de_dust2' });
 });
 
 test('portable snapshot hashing preserves values without Node globals', async ({ page }) => {
@@ -195,7 +195,7 @@ for (const mode of PARITY_MODES) {
 					const reader = new DemoReader();
 					const capture = captureParity(reader, mode);
 					const result = await reader.parseDemo(input, { entities: EntityMode[mode] });
-					if (result.incomplete || result.error) throw new Error(`Browser parse failed: ${result.error}`);
+					if (result.status !== 'complete') throw new Error(`Browser parse ${result.status}`);
 					return {
 						parity: await capture.finish(),
 						nodeGlobals: 'Buffer' in globalThis || 'process' in globalThis,
