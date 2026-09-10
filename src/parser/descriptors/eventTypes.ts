@@ -50,6 +50,7 @@ export interface IEventPlayerDisconnect {
 	networkid: string;
 	xuid: number;
 	PlayerID: number;
+	ever_fully_connected: boolean;
 }
 
 export interface IEventPlayerInfo {
@@ -756,6 +757,7 @@ export interface IEventBombPlanted {
 	player?: Player | null;
 	userid_pawn: number;
 	site: number;
+	c4: number;
 }
 
 export interface IEventBombDefused {
@@ -763,6 +765,7 @@ export interface IEventBombDefused {
 	player?: Player | null;
 	userid_pawn: number;
 	site: number;
+	c4: number;
 }
 
 export interface IEventBombExploded {
@@ -770,6 +773,7 @@ export interface IEventBombExploded {
 	player?: Player | null;
 	userid_pawn: number;
 	site: number;
+	c4: number;
 }
 
 export interface IEventBombDropped {
