@@ -67,6 +67,20 @@
       "m_PostProcessingVolumes": "number[]",
       "m_vecCsViewPunchAngle": "[number, number, number]"
     },
+    "CBodyComponentPoint": {
+      "m_sceneNode.m_angRotation": "[number, number, number]",
+      "m_sceneNode.m_flScale": "number",
+      "m_sceneNode.m_hierarchyAttachName": "number",
+      "m_sceneNode.m_hParent": "number",
+      "m_sceneNode.m_name": "number",
+      "m_sceneNode.m_vecOrigin.m_cellX": "number",
+      "m_sceneNode.m_vecOrigin.m_cellY": "number",
+      "m_sceneNode.m_vecOrigin.m_cellZ": "number",
+      "m_sceneNode.m_vecOrigin.m_nOutsideWorld": "number",
+      "m_sceneNode.m_vecOrigin.m_vecX": "number",
+      "m_sceneNode.m_vecOrigin.m_vecY": "number",
+      "m_sceneNode.m_vecOrigin.m_vecZ": "number"
+    },
     "CCSGameRules": {
       "m_arrProhibitedItemIndices": "Uint16Array",
       "m_arrTournamentActiveCasterAccounts": "Uint32Array",
@@ -169,20 +183,6 @@
       "m_totalRoundsPlayed": "number",
       "m_vMinimapMaxs": "[number, number, number]",
       "m_vMinimapMins": "[number, number, number]"
-    },
-    "CBodyComponentPoint": {
-      "m_sceneNode.m_angRotation": "[number, number, number]",
-      "m_sceneNode.m_flScale": "number",
-      "m_sceneNode.m_hierarchyAttachName": "number",
-      "m_sceneNode.m_hParent": "number",
-      "m_sceneNode.m_name": "number",
-      "m_sceneNode.m_vecOrigin.m_cellX": "number",
-      "m_sceneNode.m_vecOrigin.m_cellY": "number",
-      "m_sceneNode.m_vecOrigin.m_cellZ": "number",
-      "m_sceneNode.m_vecOrigin.m_nOutsideWorld": "number",
-      "m_sceneNode.m_vecOrigin.m_vecX": "number",
-      "m_sceneNode.m_vecOrigin.m_vecY": "number",
-      "m_sceneNode.m_vecOrigin.m_vecZ": "number"
     },
     "CCSPlayerController_InGameMoneyServices": {
       "m_iAccount": "number",
@@ -1125,6 +1125,40 @@
         "m_weaponMode": "bigint"
       }
     },
+    "CCSCustomPlayerCamera": {
+      "serializers": [
+        "CBodyComponentPoint",
+        "CEntityIdentity"
+      ],
+      "ownFields": {
+        "m_bAnimatedEveryTick": "boolean",
+        "m_bClipCameraOffset": "boolean",
+        "m_bFollowEyes": "boolean",
+        "m_bGravityDisabled": "boolean",
+        "m_fEffects": "number",
+        "m_flAnimTime": "number",
+        "m_flCameraOffsetReturnStrength": "number",
+        "m_flCreateTime": "number",
+        "m_flElasticity": "number",
+        "m_flGravityScale": "number",
+        "m_flNavIgnoreUntilTime": "number",
+        "m_flSimulationTime": "number",
+        "m_hEffectEntity": "number",
+        "m_hFollowEntity": "number",
+        "m_hOwnerEntity": "number",
+        "m_hPawn": "number",
+        "m_iTeamNum": "number",
+        "m_MoveCollide": "bigint",
+        "m_MoveType": "bigint",
+        "m_nBloodType": "number",
+        "m_nCameraMode": "number",
+        "m_nPlatformType": "number",
+        "m_nSubclassID": "number",
+        "m_ubInterpolationFrame": "number",
+        "m_vecCameraOffset": "[number, number, number]",
+        "m_vecFollowOffset": "[number, number, number]"
+      }
+    },
     "CCSGameModeRules_Deathmatch": {
       "serializers": [],
       "ownFields": {
@@ -1514,26 +1548,31 @@
       ],
       "ownFields": {
         "m_bAnimatedEveryTick": "boolean",
-        "m_bEnabled": "boolean",
+        "m_bClipCameraOffset": "boolean",
+        "m_bFollowEyes": "boolean",
         "m_bGravityDisabled": "boolean",
-        "m_bIsControllingAngles": "boolean",
         "m_fEffects": "number",
         "m_flAnimTime": "number",
+        "m_flCameraOffsetReturnStrength": "number",
         "m_flCreateTime": "number",
         "m_flElasticity": "number",
         "m_flGravityScale": "number",
         "m_flNavIgnoreUntilTime": "number",
         "m_flSimulationTime": "number",
         "m_hEffectEntity": "number",
+        "m_hFollowEntity": "number",
         "m_hOwnerEntity": "number",
         "m_hPawn": "number",
         "m_iTeamNum": "number",
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nCameraMode": "number",
         "m_nPlatformType": "number",
         "m_nSubclassID": "number",
-        "m_ubInterpolationFrame": "number"
+        "m_ubInterpolationFrame": "number",
+        "m_vecCameraOffset": "[number, number, number]",
+        "m_vecFollowOffset": "[number, number, number]"
       }
     },
     "CCSPlayerController_InGameMoneyServices": {
@@ -9579,11 +9618,11 @@
   },
   "header": {
     "demo_file_stamp": "PBDEMS2\u0000",
-    "patch_version": 14178,
-    "server_name": "Valve Counter-Strike 2 eu_north Server (srcds6005-sto1.186.63)",
+    "patch_version": 14181,
+    "server_name": "Valve Counter-Strike 2 us_south_central Server (srcds1001-dfw2.404.248)",
     "client_name": "SourceTV Demo",
-    "map_name": "de_nuke",
-    "game_directory": "/opt/srcds/cs2/csgo_v2000902/csgo",
+    "map_name": "de_ancient",
+    "game_directory": "/opt/srcds/cs2/csgo_v2000908/csgo",
     "fullpackets_version": 2,
     "allow_clientside_entities": true,
     "allow_clientside_particles": true,
@@ -9591,6 +9630,6 @@
     "demo_version_name": "valve_demo_2",
     "demo_version_guid": "8e9d71ab-04a1-4c01-bb61-acfede27c046",
     "build_num": 10896,
-    "server_start_tick": 2128
+    "server_start_tick": 2449
   }
 }

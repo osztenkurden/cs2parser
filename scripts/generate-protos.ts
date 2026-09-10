@@ -53,6 +53,7 @@ async function downloadProtos() {
 	const files = await fetchProtoList();
 	const protoFiles = files.filter(f => f.name.endsWith('.proto'));
 	console.log(`Found ${protoFiles.length} proto files`);
+	if (protoFiles.length === 0) throw new Error('No protobuf definitions found upstream');
 
 	fs.mkdirSync(PROTO_DIR, { recursive: true });
 
@@ -72,6 +73,7 @@ async function downloadProtos() {
 	}
 
 	console.log(`Downloaded ${downloaded}/${protoFiles.length} proto files to ${PROTO_DIR}`);
+	if (downloaded !== protoFiles.length) throw new Error('Some protobuf downloads failed; generation stopped');
 
 	// Ensure google/protobuf/descriptor.proto exists
 	const googleDir = path.join(PROTO_DIR, 'google', 'protobuf');
@@ -85,7 +87,7 @@ async function downloadProtos() {
 			fs.writeFileSync(path.join(googleDir, 'descriptor.proto'), await resp.text());
 			console.log('  Downloaded descriptor.proto');
 		} else {
-			console.warn('  Failed to download descriptor.proto - generation may fail for some files');
+			throw new Error(`Failed to download descriptor.proto: ${resp.status}`);
 		}
 	}
 }
@@ -95,6 +97,7 @@ function generateTsProto() {
 
 	const protoFiles = fs.readdirSync(PROTO_DIR).filter(f => f.endsWith('.proto'));
 	console.log(`Generating TypeScript for ${protoFiles.length} proto files...`);
+	if (protoFiles.length === 0) throw new Error('No local protobuf definitions found');
 
 	// The parser only ever reads messages off the wire, and the generated registry
 	// pulls in every message class, so encode/JSON/partial helpers are dead weight
@@ -135,6 +138,7 @@ function generateTsProto() {
 	}
 
 	console.log(`Generated ${succeeded} TypeScript files (${failed} failed) in ${TS_PROTO_DIR}`);
+	if (failed > 0) throw new Error('Some protobuf bindings failed to generate');
 }
 
 async function main() {

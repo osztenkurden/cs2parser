@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: NEWEST.dem on 2026-09-10 (build: 10896, patch: 14178)
+// Generated from demo: 10_09_2026.dem on 2026-09-10 (build: 10896, patch: 14181)
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -1091,6 +1091,35 @@ interface _CC4Own {
 	readonly "m_weaponMode"?: bigint;
 }
 
+interface _CCSCustomPlayerCameraOwn {
+	readonly "m_bAnimatedEveryTick"?: boolean;
+	readonly "m_bClipCameraOffset"?: boolean;
+	readonly "m_bFollowEyes"?: boolean;
+	readonly "m_bGravityDisabled"?: boolean;
+	readonly "m_fEffects"?: number;
+	readonly "m_flAnimTime"?: number;
+	readonly "m_flCameraOffsetReturnStrength"?: number;
+	readonly "m_flCreateTime"?: number;
+	readonly "m_flElasticity"?: number;
+	readonly "m_flGravityScale"?: number;
+	readonly "m_flNavIgnoreUntilTime"?: number;
+	readonly "m_flSimulationTime"?: number;
+	readonly "m_hEffectEntity"?: number;
+	readonly "m_hFollowEntity"?: number;
+	readonly "m_hOwnerEntity"?: number;
+	readonly "m_hPawn"?: number;
+	readonly "m_iTeamNum"?: number;
+	readonly "m_MoveCollide"?: bigint;
+	readonly "m_MoveType"?: bigint;
+	readonly "m_nBloodType"?: number;
+	readonly "m_nCameraMode"?: number;
+	readonly "m_nPlatformType"?: number;
+	readonly "m_nSubclassID"?: number;
+	readonly "m_ubInterpolationFrame"?: number;
+	readonly "m_vecCameraOffset"?: [number, number, number];
+	readonly "m_vecFollowOffset"?: [number, number, number];
+}
+
 interface _CCSGameModeRules_ArmsRaceOwn {
 	readonly "m_WeaponSequence"?: string[];
 }
@@ -1371,30 +1400,6 @@ interface _CCSPlayer_WeaponServicesOwn {
 	readonly "m_hMyWeapons"?: number[];
 	readonly "m_iAmmo"?: Uint16Array;
 	readonly "m_networkAnimTiming"?: Uint8Array;
-}
-
-interface _CCSPlayerCameraOwn {
-	readonly "m_bAnimatedEveryTick"?: boolean;
-	readonly "m_bEnabled"?: boolean;
-	readonly "m_bGravityDisabled"?: boolean;
-	readonly "m_bIsControllingAngles"?: boolean;
-	readonly "m_fEffects"?: number;
-	readonly "m_flAnimTime"?: number;
-	readonly "m_flCreateTime"?: number;
-	readonly "m_flElasticity"?: number;
-	readonly "m_flGravityScale"?: number;
-	readonly "m_flNavIgnoreUntilTime"?: number;
-	readonly "m_flSimulationTime"?: number;
-	readonly "m_hEffectEntity"?: number;
-	readonly "m_hOwnerEntity"?: number;
-	readonly "m_hPawn"?: number;
-	readonly "m_iTeamNum"?: number;
-	readonly "m_MoveCollide"?: bigint;
-	readonly "m_MoveType"?: bigint;
-	readonly "m_nBloodType"?: number;
-	readonly "m_nPlatformType"?: number;
-	readonly "m_nSubclassID"?: number;
-	readonly "m_ubInterpolationFrame"?: number;
 }
 
 interface _CCSPlayerControllerOwn {
@@ -3480,6 +3485,12 @@ export type ICC4 = Prefixed<"CC4",
 	_CC4Own
 >;
 
+export type ICCSCustomPlayerCamera = Prefixed<"CCSCustomPlayerCamera",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CCSCustomPlayerCameraOwn
+>;
+
 export type ICCSGameModeRules_ArmsRace = Prefixed<"CCSGameModeRules_ArmsRace", _CCSGameModeRules_ArmsRaceOwn>;
 
 export type ICCSGameModeRules_Deathmatch = Prefixed<"CCSGameModeRules_Deathmatch", _CCSGameModeRules_DeathmatchOwn>;
@@ -3535,7 +3546,7 @@ export type ICCSPlayer_WeaponServices = Prefixed<"CCSPlayer_WeaponServices", _CC
 export type ICCSPlayerCamera = Prefixed<"CCSPlayerCamera",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSPlayerCameraOwn
+	_CCSCustomPlayerCameraOwn
 >;
 
 export type ICCSPlayerController = Prefixed<"CCSPlayerController",
@@ -4005,6 +4016,7 @@ export interface EntityTypeMap {
 	CBasePlayerPawn: ICBasePlayerPawn;
 	CBasePlayerWeapon: ICBasePlayerWeapon;
 	CC4: ICC4;
+	CCSCustomPlayerCamera: ICCSCustomPlayerCamera;
 	CCSGameModeRules_ArmsRace: ICCSGameModeRules_ArmsRace;
 	CCSGameModeRules_Deathmatch: ICCSGameModeRules_Deathmatch;
 	CCSGameRules: ICCSGameRules;
