@@ -118,10 +118,10 @@ const assignMultipliers = (qf: QuantalizedFloat, steps: number) => {
 
 	let high_mul: number = Math.abs(range) <= 0.0 ? high : high / range;
 
-	if (high_mul * range > high || high_mul * range > high) {
+	if (high_mul * range > high) {
 		for (const multiplier of Q_FLOAT_MULTIPLIERS) {
 			high_mul = (high / range) * multiplier;
-			if (high_mul * range > high || high_mul * range > high) {
+			if (high_mul * range > high) {
 				continue;
 			}
 			break;

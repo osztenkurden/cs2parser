@@ -1,6 +1,6 @@
 import { BitBuffer } from '../ubitreader.js';
 import { decoders, type DecoderKeys, type Decoders } from '../descriptors/decoders.js';
-import { CDemoSendTables, EDemoCommands, type CDemoFullPacket, type CDemoPacket } from '../../ts-proto/demo.js';
+import { CDemoSendTables, EDemoCommands, type CDemoPacket } from '../../ts-proto/demo.js';
 import {
 	CMsgSource1LegacyGameEvent,
 	CMsgSource1LegacyGameEventList,
@@ -367,7 +367,7 @@ export class ParseSession {
 				if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
 				this.enqueueEvent('end', { incomplete: false, reason: 'stop' });
 				this._resetFrameState();
-				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
 				return { ended: true };
 			}
 
@@ -407,7 +407,7 @@ export class ParseSession {
 				// .dem files wrap it in a CDemoPacket envelope, broadcasts do not.
 				const data = this.decompressIfNeeded(size, isCompressed);
 				this.parsePacket({ data } as CDemoPacket);
-				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
 			} else {
 				this.handleFrame(decoder, size, isCompressed);
 			}
@@ -415,7 +415,7 @@ export class ParseSession {
 		}
 
 		this._resetFrameState();
-		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
 		return { ended: false };
 	}
 
@@ -427,7 +427,7 @@ export class ParseSession {
 
 	/** Flush remaining events to the consumer. */
 	flush(): void {
-		this.emitMainQueue(this.eventQueue, 0, false);
+		this.emitMainQueue(this.eventQueue);
 	}
 
 	// === Buffer management ===
@@ -510,14 +510,11 @@ export class ParseSession {
 	private baseParse<T extends Decoders[DecoderKeys]['decode']>(
 		decoder: T,
 		size: number,
-		isCompressed: boolean,
-		handler?: (data: ReturnType<T>) => ReturnType<T> | void
-	) {
+		isCompressed: boolean
+	): ReturnType<T> {
 		const data = this.decompressIfNeeded(size, isCompressed);
 		this.binaryR.setTo(data);
-		const decoded = decoder(this.binaryR);
-		if (!handler) return decoded as ReturnType<T>;
-		return handler(decoded as ReturnType<T>);
+		return decoder(this.binaryR) as ReturnType<T>;
 	}
 
 	// === Frame-level parsing ===
@@ -625,9 +622,7 @@ export class ParseSession {
 			case EDemoCommands.DEM_SendTables:
 				this.sendTables = this.baseParse(decoder.decode, size, isCompressed) ?? null;
 				if (this.sendTables?.data) {
-					const copy = new Uint8Array(new ArrayBuffer(this.sendTables.data.byteLength));
-					copy.set(new Uint8Array(this.sendTables.data));
-					this.sendTables.data = copy;
+					this.sendTables.data = Uint8Array.from(this.sendTables.data);
 				}
 				break;
 			case EDemoCommands.DEM_ClassInfo: {
@@ -648,44 +643,40 @@ export class ParseSession {
 				break;
 			}
 			case EDemoCommands.DEM_FileHeader:
-				this.baseParse(decoder.decode, size, isCompressed, header => {
-					this.enqueueEvent('header', header);
-				});
+				this.enqueueEvent('header', this.baseParse(decoder.decode, size, isCompressed));
 				break;
 			case EDemoCommands.DEM_Packet:
 			case EDemoCommands.DEM_SignonPacket:
-				this.baseParse(decoders[EDemoCommands.DEM_Packet].decode, size, isCompressed, packet => {
-					this.parsePacket(packet);
-				});
+				this.parsePacket(this.baseParse(decoders[EDemoCommands.DEM_Packet].decode, size, isCompressed));
 				break;
-			case EDemoCommands.DEM_FullPacket:
-				this.baseParse(decoder.decode, size, isCompressed, (fullPacket: CDemoFullPacket) => {
-					if (fullPacket.string_table) {
-						for (const snapshot of fullPacket.string_table.tables) {
-							const result = applyStringTableSnapshot(snapshot, this.baselines);
-							// Mid-stream broadcast joiners receive their initial userinfo via
-							// FullPacket snapshots rather than incremental updatestringtable
-							// packets. Re-emit those entries as a synthetic updatestringtable
-							// so DemoReader's _playerInfoMap listener picks them up.
-							if (result?.name === 'userinfo' && result.players.length > 0) {
-								this.enqueueEvent('updatestringtable', {
-									tableId: -1,
-									players: result.players,
-									table: {
-										name: 'userinfo',
-										data: [],
-										user_data_size: 0,
-										user_data_fixed_size: false,
-										flags: 0,
-										using_varint_bitcounts: false
-									}
-								});
-							}
+			case EDemoCommands.DEM_FullPacket: {
+				const fullPacket = this.baseParse(decoder.decode, size, isCompressed);
+				if (fullPacket.string_table) {
+					for (const snapshot of fullPacket.string_table.tables) {
+						const result = applyStringTableSnapshot(snapshot, this.baselines);
+						// Mid-stream broadcast joiners receive their initial userinfo via
+						// FullPacket snapshots rather than incremental updatestringtable
+						// packets. Re-emit those entries as a synthetic updatestringtable
+						// so DemoReader's _playerInfoMap listener picks them up.
+						if (result?.name === 'userinfo' && result.players.length > 0) {
+							this.enqueueEvent('updatestringtable', {
+								tableId: -1,
+								players: result.players,
+								table: {
+									name: 'userinfo',
+									data: [],
+									user_data_size: 0,
+									user_data_fixed_size: false,
+									flags: 0,
+									using_varint_bitcounts: false
+								}
+							});
 						}
 					}
-					if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
-				});
+				}
+				if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
 				break;
+			}
 			default: {
 				// Every other frame command is listenable by its EDemoCommands name and
 				// decoded only when someone is listening.
@@ -699,7 +690,7 @@ export class ParseSession {
 				break;
 			}
 		}
-		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
 	}
 
 	/**

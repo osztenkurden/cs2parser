@@ -5,7 +5,7 @@ import { DemoReader } from '../../../src/index.js';
 import { HttpBroadcastReader } from '../../../src/broadcast/index.js';
 import { EntityMode } from '../../../src/parser/entities/types.js';
 import { CDemoPacket, EDemoCommands } from '../../../src/ts-proto/demo.js';
-import { writeLEUInt32, writeUVarInt32 } from '../../unit/broadcast/helpers.js';
+import { buildFragment, type BroadcastCommand } from '../../unit/broadcast/helpers.js';
 import { MockBroadcastFetcher, type FragmentResponse } from './mock-fetcher.js';
 
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
@@ -64,7 +64,7 @@ function readDemoFrames(buf: Uint8Array): DemoFrame[] {
  * demofile-net's `HttpBroadcastReader`/`OnDemoPacket` behavior).
  */
 function encodeBroadcast(frames: DemoFrame[], opts: { signon: boolean; endMarker: boolean }): Uint8Array {
-	const parts: Uint8Array[] = [];
+	const commands: BroadcastCommand[] = [];
 	for (const f of frames) {
 		const cmdType = f.cmd & ~EDemoCommands.DEM_IsCompressed;
 		const isCompressed = (f.cmd & EDemoCommands.DEM_IsCompressed) !== 0;
@@ -72,33 +72,15 @@ function encodeBroadcast(frames: DemoFrame[], opts: { signon: boolean; endMarker
 		let cmd = f.cmd;
 		let payload = f.payload;
 		if (cmdType === EDemoCommands.DEM_Packet || cmdType === EDemoCommands.DEM_SignonPacket) {
-			const proto = isCompressed
-				? (snappy.uncompressSync(Buffer.from(payload)) as Buffer)
-				: payload;
+			const proto = isCompressed ? (snappy.uncompressSync(Buffer.from(payload)) as Buffer) : payload;
 			payload = CDemoPacket.decode(proto).data ?? new Uint8Array(0);
 			cmd = cmdType;
 		}
 
-		parts.push(writeUVarInt32(cmd));
 		const rawTick = opts.signon && f.tick === 0xffffffff ? 0 : f.tick;
-		parts.push(writeLEUInt32(rawTick));
-		parts.push(Uint8Array.of(0));
-		parts.push(writeLEUInt32(payload.length));
-		parts.push(payload);
+		commands.push({ cmd, tick: rawTick, payload });
 	}
-	if (opts.endMarker) {
-		parts.push(writeUVarInt32(0));
-		parts.push(writeLEUInt32(0));
-		parts.push(Uint8Array.of(0));
-	}
-	const total = parts.reduce((s, p) => s + p.length, 0);
-	const out = new Uint8Array(total);
-	let off = 0;
-	for (const p of parts) {
-		out.set(p, off);
-		off += p.length;
-	}
-	return out;
+	return buildFragment(commands, opts.endMarker);
 }
 
 const ok = (data: Uint8Array): FragmentResponse => ({ ok: true, data });

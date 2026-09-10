@@ -9,8 +9,6 @@ type FieldType = {
 	elementType: FieldType | null;
 };
 
-const fieldTypeMap: Record<string, FieldType> = {};
-
 const isPointerFromName = (name: string) => {
 	switch (name) {
 		case 'CBodyComponent':
@@ -66,7 +64,6 @@ const getBaseFieldType = (baseName: string, count: number | null): FieldType => 
 		elementType: elType
 	};
 
-	fieldTypeMap[baseName] = ft;
 	return ft;
 };
 
@@ -388,57 +385,6 @@ export class Field<const T extends FieldTypeEnum = FieldTypeEnum> {
 				throw 'ILLEGAL PATH #5';
 		}
 	}
-
-	_getName(): string {
-		switch (this.type) {
-			case FieldTypeEnum.Array:
-				return getNameExt((this.value as ArrayField).field_enum);
-			case FieldTypeEnum.Vector:
-				return getNameExt((this.value as VectorField).field_enum);
-			case FieldTypeEnum.Serializer: {
-				return (this.value as SerializerField).serializer.name;
-			}
-			case FieldTypeEnum.Pointer: {
-				return (this.value as PointerField).serializer.name;
-			}
-
-			case FieldTypeEnum.Value:
-				return (this.value as ValueField).name;
-			case FieldTypeEnum.None:
-				return '';
-
-			default:
-				throw 'ILLEGAL PATH #5';
-		}
-	}
-
-	_getInner(index: number) {
-		switch (this.type) {
-			case FieldTypeEnum.Array:
-				return (this.value as ArrayField).field_enum;
-			case FieldTypeEnum.Vector:
-				return (this.value as VectorField).field_enum;
-			case FieldTypeEnum.Serializer: {
-				const result = (this.value as SerializerField).serializer.fields[index];
-				if (!result) throw 'ILLEGAL PATH #1';
-
-				return result;
-			}
-			case FieldTypeEnum.Pointer: {
-				const result = (this.value as PointerField).serializer.fields[index];
-				if (!result) throw 'ILLEGAL PATH #2';
-
-				return result;
-			}
-
-			case FieldTypeEnum.Value:
-			case FieldTypeEnum.None:
-				throw 'ILLEGAL PATH #3';
-
-			default:
-				throw 'ILLEGAL PATH #4';
-		}
-	}
 }
 
 const getNameExt = (field: Field): string => {
@@ -461,34 +407,6 @@ const getNameExt = (field: Field): string => {
 
 		default:
 			throw 'ILLEGAL PATH #5';
-	}
-};
-
-export const getInnerExt = (field: Field, index: number) => {
-	switch (field.type) {
-		case FieldTypeEnum.Array:
-			return (field.value as ArrayField).field_enum;
-		case FieldTypeEnum.Vector:
-			return (field.value as VectorField).field_enum;
-		case FieldTypeEnum.Serializer: {
-			const result = (field.value as SerializerField).serializer.fields[index];
-			if (!result) throw 'ILLEGAL PATH #1';
-
-			return result;
-		}
-		case FieldTypeEnum.Pointer: {
-			const result = (field.value as PointerField).serializer.fields[index];
-			if (!result) throw 'ILLEGAL PATH #2x';
-
-			return result;
-		}
-
-		case FieldTypeEnum.Value:
-		case FieldTypeEnum.None:
-			throw 'ILLEGAL PATH #3';
-
-		default:
-			throw 'ILLEGAL PATH #4';
 	}
 };
 
@@ -572,15 +490,6 @@ export const constructorFieldHelper = {
 
 		return Decoders.QangleVarDecoder;
 	},
-	u32Tof32: (() => {
-		const dataView = new DataView(new ArrayBuffer(4));
-
-		return (input: number) => {
-			dataView.setUint32(0, input);
-
-			return dataView.getFloat32(0);
-		};
-	})(),
 	decode: (reader: BitBuffer, decoder: Decoder) => {
 		if (typeof decoder === 'object') return decodeQfloat(reader, decoder.decoder);
 		// Fast checks for the 3 most common decoder types

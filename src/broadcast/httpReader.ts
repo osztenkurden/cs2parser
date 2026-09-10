@@ -192,7 +192,7 @@ export class HttpBroadcastReader {
 		// entirely if the caller passed `false`.
 		if (this.opts.gameEventDescriptors !== false) {
 			const supplied = this.opts.gameEventDescriptors;
-			let list: CMsgSource1LegacyGameEventList | null = null;
+			let list: CMsgSource1LegacyGameEventList;
 			if (supplied instanceof Uint8Array) {
 				list = CMsgSource1LegacyGameEventList.decode(supplied);
 			} else if (supplied) {
@@ -200,7 +200,7 @@ export class HttpBroadcastReader {
 			} else {
 				list = loadBundledEventDescriptors();
 			}
-			if (list) this.parser.emit('gameeventlist', list);
+			this.parser.emit('gameeventlist', list);
 		}
 
 		// Signup fragment (tickOffset = -1)
@@ -475,8 +475,6 @@ export class HttpBroadcastReader {
 	}
 
 	private _isAbortError(e: unknown): boolean {
-		return (
-			e instanceof Error && (e.name === 'AbortError' || (e instanceof DOMException && e.name === 'AbortError'))
-		);
+		return e instanceof Error && e.name === 'AbortError';
 	}
 }

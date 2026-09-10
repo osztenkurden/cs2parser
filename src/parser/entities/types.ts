@@ -134,7 +134,7 @@ export interface OutputEvents extends OnDemandEvents, DemoFrameEvents {
 
 export type emit = <T extends keyof OutputEvents>(eventName: T, ...data: OutputEvents[T][]) => void;
 
-export type EmitQueue = (data: EventQueue, index: number, available: false) => void;
+export type EmitQueue = (data: EventQueue) => void;
 
 export type EventQueueElement = {
 	[E in keyof OutputEvents]: [E, OutputEvents[E]];

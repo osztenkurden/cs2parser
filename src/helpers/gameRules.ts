@@ -28,6 +28,13 @@ export const WinRoundReason = {
 
 export type WinRoundReason = (typeof WinRoundReason)[keyof typeof WinRoundReason];
 
+const phases: Record<number, string> = {
+	2: 'first',
+	3: 'second',
+	4: 'halftime',
+	5: 'postgame'
+};
+
 export class GameRules extends EntityHelper<'CCSGameRulesProxy'> {
 	constructor(parser: DemoReader, entityId: number) {
 		super(parser, entityId);
@@ -62,12 +69,6 @@ export class GameRules extends EntityHelper<'CCSGameRulesProxy'> {
 	}
 
 	get phase(): string {
-		const phases: Record<number, string> = {
-			2: 'first',
-			3: 'second',
-			4: 'halftime',
-			5: 'postgame'
-		};
 		return phases[this.gamePhase] ?? 'unknown';
 	}
 
