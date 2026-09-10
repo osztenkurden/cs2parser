@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.0.0](https://github.com/osztenkurden/cs2parser/compare/v1.12.0...v2.0.0) (2026-09-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* Metadata helpers now return promises; progress events report parsed byte counts.
+* improve performance, fix http reading bit gaps, make events subscribable by listeners only ([#42](https://github.com/osztenkurden/cs2parser/issues/42))
+
+### Features
+
+* add browser support and optimize parser performance ([#43](https://github.com/osztenkurden/cs2parser/issues/43)) ([2162326](https://github.com/osztenkurden/cs2parser/commit/216232695ae53456c9f3a50a3449e7bc03a39e21))
+* add resolved value for parsing ([#40](https://github.com/osztenkurden/cs2parser/issues/40)) ([db7a5d8](https://github.com/osztenkurden/cs2parser/commit/db7a5d8aab95a6a6fec6179d89f9d28da0df297c))
+* added support for decrypting chat messages ([45ad78e](https://github.com/osztenkurden/cs2parser/commit/45ad78ea0bee9b2923f3823d21d682ff6f404a14))
+* improve performance, fix http reading bit gaps, make events subscribable by listeners only ([#42](https://github.com/osztenkurden/cs2parser/issues/42)) ([62f989b](https://github.com/osztenkurden/cs2parser/commit/62f989bbb3e3e95c692b5580bcba3d7ca8938277))
+* updaed entities, snapshot and registry ([5fc2412](https://github.com/osztenkurden/cs2parser/commit/5fc2412d66897a2a6a48f9201ea729659351c41c))
+* update default descriptors ([4b76dcf](https://github.com/osztenkurden/cs2parser/commit/4b76dcf6d50730f9be965c733f49397e66cd5f11))
+* update default event descriptor ([83ba7f8](https://github.com/osztenkurden/cs2parser/commit/83ba7f8ded9b3597ba21301245346284a92ca450))
+* update events ([c14f214](https://github.com/osztenkurden/cs2parser/commit/c14f2149235c79a5910736472faa43ca9562144a))
+* update snappy ([57957e0](https://github.com/osztenkurden/cs2parser/commit/57957e08d999947d3adb683d351bfdeb3fe80a1a))
+* updated ents and scripts ([4f6ff0d](https://github.com/osztenkurden/cs2parser/commit/4f6ff0daf20cfd43c97bb66c2ad5998781ee05fa))
+* updated protos ([b5ffb78](https://github.com/osztenkurden/cs2parser/commit/b5ffb7870f7ba6c5fcd701e8a112703385d6ebbb))
+* use server WASM Snappy and add sync metadata APIs ([#44](https://github.com/osztenkurden/cs2parser/issues/44)) ([0ba8296](https://github.com/osztenkurden/cs2parser/commit/0ba8296dc131973482c8833dd04068679e7d6c7e))
+
+
+### Bug Fixes
+
+* add info about regenerated demo ([d3c2580](https://github.com/osztenkurden/cs2parser/commit/d3c25802b3d96f1ab698421c6e3a6c210f44a95e))
+* registry dropps ([d3fbf98](https://github.com/osztenkurden/cs2parser/commit/d3fbf98ae3d6473d224ec39f97e6121f59576d47))
+
 ## [1.12.0](https://github.com/osztenkurden/cs2parser/compare/v1.11.1...v1.12.0) (2026-08-25)
 
 
