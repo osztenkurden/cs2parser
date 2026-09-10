@@ -13,6 +13,20 @@ no required `error` listener and no fulfilled error result.
 - The promise is authoritative. If a completion listener throws, it rejects even though a nonfailure end notification was already emitted. Reporting listeners cannot replace an existing failure: first failure wins. Async listener promises remain ignored.
 - Async metadata reads already reject and retain that behavior. Synchronous metadata reads and `cancel()` still throw synchronously.
 
+**Before (2.0.0):** check returned errors as well as exceptions.
+
+```ts
+try {
+	const result = await parser.parseDemo('demo.dem');
+	if (result.error) console.error('Parsing failed:', result.error);
+	else if (result.incomplete) console.warn(result.reason ?? 'incomplete');
+} catch (error) {
+	console.error('Parsing failed:', error);
+}
+```
+
+**After:** handle all failures in `catch`; inspect only nonfailure outcomes.
+
 ```ts
 try {
 	const outcome = await parser.parseDemo('demo.dem');
@@ -20,7 +34,11 @@ try {
 } catch (error) {
 	console.error('Parsing failed:', error);
 }
+```
 
+Broadcast startup now explicitly reports readiness:
+
+```ts
 const started = await broadcast.start();
 const outcome = started.status === 'ready' ? await broadcast.run() : started;
 ```
