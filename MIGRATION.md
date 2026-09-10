@@ -1,6 +1,6 @@
 # Migration Guide
 
-## Breaking Async Parsing Contract (Unreleased)
+## Breaking Async Parsing Contract (2.1.0)
 
 All async parsing APIs now reject on failure, including I/O, corrupt data,
 decompression, synchronous application callbacks, and invalid usage. There is
