@@ -2,15 +2,18 @@
 
 ## Metadata
 
-`parseHeader`, `parseServerInfo`, and `parseFileInfo` remain synchronous on the server. Opt into promises with the matching `Async` methods:
+**Before:** synchronous server metadata calls. **After:** the same names remain synchronous; use the matching `Async` methods only when you want promises.
 
 ```ts
 import { DemoReader } from 'cs2parser';
 
 const path = 'demo.dem';
+// Before and after: no change needed for synchronous callers.
 const header = DemoReader.parseHeader(path);
 const serverInfo = DemoReader.parseServerInfo(path);
 const fileInfo = DemoReader.parseFileInfo(path);
+
+// After: optional async reads; likewise parseServerInfoAsync / parseFileInfoAsync.
 const asyncHeader = await DemoReader.parseHeaderAsync(path);
 ```
 
@@ -18,11 +21,11 @@ Unsuffixed methods accept paths, `Buffer`, or `Uint8Array`, return metadata or `
 
 ## Other Changes
 
-- **Progress:** values are parsed bytes, not fractions. Divide by total input size; unread trailers can leave the fraction below 1.
-- **Bytes:** treat payloads as `Uint8Array`; replace Buffer-specific text conversion with `new TextDecoder().decode(bytes)`.
-- **Messages:** subscribe to the network messages you need rather than relying on eager decoding.
-- **Emitter:** portable `events` replaces Node's emitter. Native `instanceof` checks, Node-global defaults, `errorMonitor`, and `captureRejections` do not apply. Handle async-listener rejections yourself.
-- **Browser:** import `cs2parser/browser`; server imports stay unchanged. Both use embedded WASM, without native addons. See [browser/CSP requirements](README.md#browser).
+- **Progress:** before `reader.on('progress', fraction => show(fraction))`; after `reader.on('progress', bytes => show(bytes / totalBytes))`. Unread trailers can leave the fraction below 1.
+- **Bytes:** before `bytes.toString('utf8')` on a Buffer; after `new TextDecoder().decode(bytes)` on a `Uint8Array`.
+- **Messages:** before `reader.parseDemo(path, { svc_VoiceData: true })` enabled decoding; after `reader.on('svc_VoiceData', onVoice)` before parsing enables it automatically. Flags remain available for explicit overrides.
+- **Emitter:** before Node's `EventEmitter.defaultMaxListeners = 20`; after `reader.setMaxListeners(20)`. Portable `events` does not support Node's native `instanceof` assumptions, `errorMonitor`, or `captureRejections`; catch async-listener failures explicitly, e.g. `task().catch(onError)`.
+- **Browser:** before the Node-only `import { DemoReader } from 'cs2parser'`; after browser code uses `import { DemoReader } from 'cs2parser/browser'` and `await DemoReader.parseHeaderAsync(file)`. Server imports stay unchanged; both exports use embedded WASM instead of native addons. See [browser/CSP requirements](README.md#browser).
 
 ## Server Metadata Timings
 
