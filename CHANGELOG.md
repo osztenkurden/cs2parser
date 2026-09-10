@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/osztenkurden/cs2parser/compare/v2.0.0...v2.1.0) (2026-09-10)
+
+
+### Features
+
+* improve error contracts ([#49](https://github.com/osztenkurden/cs2parser/issues/49)) ([488cff6](https://github.com/osztenkurden/cs2parser/commit/488cff612eadb32f35ae0114b123666420732010))
+
 ## [2.0.0](https://github.com/osztenkurden/cs2parser/compare/v1.12.0...v2.0.0) (2026-09-10)
 
 
