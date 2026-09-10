@@ -26,9 +26,8 @@ if (subscriptions === 'all') {
 	p.on('usercommand', () => {});
 	p.gameEvents.on('gameEvent', () => {});
 }
-p.on('error', () => {}); // the end payload carries the failure for validation below
-p.on('end', (end: { incomplete: boolean; error?: unknown }) => {
-	completed = end.incomplete === false && !end.error;
+p.on('end', (end: { status: string }) => {
+	completed = end.status === 'complete';
 });
 const start = performance.now();
 

@@ -60,7 +60,7 @@ describe.skipIf(!existsSync(demoPath))('bot gameplay fixture', () => {
 			if (player?.isBot) botShotMessages++;
 		});
 		const end = await reader.parseDemo(demoPath, { entities: EntityMode.ALL });
-		expect(end).toEqual({ incomplete: false });
+		expect(end).toEqual({ status: 'complete' });
 	}, 300000);
 
 	test('bot and TV roster entries round-trip without matching Steam IDs', () => {

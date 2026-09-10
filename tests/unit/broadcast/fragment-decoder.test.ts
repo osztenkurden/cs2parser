@@ -8,10 +8,14 @@ import { buildFragment } from './helpers.js';
 function makeSession(): { session: ParseSession; events: EventQueue } {
 	const events: EventQueue = [];
 	const parser = new DemoReader();
-	const session = ParseSession.forBroadcast(EntityMode.NONE, q => {
-		for (const e of q) events.push(e);
-		q.length = 0;
-	}, parser);
+	const session = ParseSession.forBroadcast(
+		EntityMode.NONE,
+		q => {
+			for (const e of q) events.push(e);
+			q.length = 0;
+		},
+		parser
+	);
 	return { session, events };
 }
 
@@ -64,22 +68,19 @@ describe('ParseSession.pushBroadcastFragment', () => {
 		expect(events.filter(e => e[0] === 'tickend')).toEqual([]);
 	});
 
-	test('command === 0 end-marker returns ended:true and emits end with reason "stop"', () => {
+	test('command === 0 end-marker returns ended:true for the reader to finalize', () => {
 		const { session, events } = makeSession();
-		const frag = buildFragment(
-			[{ cmd: EDemoCommands.DEM_SyncTick, tick: 5, payload: new Uint8Array(0) }],
-			true
-		);
+		const frag = buildFragment([{ cmd: EDemoCommands.DEM_SyncTick, tick: 5, payload: new Uint8Array(0) }], true);
 
 		const result = session.pushBroadcastFragment(frag, 0);
 		expect(result.ended).toBe(true);
 
 		const endEvent = events.find(e => e[0] === 'end');
-		expect(endEvent?.[1]).toEqual({ incomplete: false, reason: 'stop' });
+		expect(endEvent).toBeUndefined();
 
-		// Should have emitted tickend before the final 'end'
+		// The reader owns the end notification so it can unhook before listeners run.
 		expect(eventNames(events)).toContain('tickend');
-		expect(eventNames(events)).toContain('end');
+		expect(eventNames(events)).not.toContain('end');
 	});
 
 	test('does not consume size/payload bytes after command=0 marker', () => {
@@ -94,8 +95,8 @@ describe('ParseSession.pushBroadcastFragment', () => {
 
 		const result = session.pushBroadcastFragment(frag, 0);
 		expect(result.ended).toBe(true);
-		// Only one 'end' emitted (no exceptions/extra events from parsing garbage)
-		expect(events.filter(e => e[0] === 'end').length).toBe(1);
+		// No exceptions/extra events from parsing garbage; the reader owns 'end'.
+		expect(events.filter(e => e[0] === 'end').length).toBe(0);
 	});
 
 	test('preserves DEM_IsCompressed flag (compression dispatch path)', () => {

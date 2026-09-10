@@ -1,4 +1,34 @@
-# Migrating From 1.x
+# Migration Guide
+
+## Breaking Async Parsing Contract (2.1.0)
+
+All async parsing APIs now reject on failure, including I/O, corrupt data,
+decompression, synchronous application callbacks, and invalid usage. There is
+no required `error` listener and no fulfilled error result.
+
+- `parseDemo()` returns exported `ParseOutcome`: `{ status: 'complete' } | { status: 'incomplete' } | { status: 'cancelled' }`.
+- `parseHttpBroadcast()` and `HttpBroadcastReader.run()` return exported `BroadcastOutcome`: `{ status: 'complete' } | { status: 'cancelled' } | { status: 'timeout' }`, not `void` or an error terminus.
+- `HttpBroadcastReader.start()` returns exported `BroadcastStartOutcome`: `{ status: 'ready' } | BroadcastOutcome`. Fatal signup/full/initial-delta failures now reject immediately. Completion or cancellation during startup needs no `run()` call.
+- `end` carries exported `ParseEnd`: nonfailure outcomes plus `{ status: 'error', error: unknown }`. Replace `incomplete`, `reason`, and optional `error` checks with a `status` switch. `EndReason` and `BroadcastTerminus` are removed, without aliases.
+- The promise is authoritative. If a completion listener throws, it rejects even though a nonfailure end notification was already emitted. Reporting listeners cannot replace an existing failure: first failure wins. Async listener promises remain ignored.
+- Async metadata reads already reject and retain that behavior. Synchronous metadata reads and `cancel()` still throw synchronously.
+
+```ts
+try {
+	const outcome = await parser.parseDemo('demo.dem');
+	if (outcome.status !== 'complete') console.warn(outcome.status);
+} catch (error) {
+	console.error('Parsing failed:', error);
+}
+
+const started = await broadcast.start();
+const outcome = started.status === 'ready' ? await broadcast.run() : started;
+```
+
+See [parsing](docs/parsing.md) and [broadcast lifecycle](docs/http-broadcast.md)
+for cancellation, timeout, cleanup, and callback details.
+
+## Migrating From 1.x
 
 ## Metadata
 

@@ -33,13 +33,11 @@ describe('HttpBroadcastReader (throttle timing)', () => {
 		const FETCH_DELAY = 40;
 		const fetchStartedAt: number[] = [];
 
-		const slowDelta =
-			(data: Uint8Array) =>
-			async (): Promise<FragmentResponse> => {
-				fetchStartedAt.push(Date.now());
-				await new Promise(r => setTimeout(r, FETCH_DELAY));
-				return ok(data);
-			};
+		const slowDelta = (data: Uint8Array) => async (): Promise<FragmentResponse> => {
+			fetchStartedAt.push(Date.now());
+			await new Promise(r => setTimeout(r, FETCH_DELAY));
+			return ok(data);
+		};
 
 		const fetcher = new MockBroadcastFetcher({
 			sync: baseSync,
@@ -65,7 +63,7 @@ describe('HttpBroadcastReader (throttle timing)', () => {
 		await reader.start();
 		const terminus = await reader.run();
 
-		expect(terminus.reason).toBe('stop');
+		expect(terminus.status).toBe('complete');
 		expect(fetchStartedAt.length).toBe(5);
 
 		// With the fix, consecutive /delta fetches start ~THROTTLE ms apart.

@@ -42,7 +42,9 @@ parser.on('serverinfo', info => {}); // CSVCMsg_ServerInfo — fires once
 parser.on('tickstart', tick => {}); // number
 parser.on('tickend', tick => {}); // number
 parser.on('progress', bytesParsed => {}); // cumulative bytes, periodically and at completion
-parser.on('end', ({ incomplete, error }) => {});
+parser.on('end', outcome => {
+	if (outcome.status === 'error') console.error(outcome.error);
+}); // observational; always handle the parsing promise's rejection
 parser.on('cancel', () => {}); // fires on parser.cancel()
 parser.on('error', ({ error }) => {}); // fatal parse error
 parser.on('debug', msg => {}); // diagnostic strings

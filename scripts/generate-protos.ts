@@ -5,7 +5,7 @@
  * Usage:
  *   bun scripts/generate-protos.ts [--fetch-only] [--generate-only]
  */
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -115,9 +115,7 @@ function generateTsProto() {
 		// Steam RPC service clients call encode() on request messages; nothing here
 		// speaks to Steam, so skip them rather than keep encode around for their sake.
 		'outputServices=false'
-	]
-		.map(opt => `--ts_proto_opt=${opt}`)
-		.join(' ');
+	].map(opt => `--ts_proto_opt=${opt}`);
 
 	const isWindows = process.platform === 'win32';
 	const pluginPath = isWindows
@@ -128,8 +126,16 @@ function generateTsProto() {
 	let failed = 0;
 	for (const file of protoFiles) {
 		try {
-			const cmd = `cd "${PROTO_DIR}" && protoc --plugin=protoc-gen-ts_proto="${pluginPath}" ${tsProtoOpts} --ts_proto_out="${TS_PROTO_DIR}" ./${file}`;
-			execSync(cmd, { stdio: 'pipe' });
+			execFileSync(
+				'protoc',
+				[
+					`--plugin=protoc-gen-ts_proto=${pluginPath}`,
+					...tsProtoOpts,
+					`--ts_proto_out=${TS_PROTO_DIR}`,
+					`./${file}`
+				],
+				{ cwd: PROTO_DIR, stdio: 'pipe' }
+			);
 			succeeded++;
 		} catch (e: any) {
 			console.warn(`  Failed: ${file} - ${e.stderr?.toString().trim() || e.message}`);

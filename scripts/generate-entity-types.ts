@@ -68,8 +68,7 @@ async function collectFromDemo(demoPath: string): Promise<SnapshotData> {
 		header = h;
 	});
 	const end = await parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
-	if (end.error) throw end.error;
-	if (end.incomplete) throw new Error('Demo parsing was incomplete; refusing to generate entity types.');
+	if (end.status !== 'complete') throw new Error('Demo parsing did not complete; refusing to generate entity types.');
 
 	// Build (fullPath → tsType) entries, collapsing container sub-fields into
 	// `Array<{ ... }>` at the container's key and emitting typed arrays where

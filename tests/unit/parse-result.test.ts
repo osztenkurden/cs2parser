@@ -22,6 +22,129 @@ const completeDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands
 const invalidDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands.DEM_FileHeader, 1, 3, 0x0f, 0, 0])]);
 const stop = demoFrame(EDemoCommands.DEM_Stop);
 
+describe('listener failure lifecycle', () => {
+	test.each(['remove', 'prepend'] as const)('end cleanup cannot be bypassed by %s listeners', async mode => {
+		const reader = new BrowserDemoReader();
+		let releases = 0;
+		reader._snappy.release = () => {
+			releases++;
+		};
+		const failure = new Error('end listener');
+		if (mode === 'remove') reader.removeAllListeners('end');
+		else
+			reader.prependListener('end', () => {
+				expect(reader.hasEnded).toBe(true);
+				expect(releases).toBe(1);
+				throw failure;
+			});
+		const pending = reader.parseDemo(completeDemo);
+		if (mode === 'remove') expect(await pending).toEqual({ status: 'complete' });
+		else await expect(pending).rejects.toBe(failure);
+		expect(reader.hasEnded).toBe(true);
+		expect(releases).toBe(1);
+		await expect(reader.parseDemo(completeDemo)).rejects.toThrow('already been parsed');
+	});
+
+	test.each(['header', 'error', 'debug', 'end'] as const)(
+		'%s exceptions reject once and unlock input',
+		async event => {
+			const reader = new BrowserDemoReader();
+			const failure = new Error(`${event} listener`);
+			let calls = 0;
+			let cancellations = 0;
+			let ends = 0;
+			let releases = 0;
+			reader._snappy.release = () => {
+				releases++;
+			};
+			reader.on('end', () => {
+				ends++;
+			});
+			reader.on(event, () => {
+				calls++;
+				throw failure;
+			});
+			const source = new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(
+						event === 'error' ? invalidDemo : demoFile(demoFrame(EDemoCommands.DEM_FileHeader), stop)
+					);
+				},
+				cancel() {
+					cancellations++;
+				}
+			});
+			if (event === 'error') await expect(reader.parseDemo(source)).rejects.toBeInstanceOf(Error);
+			else await expect(reader.parseDemo(source)).rejects.toBe(failure);
+			expect(calls).toBe(1);
+			expect(ends).toBe(1);
+			expect(releases).toBe(1);
+			expect(cancellations).toBe(1);
+			expect(source.locked).toBe(false);
+			expect(reader.listenerCount('cancel')).toBe(0);
+		}
+	);
+
+	test('the first callback exception wins over end listener failures, even when it is undefined', async () => {
+		const reader = new BrowserDemoReader();
+		reader.on('header', () => {
+			throw undefined;
+		});
+		reader.on('end', () => {
+			throw new Error('secondary');
+		});
+		let rejected = false;
+		try {
+			await reader.parseDemo(demoFile(demoFrame(EDemoCommands.DEM_FileHeader), stop));
+		} catch (cause) {
+			rejected = true;
+			expect(cause).toBeUndefined();
+		}
+		expect(rejected).toBe(true);
+		expect(reader.hasEnded).toBe(true);
+	});
+
+	test('an error listener exception does not replace the decoder error in the end payload', async () => {
+		const reader = new BrowserDemoReader();
+		const failure = new Error('application');
+		let decodeError: unknown;
+		let endError: unknown;
+		reader.on('error', ({ error }) => {
+			decodeError = error;
+			throw failure;
+		});
+		reader.on('end', result => {
+			if (result.status === 'error') endError = result.error;
+		});
+		const pending = reader.parseDemo(invalidDemo);
+		await expect(pending).rejects.toBeInstanceOf(Error);
+		await expect(pending).rejects.toBe(decodeError);
+		expect(decodeError).toBeInstanceOf(Error);
+		expect(endError).toBe(decodeError);
+	});
+
+	test('throwing cancel listeners still end and settle a pending read', async () => {
+		const reader = new BrowserDemoReader();
+		const failure = new Error('cancel listener');
+		let ends = 0;
+		reader.on('cancel', () => {
+			throw failure;
+		});
+		reader.on('end', result => {
+			ends++;
+			expect(result).toEqual({ status: 'cancelled' });
+			throw new Error('secondary');
+		});
+		const source = new ReadableStream<Uint8Array>();
+		const pending = reader.parseDemo(source);
+		expect(() => reader.cancel()).toThrow(failure);
+		await expect(pending).rejects.toBe(failure);
+		expect(ends).toBe(1);
+		expect(reader.hasEnded).toBe(true);
+		expect(source.locked).toBe(false);
+	});
+});
+
 test('server readers own independent WASM decoders', () => {
 	const first = new DemoReader();
 	const second = new DemoReader();
@@ -47,7 +170,7 @@ for (const method of ['buffer', 'stream', 'path', 'chunked path'] as const) {
 
 			const result = await parse(reader, completeDemo);
 
-			expect(result).toEqual({ incomplete: false });
+			expect(result).toEqual({ status: 'complete' });
 			expect(ends).toHaveLength(1);
 			expect(ends[0]).toBe(result);
 			expect(reader.hasEnded).toBe(true);
@@ -55,23 +178,19 @@ for (const method of ['buffer', 'stream', 'path', 'chunked path'] as const) {
 
 		test('returns incomplete input without an end listener', async () => {
 			const result = await parse(new DemoReader(), Buffer.alloc(8));
-			expect(result).toEqual({ incomplete: true });
+			expect(result).toEqual({ status: 'incomplete' });
 		});
 
-		test('returns parse errors without end or error listeners', async () => {
-			const result = await parse(new DemoReader(), invalidDemo);
-			expect(result.error).toBeInstanceOf(Error);
-			expect(result.incomplete).toBe(false);
+		test('rejects parse errors without end or error listeners', async () => {
+			await expect(parse(new DemoReader(), invalidDemo)).rejects.toBeInstanceOf(Error);
 		});
 
 		test('a complete frame with truncated protobuf is corrupt, not incomplete input', async () => {
 			const corrupt = demoFile(demoFrame(EDemoCommands.DEM_FileHeader, Uint8Array.of(10, 20)));
-			const result = await parse(new DemoReader(), corrupt);
-			expect(result.error).toBeInstanceOf(RangeError);
-			expect(result.incomplete).toBe(false);
+			await expect(parse(new DemoReader(), corrupt)).rejects.toBeInstanceOf(RangeError);
 		});
 
-		test('preserves error events and returns the exact end event object', async () => {
+		test('preserves the same error in diagnostics and the rejected promise', async () => {
 			const reader = new DemoReader();
 			let emittedError: unknown;
 			let endResult: unknown;
@@ -82,11 +201,10 @@ for (const method of ['buffer', 'stream', 'path', 'chunked path'] as const) {
 				endResult = result;
 			});
 
-			const result = await parse(reader, invalidDemo);
-
-			expect(endResult).toBe(result);
-			expect(result.error).toBeInstanceOf(Error);
-			expect(result.error).toBe(emittedError);
+			const pending = parse(reader, invalidDemo);
+			await expect(pending).rejects.toBeInstanceOf(Error);
+			await expect(pending).rejects.toBe(emittedError);
+			expect(endResult).toEqual({ status: 'error', error: emittedError });
 		});
 
 		test('returns the cancellation payload', async () => {
@@ -97,23 +215,67 @@ for (const method of ['buffer', 'stream', 'path', 'chunked path'] as const) {
 
 			const result = await parse(reader, completeDemo);
 
-			expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+			expect(result).toEqual({ status: 'cancelled' });
 			expect(ends).toHaveLength(1);
 			expect(ends[0]).toBe(result);
 		});
 	});
 }
 
-test('returns a stream read error without an end listener', async () => {
+test('rejects a stream read error without an end listener', async () => {
 	const error = new Error('Read failed');
 	const stream = new Readable({
 		read() {
 			this.destroy(error);
 		}
 	});
-	const result = await new DemoReader().parseDemo(stream);
-	expect(result).toEqual({ incomplete: true, error });
-	expect(result.error).toBe(error);
+	await expect(new DemoReader().parseDemo(stream)).rejects.toBe(error);
+});
+
+test.each([DemoReader, BrowserDemoReader])('invalid input and reuse always return promises (%p)', async Reader => {
+	const reader = new Reader();
+	const invalid = reader.parseDemo(null as any);
+	expect(invalid).toBeInstanceOf(Promise);
+	await expect(invalid).rejects.toBeInstanceOf(TypeError);
+	expect(reader.hasEnded).toBe(false);
+	expect(await reader.parseDemo(completeDemo)).toEqual({ status: 'complete' });
+	const reused = reader.parseDemo(completeDemo);
+	expect(reused).toBeInstanceOf(Promise);
+	await expect(reused).rejects.toThrow('already been parsed');
+});
+
+test('missing files reject without diagnostic listeners', async () => {
+	await expect(new DemoReader().parseDemo(join(tempDir, 'missing.dem'))).rejects.toThrow('ENOENT');
+});
+
+test.each([DemoReader, BrowserDemoReader])('invalid options do not consume input or reserve %p', async Reader => {
+	for (const opts of [null, { decryptionKey: new Uint8Array(1) }, { entities: 99 }]) {
+		const reader = new Reader();
+		const source = new ReadableStream<Uint8Array>();
+		const pending = reader.parseDemo(source, opts as any);
+		expect(pending).toBeInstanceOf(Promise);
+		await expect(pending).rejects.toBeInstanceOf(Error);
+		expect(source.locked).toBe(false);
+		expect(reader.hasEnded).toBe(false);
+		expect(await reader.parseDemo(new Uint8Array())).toEqual({ status: 'incomplete' });
+	}
+});
+
+test('non-Error stream failures are normalized once for rejection and diagnostics', async () => {
+	const reader = new BrowserDemoReader();
+	let diagnostic: unknown;
+	reader.on('end', end => {
+		if (end.status === 'error') diagnostic = end.error;
+	});
+	const source = new ReadableStream<Uint8Array>({
+		start(c) {
+			c.error('read failed');
+		}
+	});
+	const pending = reader.parseDemo(source);
+	await expect(pending).rejects.toThrow('read failed');
+	await expect(pending).rejects.toBe(diagnostic);
+	expect(source.locked).toBe(false);
 });
 
 test.each([false, true])('cancelling a Node stream settles a pending read (emitClose=%s)', async emitClose => {
@@ -139,7 +301,7 @@ test.each([false, true])('cancelling a Node stream settles a pending read (emitC
 	await reading;
 	reader.cancel();
 	const result = await pending;
-	expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+	expect(result).toEqual({ status: 'cancelled' });
 	expect(ends).toEqual([result]);
 	expect(source.destroyed).toBe(true);
 	expect(destroys).toBe(1);
@@ -155,7 +317,7 @@ test('early completion closes a Node source that never sends EOF', async () => {
 			}
 		}
 	});
-	expect(await new DemoReader().parseDemo(source)).toEqual({ incomplete: false });
+	expect(await new DemoReader().parseDemo(source)).toEqual({ status: 'complete' });
 	expect(source.destroyed).toBe(true);
 });
 
@@ -172,9 +334,7 @@ test('a corrupt complete frame closes a stalled Node source without requesting m
 	const reader = new DemoReader();
 	const timeout = setTimeout(() => reader.cancel(), 1000);
 	try {
-		const result = await reader.parseDemo(source);
-		expect(result.error).toBeInstanceOf(RangeError);
-		expect(result.incomplete).toBe(false);
+		await expect(reader.parseDemo(source)).rejects.toBeInstanceOf(RangeError);
 		expect(source.destroyed).toBe(true);
 	} finally {
 		clearTimeout(timeout);
@@ -194,9 +354,7 @@ test('a corrupt complete frame cancels and unlocks a stalled Web Stream', async 
 	const reader = new BrowserDemoReader();
 	const timeout = setTimeout(() => reader.cancel(), 1000);
 	try {
-		const result = await reader.parseDemo(source);
-		expect(result.error).toBeInstanceOf(RangeError);
-		expect(result.incomplete).toBe(false);
+		await expect(reader.parseDemo(source)).rejects.toBeInstanceOf(RangeError);
 		expect(cancellations).toBe(1);
 		expect(source.locked).toBe(false);
 	} finally {
@@ -217,7 +375,7 @@ test('Web cancellation unblocks a pending read and cancels the source exactly on
 	const parsed = reader.parseDemo(source);
 	reader.cancel();
 	const result = await parsed;
-	expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+	expect(result).toEqual({ status: 'cancelled' });
 	expect(ends).toEqual([result]);
 	expect(ends[0]).toBe(result);
 	expect(cancelled).toBe(1);
@@ -237,12 +395,12 @@ test('early stop cancels unread Web input without waiting for EOF', async () => 
 	});
 	const parsed = new BrowserDemoReader().parseDemo(source);
 	controller.enqueue(demoFile(stop));
-	expect(await parsed).toEqual({ incomplete: false });
+	expect(await parsed).toEqual({ status: 'complete' });
 	expect(cancelled).toBe(1);
 	expect(source.locked).toBe(false);
 });
 
-test('Web source failures and invalid chunks preserve terminal errors and release the lock', async () => {
+test('Web source failures and invalid chunks reject and release the lock', async () => {
 	for (const afterPrefix of [false, true]) {
 		const error = new Error('source failure');
 		let first = true;
@@ -254,9 +412,7 @@ test('Web source failures and invalid chunks preserve terminal errors and releas
 				} else c.error(error);
 			}
 		});
-		const result = await new BrowserDemoReader().parseDemo(source);
-		expect(result).toEqual({ incomplete: true, error });
-		expect(result.error).toBe(error);
+		await expect(new BrowserDemoReader().parseDemo(source)).rejects.toBe(error);
 		expect(source.locked).toBe(false);
 	}
 	const source = new ReadableStream({
@@ -264,19 +420,18 @@ test('Web source failures and invalid chunks preserve terminal errors and releas
 			c.enqueue('invalid');
 		}
 	});
-	const result = await new BrowserDemoReader().parseDemo(source);
-	expect(result.error).toBeInstanceOf(TypeError);
+	await expect(new BrowserDemoReader().parseDemo(source as any)).rejects.toBeInstanceOf(TypeError);
 	expect(source.locked).toBe(false);
 });
 
 test('starting another demo or broadcast does not interrupt an active parse', async () => {
 	const reader = new BrowserDemoReader();
 	const pending = reader.parseDemo(new ReadableStream<Uint8Array>());
-	expect(() => reader.parseDemo(demoFile(stop))).toThrow('already in progress');
+	await expect(reader.parseDemo(demoFile(stop))).rejects.toThrow('already in progress');
 	await expect(reader.parseHttpBroadcast('https://unused.invalid/')).rejects.toThrow('already in progress');
 	expect(reader.hasEnded).toBe(false);
 	reader.cancel();
-	expect((await pending).reason).toBe('cancelled');
+	expect((await pending).status).toBe('cancelled');
 });
 
 test.each(['complete', 'error', 'cancel'])('decoder storage is released after %s', async outcome => {
@@ -292,13 +447,12 @@ test.each(['complete', 'error', 'cancel'])('decoder storage is released after %s
 		snappy.compressSync(bytesField(5, new TextEncoder().encode('de_nuke')))
 	);
 	if (outcome === 'cancel') reader.on('header', () => reader.cancel());
-	const result = await reader.parseDemo(
+	const pending = reader.parseDemo(
 		demoFile(header, outcome === 'error' ? demoFrame(EDemoCommands.DEM_FileHeader, Uint8Array.of(10, 255)) : stop)
 	);
+	if (outcome === 'error') await expect(pending).rejects.toBeInstanceOf(Error);
+	else expect(await pending).toEqual({ status: outcome === 'cancel' ? 'cancelled' : 'complete' });
 	expect(releases).toBe(1);
-	if (outcome === 'complete') expect(result).toEqual({ incomplete: false });
-	if (outcome === 'error') expect(result.error).toBeInstanceOf(Error);
-	if (outcome === 'cancel') expect(result.reason).toBe('cancelled');
 });
 
 test('overflowing frame varints fail in both the checked and lookahead paths', async () => {
@@ -310,9 +464,7 @@ test('overflowing frame varints fail in both the checked and lookahead paths', a
 		]) {
 			const bytes = demoFile(Uint8Array.from([...header, ...new Array(padding).fill(0)]));
 			for (const source of [bytes, Readable.from([bytes])]) {
-				const result = await new DemoReader().parseDemo(source);
-				expect(result.error?.message).toBe('Invalid frame varint');
-				expect(result.incomplete).toBe(false);
+				await expect(new DemoReader().parseDemo(source)).rejects.toThrow('Invalid frame varint');
 			}
 		}
 	}

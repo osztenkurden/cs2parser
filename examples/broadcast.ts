@@ -41,7 +41,7 @@ reader.on('gameevent', event => {
 });
 reader.on('end', end => {
 	console.log(
-		`[broadcast] done. reason=${end.reason} tick=${reader.currentTick} entities=${reader.entities.filter(Boolean).length} events=${eventCount}`
+		`[broadcast] done. status=${end.status} tick=${reader.currentTick} entities=${reader.entities.filter(Boolean).length} events=${eventCount}`
 	);
 });
 
@@ -60,9 +60,9 @@ process.on('SIGTERM', onSignal);
 
 try {
 	console.log(`[broadcast] connecting to ${relayUrl}`);
-	await httpReader.start();
-	const terminus = await httpReader.run();
-	if (terminus.reason === 'error') throw terminus.error;
+	const started = await httpReader.start();
+	const outcome = started.status === 'ready' ? await httpReader.run() : started;
+	console.log('[broadcast] outcome:', outcome.status);
 } catch (error) {
 	console.error('[broadcast] failed:', error);
 	process.exitCode = 1;

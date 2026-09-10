@@ -8,13 +8,13 @@ export class DemoReader extends BaseDemoReader {
 		super(new SnappyDecoder());
 	}
 
-	static parseHeaderAsync(source: MetadataInput) {
+	static async parseHeaderAsync(source: MetadataInput) {
 		return parseHeaderAsync(source, new SnappyDecoder());
 	}
-	static parseServerInfoAsync(source: MetadataInput) {
+	static async parseServerInfoAsync(source: MetadataInput) {
 		return parseServerInfoAsync(source, new SnappyDecoder());
 	}
-	static parseFileInfoAsync(source: MetadataInput) {
+	static async parseFileInfoAsync(source: MetadataInput) {
 		return parseFileInfoAsync(source, new SnappyDecoder());
 	}
 }

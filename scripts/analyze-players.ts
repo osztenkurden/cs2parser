@@ -175,5 +175,4 @@ console.log(
 		2
 	)
 );
-if (end.error) console.error(end.error);
-if (end.error || end.incomplete || coverage.unresolved > 0) process.exitCode = 1;
+if (end.status !== 'complete' || coverage.unresolved > 0) process.exitCode = 1;

@@ -74,7 +74,7 @@ test('nested compressed string tables and entries leave the outer packet intact'
 	reader.on('createstringtable', table => (retained = table?.table.data[0]?.value ?? undefined));
 	reader.on('serverinfo', info => (map = info.map_name));
 	expect(await reader.parseDemo(demoFile(frame, frame, demoFrame(EDemoCommands.DEM_Stop)))).toEqual({
-		incomplete: false
+		status: 'complete'
 	});
 	expect(map).toBe('de_nuke');
 	expect(retained).toEqual(value);

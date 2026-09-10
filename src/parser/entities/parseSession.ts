@@ -1,6 +1,6 @@
 import { BitBuffer } from '../ubitreader.js';
 import { decoders, type DecoderKeys, type Decoders } from '../descriptors/decoders.js';
-import { CDemoSendTables, EDemoCommands, type CDemoFullPacket, type CDemoPacket } from '../../ts-proto/demo.js';
+import { CDemoSendTables, EDemoCommands, type CDemoPacket } from '../../ts-proto/demo.js';
 import {
 	CMsgSource1LegacyGameEvent,
 	CMsgSource1LegacyGameEventList,
@@ -152,6 +152,7 @@ export class ParseSession {
 		parser: DemoReader,
 		settings?: ParseSessionOptions
 	) {
+		ParseSession.validateOptions(entityMode, settings);
 		this._frameBuf = buffer;
 		this._frameOffset = 16; // skip demo file header
 		this._frameLimit = buffer.length;
@@ -160,10 +161,25 @@ export class ParseSession {
 		this.emitMainQueue = emitMainQueue;
 		this.settings = settings;
 		if (settings?.decryptionKey !== undefined) {
-			if (!(settings.decryptionKey instanceof Uint8Array) || settings.decryptionKey.length !== 16) {
-				throw new TypeError('decryptionKey must contain exactly 16 bytes');
-			}
 			this.decryptionKey = Uint8Array.from(settings.decryptionKey);
+		}
+	}
+
+	/** Validate before reserving a parser or opening its input. */
+	static validateOptions(entityMode: EntityMode, settings?: ParseSessionOptions): void {
+		if (settings === null || (settings !== undefined && typeof settings !== 'object')) {
+			throw new TypeError('Parse options must be an object');
+		}
+		if (
+			entityMode !== EntityMode.NONE &&
+			entityMode !== EntityMode.ALL &&
+			entityMode !== EntityMode.ONLY_GAME_RULES
+		) {
+			throw new RangeError('Invalid entity mode');
+		}
+		const key = settings?.decryptionKey;
+		if (key !== undefined && (!(key instanceof Uint8Array) || key.length !== 16)) {
+			throw new TypeError('decryptionKey must contain exactly 16 bytes');
 		}
 	}
 
@@ -241,7 +257,7 @@ export class ParseSession {
 
 		try {
 			while (true) {
-				if (forceBreak) break;
+				if (forceBreak || this.parser.hasEnded) break;
 				this._frameMarked = this._frameOffset;
 				try {
 					if (++frameCount % 5000 === 0) {
@@ -255,6 +271,8 @@ export class ParseSession {
 						await new Promise<void>(resolve => setTimeout(resolve, 0));
 					}
 				} catch (e) {
+					// Queue delivery has already finalized the parser on a listener exception.
+					if (this.parser.hasEnded) throw e;
 					if (e === NEED_MORE_INPUT && readNextChunk) {
 						// Incremental stream input may stop in the middle of a frame. Restore
 						// the frame boundary before appending more bytes and trying again.
@@ -263,20 +281,14 @@ export class ParseSession {
 						try {
 							chunk = await readNextChunk();
 						} catch (streamError) {
-							if (!forceBreak) {
-								const error =
-									streamError instanceof Error
-										? streamError
-										: new Error(`Exception while reading demo stream: ${streamError}`);
-								this.enqueueEvent('end', { error, incomplete: true });
-							}
+							if (!forceBreak) throw streamError;
 							break;
 						}
 
 						if (forceBreak) break;
 						if (chunk === null) {
 							if (this._readingTrailer) this.finishDemo();
-							else this.enqueueEvent('end', { incomplete: true });
+							else this.enqueueEvent('end', { status: 'incomplete' });
 							break;
 						}
 
@@ -285,12 +297,9 @@ export class ParseSession {
 					}
 
 					if (e === NEED_MORE_INPUT) {
-						this.enqueueEvent('end', { incomplete: true });
+						this.enqueueEvent('end', { status: 'incomplete' });
 					} else {
-						const error = e instanceof Error ? e : new Error(`Exception during parsing: ${e}`);
-						this.enqueueEvent('debug', JSON.stringify(this.dumpState()));
-						this.enqueueEvent('error', { error: e } as any);
-						this.enqueueEvent('end', { error, incomplete: false });
+						throw e;
 					}
 					break;
 				}
@@ -347,74 +356,77 @@ export class ParseSession {
 			return v;
 		};
 
-		while (off < len && !this.parser.hasEnded) {
-			const command = readUVarInt32();
-			const rawTick = readLEUInt32() | 0; // sign-extend 32 bits
-			if (off >= len) throw new RangeError('Truncated broadcast fragment (reserved byte)');
-			const reserved = buf[off++]!;
-			if (reserved !== 0) {
-				this.enqueueEvent(
-					'debug',
-					`broadcast fragment reserved byte was 0x${reserved.toString(16)}, expected 0`
-				);
-			}
+		try {
+			while (off < len && !this.parser.hasEnded) {
+				const command = readUVarInt32();
+				const rawTick = readLEUInt32() | 0; // sign-extend 32 bits
+				if (off >= len) throw new RangeError('Truncated broadcast fragment (reserved byte)');
+				const reserved = buf[off++]!;
+				if (reserved !== 0) {
+					this.enqueueEvent(
+						'debug',
+						`broadcast fragment reserved byte was 0x${reserved.toString(16)}, expected 0`
+					);
+				}
 
-			if (command === 0) {
-				// End-of-stream marker. Don't read size/payload.
-				this.reportUserCmdDeltaHealth();
-				if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
-				this.enqueueEvent('end', { incomplete: false, reason: 'stop' });
-				this._resetFrameState();
-				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
-				return { ended: true };
-			}
+				if (command === 0) {
+					// End-of-stream marker. Don't read size/payload.
+					this.reportUserCmdDeltaHealth();
+					if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
+					if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
+					return { ended: true };
+				}
 
-			const size = readLEUInt32();
-			if (off + size > len) {
-				throw new RangeError(
-					`Truncated broadcast fragment (payload, want ${size} bytes, ${len - off} available)`
-				);
-			}
+				const size = readLEUInt32();
+				if (off + size > len) {
+					throw new RangeError(
+						`Truncated broadcast fragment (payload, want ${size} bytes, ${len - off} available)`
+					);
+				}
 
-			let tick = rawTick + tickOffset;
-			if (tick < 0) tick = -1;
+				let tick = rawTick + tickOffset;
+				if (tick < 0) tick = -1;
 
-			if (this.currentTick !== tick) {
-				if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
-				this.currentTick = tick;
-				this.enqueueEvent('tickstart', this.currentTick);
-			}
+				if (this.currentTick !== tick) {
+					if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
+					this.currentTick = tick;
+					this.enqueueEvent('tickstart', this.currentTick);
+				}
 
-			const commandType = command & ~EDemoCommands.DEM_IsCompressed;
-			const isCompressed = (command & EDemoCommands.DEM_IsCompressed) !== 0;
-			const decoder = decoders[commandType as keyof typeof decoders];
+				const commandType = command & ~EDemoCommands.DEM_IsCompressed;
+				const isCompressed = (command & EDemoCommands.DEM_IsCompressed) !== 0;
+				const decoder = decoders[commandType as keyof typeof decoders];
 
-			if (!decoder) {
-				this.noteUnknownFrameCommand(commandType, command, size);
+				if (!decoder) {
+					this.noteUnknownFrameCommand(commandType, command, size);
+					off += size;
+					continue;
+				}
+
+				// handleFrame -> baseParse -> decompressIfNeeded reads `size` bytes from
+				// _frameBuf starting at _frameOffset, and advances _frameOffset by `size`.
+				this._frameBuf = buf;
+				this._frameOffset = off;
+				this._frameLimit = off + size;
+				if (commandType === EDemoCommands.DEM_Packet || commandType === EDemoCommands.DEM_SignonPacket) {
+					// Broadcast wire format delivers the SVC bit-stream directly here;
+					// .dem files wrap it in a CDemoPacket envelope, broadcasts do not.
+					const data = this.decompressIfNeeded(size, isCompressed);
+					this.parsePacket({ data } as CDemoPacket);
+					if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
+				} else {
+					this.handleFrame(decoder, size, isCompressed);
+				}
 				off += size;
-				continue;
 			}
 
-			// handleFrame -> baseParse -> decompressIfNeeded reads `size` bytes from
-			// _frameBuf starting at _frameOffset, and advances _frameOffset by `size`.
-			this._frameBuf = buf;
-			this._frameOffset = off;
-			this._frameLimit = off + size;
-			if (commandType === EDemoCommands.DEM_Packet || commandType === EDemoCommands.DEM_SignonPacket) {
-				// Broadcast wire format delivers the SVC bit-stream directly here;
-				// .dem files wrap it in a CDemoPacket envelope, broadcasts do not.
-				const data = this.decompressIfNeeded(size, isCompressed);
-				this.parsePacket({ data } as CDemoPacket);
-				if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
-			} else {
-				this.handleFrame(decoder, size, isCompressed);
-			}
-			off += size;
+			if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
+			return { ended: false };
+		} finally {
+			// Best-effort fragment recovery must not replay undelivered notifications.
+			this.eventQueue.length = 0;
+			this._resetFrameState();
 		}
-
-		this._resetFrameState();
-		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
-		return { ended: false };
 	}
 
 	private _resetFrameState(): void {
@@ -425,7 +437,7 @@ export class ParseSession {
 
 	/** Flush remaining events to the consumer. */
 	flush(): void {
-		this.emitMainQueue(this.eventQueue, 0, false);
+		this.emitMainQueue(this.eventQueue);
 	}
 
 	// === Buffer management ===
@@ -508,14 +520,11 @@ export class ParseSession {
 	private baseParse<T extends Decoders[DecoderKeys]['decode']>(
 		decoder: T,
 		size: number,
-		isCompressed: boolean,
-		handler?: (data: ReturnType<T>) => ReturnType<T> | void
-	) {
+		isCompressed: boolean
+	): ReturnType<T> {
 		const data = this.decompressIfNeeded(size, isCompressed);
 		this.binaryR.setTo(data);
-		const decoded = decoder(this.binaryR);
-		if (!handler) return decoded as ReturnType<T>;
-		return handler(decoded as ReturnType<T>);
+		return decoder(this.binaryR) as ReturnType<T>;
 	}
 
 	// === Frame-level parsing ===
@@ -601,7 +610,7 @@ export class ParseSession {
 		this.reportUserCmdDeltaHealth();
 		this.enqueueEvent('tickend', this.currentTick);
 		this.enqueueEvent('progress', this.getProgress());
-		this.enqueueEvent('end', { incomplete: false });
+		this.enqueueEvent('end', { status: 'complete' });
 		return false;
 	}
 
@@ -623,9 +632,7 @@ export class ParseSession {
 			case EDemoCommands.DEM_SendTables:
 				this.sendTables = this.baseParse(decoder.decode, size, isCompressed) ?? null;
 				if (this.sendTables?.data) {
-					const copy = new Uint8Array(new ArrayBuffer(this.sendTables.data.byteLength));
-					copy.set(new Uint8Array(this.sendTables.data));
-					this.sendTables.data = copy;
+					this.sendTables.data = Uint8Array.from(this.sendTables.data);
 				}
 				break;
 			case EDemoCommands.DEM_ClassInfo: {
@@ -646,44 +653,40 @@ export class ParseSession {
 				break;
 			}
 			case EDemoCommands.DEM_FileHeader:
-				this.baseParse(decoder.decode, size, isCompressed, header => {
-					this.enqueueEvent('header', header);
-				});
+				this.enqueueEvent('header', this.baseParse(decoder.decode, size, isCompressed));
 				break;
 			case EDemoCommands.DEM_Packet:
 			case EDemoCommands.DEM_SignonPacket:
-				this.baseParse(decoders[EDemoCommands.DEM_Packet].decode, size, isCompressed, packet => {
-					this.parsePacket(packet);
-				});
+				this.parsePacket(this.baseParse(decoders[EDemoCommands.DEM_Packet].decode, size, isCompressed));
 				break;
-			case EDemoCommands.DEM_FullPacket:
-				this.baseParse(decoder.decode, size, isCompressed, (fullPacket: CDemoFullPacket) => {
-					if (fullPacket.string_table) {
-						for (const snapshot of fullPacket.string_table.tables) {
-							const result = applyStringTableSnapshot(snapshot, this.baselines);
-							// Mid-stream broadcast joiners receive their initial userinfo via
-							// FullPacket snapshots rather than incremental updatestringtable
-							// packets. Re-emit those entries as a synthetic updatestringtable
-							// so DemoReader's _playerInfoMap listener picks them up.
-							if (result?.name === 'userinfo' && result.players.length > 0) {
-								this.enqueueEvent('updatestringtable', {
-									tableId: -1,
-									players: result.players,
-									table: {
-										name: 'userinfo',
-										data: [],
-										user_data_size: 0,
-										user_data_fixed_size: false,
-										flags: 0,
-										using_varint_bitcounts: false
-									}
-								});
-							}
+			case EDemoCommands.DEM_FullPacket: {
+				const fullPacket = this.baseParse(decoder.decode, size, isCompressed);
+				if (fullPacket.string_table) {
+					for (const snapshot of fullPacket.string_table.tables) {
+						const result = applyStringTableSnapshot(snapshot, this.baselines);
+						// Mid-stream broadcast joiners receive their initial userinfo via
+						// FullPacket snapshots rather than incremental updatestringtable
+						// packets. Re-emit those entries as a synthetic updatestringtable
+						// so DemoReader's _playerInfoMap listener picks them up.
+						if (result?.name === 'userinfo' && result.players.length > 0) {
+							this.enqueueEvent('updatestringtable', {
+								tableId: -1,
+								players: result.players,
+								table: {
+									name: 'userinfo',
+									data: [],
+									user_data_size: 0,
+									user_data_fixed_size: false,
+									flags: 0,
+									using_varint_bitcounts: false
+								}
+							});
 						}
 					}
-					if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
-				});
+				}
+				if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
 				break;
+			}
 			default: {
 				// Every other frame command is listenable by its EDemoCommands name and
 				// decoded only when someone is listening.
@@ -697,7 +700,7 @@ export class ParseSession {
 				break;
 			}
 		}
-		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue, 0, false);
+		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
 	}
 
 	/**
@@ -1018,13 +1021,5 @@ export class ParseSession {
 			packetEntitiesQueue.length = 0;
 			gameEventQueue.length = 0;
 		}
-	}
-
-	private dumpState() {
-		return {
-			currentTick: this.currentTick,
-			bytebufferOffset: this._frameOffset,
-			bytebufferRemaining: this._frameLimit - this._frameOffset
-		};
 	}
 }

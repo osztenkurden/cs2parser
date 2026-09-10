@@ -29,10 +29,10 @@ try {
 	for (const source of [path, Uint8Array.from(demo), Readable.from([demo])]) {
 		const reader = new DemoReader();
 		assert(reader._snappy instanceof SnappyDecoder);
-		assert.deepEqual(await reader.parseDemo(source), { incomplete: false });
+		assert.deepEqual(await reader.parseDemo(source), { status: 'complete' });
 		assert.equal(reader.header.map_name, 'de_nuke');
 	}
-	assert.deepEqual(await new DemoReader().parseDemo(path, { stream: false }), { incomplete: false });
+	assert.deepEqual(await new DemoReader().parseDemo(path, { stream: false }), { status: 'complete' });
 	for (const emitClose of [false, true]) {
 		let requested;
 		const reading = new Promise(resolve => {
@@ -48,7 +48,7 @@ try {
 		const pending = cancelled.parseDemo(stalled);
 		await reading;
 		cancelled.cancel();
-		assert.deepEqual(await pending, { incomplete: true, reason: 'cancelled' });
+		assert.deepEqual(await pending, { status: 'cancelled' });
 		assert.equal(stalled.destroyed, true);
 	}
 	let sent = false;
@@ -60,7 +60,7 @@ try {
 			}
 		}
 	});
-	assert.deepEqual(await new DemoReader().parseDemo(withoutEOF), { incomplete: false });
+	assert.deepEqual(await new DemoReader().parseDemo(withoutEOF), { status: 'complete' });
 	assert.equal(withoutEOF.destroyed, true);
 	assert.equal((await DemoReader.parseHeaderAsync(path)).map_name, 'de_nuke');
 	for (const source of [path, demo, Uint8Array.from(demo)]) {
@@ -80,8 +80,18 @@ try {
 		await assert.rejects(read(join(directory, 'missing.dem')));
 	}
 	const browser = new BrowserReader();
-	assert.deepEqual(await browser.parseDemo(new Blob([demo]).stream()), { incomplete: false });
+	assert.deepEqual(await browser.parseDemo(new Blob([demo]).stream()), { status: 'complete' });
 	assert.equal(browser.header.map_name, 'de_nuke');
+	for (const Reader of [DemoReader, BrowserReader]) {
+		const parser = new Reader();
+		const invalid = parser.parseDemo(null);
+		assert(invalid instanceof Promise);
+		await assert.rejects(invalid, TypeError);
+		const corrupt = Buffer.concat([Buffer.alloc(16), Buffer.from([1, 1, 3, 15, 0, 0])]);
+		await assert.rejects(parser.parseDemo(corrupt));
+		assert.equal(parser.hasEnded, true);
+		await assert.rejects(parser.parseDemo(demo), /already been parsed/);
+	}
 	const output = new Uint8Array(9);
 	assert.equal(new SnappyDecoder().uncompress(header, output), output);
 	assert.deepEqual(output, Uint8Array.of(42, 7, ...Buffer.from('de_nuke')));

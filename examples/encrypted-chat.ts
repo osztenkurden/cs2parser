@@ -16,7 +16,7 @@ reader.on('chat', message => {
 });
 reader.on('debug', message => console.error(message));
 const result = await reader.parseDemo(demoPath, { decryptionKey });
-if (result.error || result.incomplete) {
+if (result.status !== 'complete') {
 	console.error('Demo parsing did not complete:', result);
 	process.exitCode = 1;
 }

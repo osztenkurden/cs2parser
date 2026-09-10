@@ -22,7 +22,7 @@ await parser.parseHttpBroadcast('http://relay.example.com/match-id/', {
 });
 ```
 
-`parseHttpBroadcast` resolves when the broadcast ends (`{ reason: 'stop' }`), the relay stops returning new fragments (`'timeout'`), or the parser is cancelled. It throws if the relay returns a fatal error.
+`parseHttpBroadcast` returns `Promise<BroadcastOutcome>`: `{ status: 'complete' }`, `{ status: 'timeout' }`, or `{ status: 'cancelled' }`. Fatal failures and synchronous application callback exceptions reject, just like `parseDemo`. Timeout is a nonfailure policy outcome: the relay stopped supplying new fragments after the configured retries; it does not prove the match ended.
 
 ### `HttpBroadcastReader` (finer control)
 
@@ -35,10 +35,10 @@ const parser = new DemoReader();
 parser.on('broadcastsync', sync => console.log('connected', sync.map, 'tick', sync.tick));
 
 const reader = new HttpBroadcastReader(parser, 'http://relay.example.com/match-id/');
-await reader.start(); // /sync + /start + first /full
+const started = await reader.start(); // /sync + /start + first /full + initial /delta attempt
 console.log('tail tick:', reader.tailTick);
-const terminus = await reader.run(); // /N/delta loop
-console.log(terminus.reason); // 'stop' | 'timeout' | 'cancelled' | 'error'
+const outcome = started.status === 'ready' ? await reader.run() : started;
+console.log(outcome.status); // 'complete' | 'timeout' | 'cancelled'
 ```
 
 | Option                 | Type                                                    | Default            | Description                                                                                                                                |
@@ -53,7 +53,27 @@ console.log(terminus.reason); // 'stop' | 'timeout' | 'cancelled' | 'error'
 | `onFragmentError`      | `(err, ctx) => 'abort' \| 'continue'`                   | `'abort'`          | Skip a malformed fragment instead of aborting                                                                                              |
 | `gameEventDescriptors` | `CMsgSource1LegacyGameEventList \| Uint8Array \| false` | bundled            | Preload the game-event descriptor list (see below). Defaults to the descriptor file shipped with the package; pass `false` to skip preload |
 
-`reader.stop()` aborts the loop and pending fetches; `reader.sync`, `reader.fragment`, `reader.tailTick` expose live state.
+`reader.stop()` aborts the loop and pending fetches; `reader.sync`, `reader.fragment`, `reader.tailTick` expose live state. `stop()` is idempotent and also completes cancellation between an awaited `start()` and `run()`, without requiring a later `run()` call. The external signal and `parser.cancel()` also cancel in that interval. A custom fetcher must honor its `AbortSignal` to settle pending I/O promptly.
+
+### Error contracts
+
+All async entry points reject failures, including invalid lifecycle calls. No `error` listener is required:
+
+| Operation | Failure behavior |
+| --- | --- |
+| `start()` session options or parser admission | Rejects before I/O; invalid session options do not reserve or end the parser. |
+| `start()` sync fetch, sync validation, descriptor setup | Rejects; an attached parser is ended and broadcast listeners are removed. |
+| `start()` signup/full fetch or unrecovered fragment decode failure | Rejects after terminal cleanup. |
+| Initial delta attempt | A fatal fetch/decode exception rejects; a 404/405 unavailable response logs a diagnostic and continues from the keyframe. |
+| `run()` operational failure | Rejects after terminal cleanup. Delta 404/405 retry exhaustion instead fulfills `{ status: 'timeout' }`. |
+| `start()` or `run()` synchronous application callback exception | Rejects with the original thrown value after terminal cleanup. |
+| `parseHttpBroadcast()` | Returns a terminal `BroadcastOutcome`, or rejects for failure in either phase. |
+
+`start()` returns the exported `BroadcastStartOutcome`, `{ status: 'ready' } | BroadcastOutcome`. Check readiness before calling `run()`: startup can consume an end marker (`complete`) or be cancelled, without needing a subsequent run to clean up. Always await `start()` before `run()`. Pending-start and concurrent-run calls reject without starting another fetch loop. Both parser and broadcast reader are single-use after admission; repeated `run()` after termination returns the stored outcome or rejects the original failure. Invalid options do not reserve the parser. Retry counts must be nonnegative integers; intervals must be finite nonnegative numbers.
+
+`onFragmentError` only handles fragment decoding failures. Returning `'continue'` skips a failed fragment but does not roll back partially applied state. Listener exceptions are not offered to this recovery callback. If `onFragmentError` itself throws, the active operation rejects and terminates. A secondary `end` listener exception cannot replace the original exception being rejected; existing operational errors remain in their terminal payloads.
+
+Synchronous `broadcastsync`, fragment-event, diagnostic, and terminal listeners follow the [parser callback policy](parsing.md#errors-and-callbacks): no event replay, cleanup independent of public listeners, and no awaiting `async` listeners. `stop()` between operations can synchronously throw an `end` listener exception, but terminal state and listener cleanup are already completed. Exceptions in listeners invoked by `AbortSignal` dispatch follow the host's EventTarget reporting rules when there is no active reader operation to reject.
 
 ### Mid-stream joins and `gameEventDescriptors`
 
@@ -104,14 +124,13 @@ parser.on('broadcastsync', sync => {
 });
 ```
 
-Terminus reasons returned by `run()`:
+Outcome statuses returned by `run()` and `parseHttpBroadcast()`:
 
 | Reason        | Meaning                                                                              |
 | ------------- | ------------------------------------------------------------------------------------ |
-| `'stop'`      | Broadcast ended cleanly (`cmd === 0` end-of-stream marker received)                  |
+| `'complete'`  | Broadcast ended cleanly (`cmd === 0` end-of-stream marker received)                  |
 | `'timeout'`   | `maxDeltaRetries` consecutive 404/405s on `/delta` (relay stopped advancing)         |
 | `'cancelled'` | `reader.stop()`, `parser.cancel()`, or external `signal` aborted                     |
-| `'error'`     | Fatal error (HTTP failure, malformed fragment without `onFragmentError: 'continue'`) |
 
 ### Diagnostic scripts
 
