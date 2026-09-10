@@ -1,4 +1,4 @@
-import { DemoReader } from './../src/index.js';
+import { DemoReader } from '../src/index.js';
 const demoPath = process.argv[2];
 
 if (!demoPath) {
@@ -8,20 +8,10 @@ if (!demoPath) {
 
 const reader = new DemoReader();
 
-// CS2 uses both chat messages depending on the server. UM_SayText2 carries the
-// sender's entity index and localisation params; UM_SayText carries a player
-// index and a pre-formatted string. Listen for both or you'll miss half of them.
-reader.on('UM_SayText2', e => {
-	if (e.entityindex === undefined) return;
-	const player = reader.players[e.entityindex - 1];
-	console.log(player?.name, e.param2);
+// The chat event combines both SayText formats and resolves the sender.
+reader.on('chat', message => {
+	console.log(message.playerInfo?.name ?? 'server', message.text);
 });
 
-reader.on('UM_SayText', e => {
-	const player = e.playerindex !== undefined ? reader.players[e.playerindex - 1] : undefined;
-	console.log(player?.name, e.text);
-});
-
-reader.gameEvents.on('player_chat', console.log);
-
+// Userinfo is available without entity parsing.
 await reader.parseDemo(demoPath);

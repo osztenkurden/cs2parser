@@ -6,6 +6,7 @@ export type { DemoFrameEvents } from '../descriptors/decoders.js';
 import type { CSGOUserCmdPB } from '../../ts-proto/cs_usercmd.js';
 import type { CMsgSource1LegacyGameEventList, CMsgSource1LegacyGameEvent } from '../../ts-proto/gameevents.js';
 import type { CSVCMsg_ServerInfo } from '../../ts-proto/netmessages.js';
+import type { CMsgPlayerInfo } from '../../ts-proto/networkbasetypes.js';
 import type { CUserMessageSayText, CUserMessageSayText2 } from '../../ts-proto/usermessages.js';
 import type { NetMessageName, NetMessagePayload } from '../descriptors/generated/messageRegistry.js';
 import type { OnDemandMessageName } from '../descriptors/svc.js';
@@ -86,6 +87,8 @@ export type UserCommand = {
 export type ChatMessage = {
 	/** Sender, or null for server messages and players without a controller entity. */
 	player: Player | null;
+	/** Sender's userinfo entry, available without entities; null for server messages or missing userinfo. */
+	playerInfo: CMsgPlayerInfo | null;
 	/** Message body. */
 	text: string;
 	/** Which user message carried it — CS2 servers use both. */

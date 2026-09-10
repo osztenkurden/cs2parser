@@ -2,11 +2,35 @@ import { test, expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import type * as Browser from '../../src/browser.js';
 import { canonicalize, PARITY_CHUNK_SIZES, PARITY_MODES, sha256 } from '../helpers/parity.js';
+import { BinaryWriter } from '@bufbuild/protobuf/wire';
+import { bytesField, demoFile, demoFrame, networkPacket } from '../helpers/demo.js';
+import { encryptedChatCiphertext, encryptedChatKeyValue } from '../helpers/encryptedChat.js';
 
 type BrowserTestModule = typeof Browser & typeof import('../helpers/parity.js');
 
 test.beforeEach(async ({ page }) => {
 	await page.goto('/');
+});
+
+test('published browser export extracts a match key and decrypts public chat', async ({ page }) => {
+	const envelope = new BinaryWriter().uint32(10).bytes(encryptedChatCiphertext).uint32(16).int32(2).finish();
+	const demo = demoFile(demoFrame(7, bytesField(3, networkPacket([{ id: 78, body: envelope }]))), demoFrame(0));
+	const info = bytesField(3, new BinaryWriter().uint32(56).uint64(encryptedChatKeyValue).finish());
+	const result = await page.evaluate(
+		async ({ demo, info }) => {
+			const moduleUrl = '/bundle.mjs';
+			const { DemoReader, extractPublicEncryptionKey } = (await import(moduleUrl)) as typeof Browser;
+			const reader = new DemoReader();
+			const texts: string[] = [];
+			reader.on('chat', message => texts.push(message.text));
+			const end = await reader.parseDemo(new Blob([Uint8Array.from(demo)]).stream(), {
+				decryptionKey: extractPublicEncryptionKey(Uint8Array.from(info))
+			});
+			return { texts, end, nodeGlobals: 'Buffer' in globalThis || 'process' in globalThis };
+		},
+		{ demo: [...demo], info: [...info] }
+	);
+	expect(result).toEqual({ texts: ['Hello, world!'], end: { incomplete: false }, nodeGlobals: false });
 });
 
 test('published export parses File and fetch streams without Node globals or isolation', async ({ page }) => {

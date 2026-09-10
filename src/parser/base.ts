@@ -5,7 +5,7 @@ import { GameEvents } from './descriptors/gameEventEmitter.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { EntityMode, type EmitQueue, type OutputEvents } from './entities/types.js';
 import type { Decoder, PropInfo } from './entities/constructorFields.js';
-import { ParseSession, type ParseSettings } from './entities/parseSession.js';
+import { ParseSession, type ParseSessionOptions, type ParseSettings } from './entities/parseSession.js';
 import { applyPropUpdate } from './entities/entityParser.js';
 import { Player } from '../helpers/player.js';
 import { Team } from '../helpers/team.js';
@@ -29,7 +29,7 @@ const steamIdToAccountId = (steamId: bigint | number): number => {
 };
 
 export type DemoInput = Uint8Array | ReadableStream<Uint8Array>;
-export type ParseOptions = { entities?: EntityMode } & ParseSettings;
+export type ParseOptions = { entities?: EntityMode } & ParseSessionOptions;
 interface DemoStreamReader {
 	read(): Promise<{ done?: boolean; value?: Uint8Array }>;
 	cancel(reason?: unknown): Promise<unknown>;

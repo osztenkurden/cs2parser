@@ -1,5 +1,5 @@
 import type { BaseDemoReader as DemoReader } from '../parser/base.js';
-import { ParseSession, type ParseSettings } from '../parser/entities/parseSession.js';
+import { ParseSession, type ParseSessionOptions } from '../parser/entities/parseSession.js';
 import { EntityMode, type EndReason } from '../parser/entities/types.js';
 import { CMsgSource1LegacyGameEventList } from '../ts-proto/gameevents.js';
 import { loadBundledEventDescriptors } from './defaultEventDescriptors.js';
@@ -13,7 +13,7 @@ export interface FragmentErrorContext {
 	phase: 'signup' | 'full' | 'delta';
 }
 
-export interface HttpBroadcastOptions extends ParseSettings {
+export interface HttpBroadcastOptions extends ParseSessionOptions {
 	/** Entity parsing mode (default: EntityMode.NONE). */
 	entities?: EntityMode;
 	/** Custom fetcher; defaults to one built around `globalThis.fetch`. */

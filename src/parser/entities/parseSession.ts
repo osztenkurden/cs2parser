@@ -8,6 +8,7 @@ import {
 } from '../../ts-proto/gameevents.js';
 import {
 	CSVCMsg_CreateStringTable,
+	CSVCMsg_EncryptedData,
 	CSVCMsg_PacketEntities,
 	CSVCMsg_ServerInfo,
 	CSVCMsg_UpdateStringTable,
@@ -29,6 +30,7 @@ import { parseClassInfo } from './classInfo.js';
 import { EntityParser } from './entityParser.js';
 import type { BaseDemoReader as DemoReader } from '../base.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
+import { EncryptedMessageDecoder } from '../../encryption/encryptedMessage.js';
 
 /**
  * Per-message decode overrides, one optional boolean per network message name.
@@ -40,6 +42,11 @@ import { BinaryReaderEditable } from '../../binary-encoding/index.js';
  */
 export type ParseSettings = {
 	[K in keyof OnDemandEvents]?: boolean;
+};
+
+export type ParseSessionOptions = ParseSettings & {
+	/** Public GOTV key: 16 bytes from extractPublicEncryptionKey(.dem.info bytes). Decrypts key_type 2 only. */
+	decryptionKey?: Uint8Array;
 };
 
 /**
@@ -92,6 +99,10 @@ export class ParseSession {
 	private readonly emitMainQueue: EmitQueue;
 
 	private readonly settings: ParseSettings | undefined;
+	private readonly decryptionKey: Uint8Array | undefined;
+	private encryptedDecoder: EncryptedMessageDecoder | undefined;
+	private decryptMessages = false;
+	private readonly encryptedWarnings = new Set<string>();
 
 	// Bound reference for EntityParser (avoids .bind() on every call)
 	private readonly enqueueEvent: emit = (eventName, data) => {
@@ -139,7 +150,7 @@ export class ParseSession {
 		entityMode: EntityMode,
 		emitMainQueue: EmitQueue,
 		parser: DemoReader,
-		settings?: ParseSettings
+		settings?: ParseSessionOptions
 	) {
 		this._frameBuf = buffer;
 		this._frameOffset = 16; // skip demo file header
@@ -148,6 +159,12 @@ export class ParseSession {
 		this.parser = parser;
 		this.emitMainQueue = emitMainQueue;
 		this.settings = settings;
+		if (settings?.decryptionKey !== undefined) {
+			if (!(settings.decryptionKey instanceof Uint8Array) || settings.decryptionKey.length !== 16) {
+				throw new TypeError('decryptionKey must contain exactly 16 bytes');
+			}
+			this.decryptionKey = Uint8Array.from(settings.decryptionKey);
+		}
 	}
 
 	/**
@@ -159,7 +176,7 @@ export class ParseSession {
 		entityMode: EntityMode,
 		emitMainQueue: EmitQueue,
 		parser: DemoReader,
-		settings?: ParseSettings
+		settings?: ParseSessionOptions
 	): ParseSession {
 		const session = new ParseSession(new Uint8Array(0), entityMode, emitMainQueue, parser, settings);
 		session._frameOffset = 0;
@@ -693,8 +710,9 @@ export class ParseSession {
 	private handleOptionalCommand(entry: MessageEntry | undefined, id: number, reader: BitBuffer, size: number) {
 		const wantsMessage = entry !== undefined && this.isMessageEnabled(entry.name, entry.id);
 		const wantsRaw = this.rawListener;
+		const wantsDecryption = id === SVC_Messages.svc_EncryptedData && this.decryptMessages;
 
-		if (!wantsMessage && !wantsRaw) {
+		if (!wantsMessage && !wantsRaw && !wantsDecryption) {
 			reader.skipBytesBetter(size);
 			return;
 		}
@@ -706,16 +724,40 @@ export class ParseSession {
 		// allocates for messages somebody asked for.
 		const msgContent = new Uint8Array(size);
 		reader.readBytes(msgContent);
+		this.emitOptionalMessage(entry, id, msgContent, wantsDecryption);
+	}
 
-		if (wantsRaw) {
+	private emitOptionalMessage(entry: MessageEntry | undefined, id: number, msgContent: Uint8Array, decrypt = false) {
+		if (this.rawListener) {
 			this.enqueueEvent('anymessage', { name: entry?.name, id, bytes: msgContent });
 		}
-		if (wantsMessage) {
+		if (entry && (this.isMessageEnabled(entry.name, id) || decrypt)) {
 			const decoded = entry.class.decode(msgContent);
 			if ((this.parser?.listenerCount(entry.name) ?? 0) > 0) {
 				this.enqueueEvent(entry.name as 'debug', decoded as never);
 			}
 			if (this._derivedSources.has(entry.id)) this.emitDerived(entry.id, decoded);
+			if (decrypt) this.handleEncryptedMessage(decoded as CSVCMsg_EncryptedData);
+		}
+	}
+
+	private handleEncryptedMessage(message: CSVCMsg_EncryptedData): void {
+		// Team/private communication uses a separate key that public match info does not provide.
+		if (message.key_type !== 2) return;
+		try {
+			this.encryptedDecoder ??= new EncryptedMessageDecoder(this.decryptionKey!);
+			const inner = this.encryptedDecoder.decode(message.encrypted ?? new Uint8Array(0));
+			const entry = messageById[inner.id];
+			if (entry?.core || inner.id === SVC_Messages.svc_EncryptedData) {
+				throw new Error('Unsupported encrypted inner message type');
+			}
+			this.emitOptionalMessage(entry, inner.id, inner.bytes);
+		} catch (error) {
+			// A missing/wrong match key or malformed optional chat must not abort gameplay parsing.
+			const reason = error instanceof Error ? error.message : String(error);
+			if (this.encryptedWarnings.has(reason)) return;
+			this.encryptedWarnings.add(reason);
+			this.enqueueEvent('debug', `Unable to decrypt public GOTV message: ${reason}`);
 		}
 	}
 
@@ -746,6 +788,17 @@ export class ParseSession {
 			if ((this.parser?.listenerCount(event) ?? 0) === 0) continue;
 			for (const id of sources) this._derivedSources.add(id);
 		}
+		this.decryptMessages =
+			this.decryptionKey !== undefined &&
+			this.settings?.svc_EncryptedData !== false &&
+			(this.rawListener ||
+				messageById.some(
+					entry =>
+						entry !== undefined &&
+						!entry.core &&
+						entry.id !== SVC_Messages.svc_EncryptedData &&
+						this.isMessageEnabled(entry.name, entry.id)
+				));
 	}
 
 	/**
@@ -820,6 +873,7 @@ export class ParseSession {
 			const index = isSayText2 ? raw.entityindex : raw.playerindex;
 			this.enqueueEvent('chat', {
 				player: index !== undefined && index > 0 ? (this.parser?.getPlayer(index) ?? null) : null,
+				playerInfo: index !== undefined && index > 0 ? (this.parser?.players[index - 1] ?? null) : null,
 				text: (isSayText2 ? raw.param2 : raw.text) ?? '',
 				source: isSayText2 ? 'UM_SayText2' : 'UM_SayText',
 				messageName: isSayText2 ? raw.messagename : undefined,
