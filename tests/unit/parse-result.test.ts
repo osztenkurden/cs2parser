@@ -22,6 +22,128 @@ const completeDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands
 const invalidDemo = Buffer.concat([Buffer.alloc(16), Buffer.from([EDemoCommands.DEM_FileHeader, 1, 3, 0x0f, 0, 0])]);
 const stop = demoFrame(EDemoCommands.DEM_Stop);
 
+describe('listener failure lifecycle', () => {
+	test.each(['remove', 'prepend'] as const)('end cleanup cannot be bypassed by %s listeners', async mode => {
+		const reader = new BrowserDemoReader();
+		let releases = 0;
+		reader._snappy.release = () => {
+			releases++;
+		};
+		const failure = new Error('end listener');
+		if (mode === 'remove') reader.removeAllListeners('end');
+		else
+			reader.prependListener('end', () => {
+				expect(reader.hasEnded).toBe(true);
+				expect(releases).toBe(1);
+				throw failure;
+			});
+		const pending = reader.parseDemo(completeDemo);
+		if (mode === 'remove') expect(await pending).toEqual({ incomplete: false });
+		else await expect(pending).rejects.toBe(failure);
+		expect(reader.hasEnded).toBe(true);
+		expect(releases).toBe(1);
+		expect(() => reader.parseDemo(completeDemo)).toThrow('already been parsed');
+	});
+
+	test.each(['header', 'error', 'debug', 'end'] as const)(
+		'%s exceptions reject once and unlock input',
+		async event => {
+			const reader = new BrowserDemoReader();
+			const failure = new Error(`${event} listener`);
+			let calls = 0;
+			let cancellations = 0;
+			let ends = 0;
+			let releases = 0;
+			reader._snappy.release = () => {
+				releases++;
+			};
+			reader.on('end', () => {
+				ends++;
+			});
+			reader.on(event, () => {
+				calls++;
+				throw failure;
+			});
+			const source = new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(
+						event === 'error' || event === 'debug'
+							? invalidDemo
+							: demoFile(demoFrame(EDemoCommands.DEM_FileHeader), stop)
+					);
+				},
+				cancel() {
+					cancellations++;
+				}
+			});
+			await expect(reader.parseDemo(source)).rejects.toBe(failure);
+			expect(calls).toBe(1);
+			expect(ends).toBe(1);
+			expect(releases).toBe(1);
+			expect(cancellations).toBe(1);
+			expect(source.locked).toBe(false);
+			expect(reader.listenerCount('cancel')).toBe(0);
+		}
+	);
+
+	test('the first callback exception wins over end listener failures, even when it is undefined', async () => {
+		const reader = new BrowserDemoReader();
+		reader.on('header', () => {
+			throw undefined;
+		});
+		reader.on('end', () => {
+			throw new Error('secondary');
+		});
+		let rejected = false;
+		try {
+			await reader.parseDemo(demoFile(demoFrame(EDemoCommands.DEM_FileHeader), stop));
+		} catch (cause) {
+			rejected = true;
+			expect(cause).toBeUndefined();
+		}
+		expect(rejected).toBe(true);
+		expect(reader.hasEnded).toBe(true);
+	});
+
+	test('an error listener exception does not replace the decoder error in the end payload', async () => {
+		const reader = new BrowserDemoReader();
+		const failure = new Error('application');
+		let decodeError: unknown;
+		let endError: unknown;
+		reader.on('error', ({ error }) => {
+			decodeError = error;
+			throw failure;
+		});
+		reader.on('end', ({ error }) => {
+			endError = error;
+		});
+		await expect(reader.parseDemo(invalidDemo)).rejects.toBe(failure);
+		expect(decodeError).toBeInstanceOf(Error);
+		expect(endError).toBe(decodeError);
+	});
+
+	test('throwing cancel listeners still end and settle a pending read', async () => {
+		const reader = new BrowserDemoReader();
+		const failure = new Error('cancel listener');
+		let ends = 0;
+		reader.on('cancel', () => {
+			throw failure;
+		});
+		reader.on('end', result => {
+			ends++;
+			expect(result).toEqual({ incomplete: true, reason: 'cancelled' });
+			throw new Error('secondary');
+		});
+		const source = new ReadableStream<Uint8Array>();
+		const pending = reader.parseDemo(source);
+		expect(() => reader.cancel()).toThrow(failure);
+		await expect(pending).rejects.toBe(failure);
+		expect(ends).toBe(1);
+		expect(reader.hasEnded).toBe(true);
+		expect(source.locked).toBe(false);
+	});
+});
+
 test('server readers own independent WASM decoders', () => {
 	const first = new DemoReader();
 	const second = new DemoReader();

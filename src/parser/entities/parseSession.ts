@@ -241,7 +241,7 @@ export class ParseSession {
 
 		try {
 			while (true) {
-				if (forceBreak) break;
+				if (forceBreak || this.parser.hasEnded) break;
 				this._frameMarked = this._frameOffset;
 				try {
 					if (++frameCount % 5000 === 0) {
@@ -255,6 +255,8 @@ export class ParseSession {
 						await new Promise<void>(resolve => setTimeout(resolve, 0));
 					}
 				} catch (e) {
+					// Queue delivery has already finalized the parser on a listener exception.
+					if (this.parser.hasEnded) throw e;
 					if (e === NEED_MORE_INPUT && readNextChunk) {
 						// Incremental stream input may stop in the middle of a frame. Restore
 						// the frame boundary before appending more bytes and trying again.

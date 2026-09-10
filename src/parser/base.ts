@@ -5,7 +5,7 @@ import { GameEvents } from './descriptors/gameEventEmitter.js';
 import { CMsgPlayerInfo } from '../ts-proto/networkbasetypes.js';
 import { EntityMode, type EmitQueue, type OutputEvents } from './entities/types.js';
 import type { Decoder, PropInfo } from './entities/constructorFields.js';
-import { ParseSession, type ParseSessionOptions, type ParseSettings } from './entities/parseSession.js';
+import { ParseSession, type ParseSessionOptions } from './entities/parseSession.js';
 import { applyPropUpdate } from './entities/entityParser.js';
 import { Player } from '../helpers/player.js';
 import { Team } from '../helpers/team.js';
@@ -48,6 +48,8 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	private _endResult!: OutputEvents['end'];
 	private _reader: DemoStreamReader | null = null;
 	private _parsing = false;
+	private _cancelBroadcast: (() => void) | undefined;
+	private _callbackFailure: { cause: unknown } | undefined;
 
 	entities: AnyEntity[];
 	private _directWriteMode = false;
@@ -299,16 +301,6 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		});
 		this.entities = [];
 		this.gameEvents.listen(this);
-		this.on('end', result => {
-			this._endResult = result;
-			this._hasEnded = true;
-			this._parsing = false;
-			this._snappy.release?.();
-			this.emit(
-				'debug',
-				`[${this.currentTick}] Parsed demo in ${Math.round(performance.now() - this._parseStartTime)}ms`
-			);
-		});
 
 		this.on('tickstart', tick => {
 			this.currentTick = tick;
@@ -404,14 +396,55 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	propIdToInfo: Record<number, PropInfo> = {};
 
 	private _emitQueue: EmitQueue = queue => {
-		for (const element of queue) {
-			if (this._hasEnded) break;
-			// Errors are also included in the end result; an error listener is optional.
-			if (element[0] === 'error' && this.listenerCount('error') === 0) continue;
-			this.emit(element[0], element[1] as any);
+		try {
+			for (const element of queue) {
+				if (this._hasEnded) break;
+				// Errors are also included in the end result; an error listener is optional.
+				if (element[0] === 'error' && this.listenerCount('error') === 0) continue;
+				if (element[0] === 'end') this._end(element[1]);
+				else this.emit(element[0], element[1] as any);
+			}
+		} catch (cause) {
+			// Keep a pending decoder result, but reject with the original listener exception.
+			this._callbackFailure ??= { cause };
+			const terminal = queue.find(element => element[0] === 'end');
+			try {
+				this._end(terminal?.[1] ?? { error: cause, incomplete: true });
+			} catch {
+				/* A terminal listener must not replace the first exception. */
+			}
+			throw cause;
+		} finally {
+			queue.length = 0;
 		}
-		queue.length = 0;
 	};
+
+	/** @internal Commit terminal state before notifying application listeners. */
+	_end(result: OutputEvents['end']): void {
+		if (this._endResult !== undefined) return;
+		this._endResult = result;
+		this._hasEnded = true;
+		this._parsing = false;
+		this._directWriteMode = false;
+		this._cancelBroadcast = undefined;
+		this._snappy.release?.();
+		try {
+			this.emit('end', result);
+			if (this._callbackFailure) return;
+			this.emit(
+				'debug',
+				`[${this.currentTick}] Parsed demo in ${Math.round(performance.now() - this._parseStartTime)}ms`
+			);
+		} catch (cause) {
+			this._callbackFailure ??= { cause };
+			throw cause;
+		}
+	}
+
+	/** @internal Also propagates exceptions from cancellation during a pending read/fetch. */
+	_throwCallbackError(): void {
+		if (this._callbackFailure) throw this._callbackFailure.cause;
+	}
 
 	protected assertCanParse() {
 		if (this._hasEnded) throw new Error('Demo has already been parsed');
@@ -479,13 +512,14 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 				}
 			}
 			if (!this._hasEnded) {
-				if (initial.length < 16) this.emit('end', { incomplete: true });
+				if (initial.length < 16) this._end({ incomplete: true });
 				else await new ParseSession(initial, entityMode, this._emitQueue, this, opts).runAsync(readNextChunk);
 			}
 		} catch (cause) {
+			this._throwCallbackError();
 			if (!this._hasEnded) {
 				const error = cause instanceof Error ? cause : new Error(`Exception while reading demo: ${cause}`);
-				this.emit('end', { error, incomplete: true });
+				this._end({ error, incomplete: true });
 			}
 		} finally {
 			const reader = this._reader;
@@ -496,11 +530,16 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 				} catch {
 					/* Keep the original parse result. */
 				}
-				reader.releaseLock?.();
+				try {
+					reader.releaseLock?.();
+				} catch {
+					/* Keep the original result or callback exception. */
+				}
 			}
 			this._directWriteMode = false;
 			this._parsing = false;
 		}
+		this._throwCallbackError();
 		return this._endResult;
 	}
 
@@ -509,8 +548,25 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		this._hasEnded = true;
 		// cancel() settles a pending read immediately, unlike merely releasing its lock.
 		void this._reader?.cancel(new Error('Demo parsing cancelled')).catch(() => {});
-		this.emit('cancel');
-		this.emit('end', { incomplete: true, reason: 'cancelled' });
+		const cancelBroadcast = this._cancelBroadcast;
+		let failure: { cause: unknown } | undefined;
+		try {
+			this.emit('cancel');
+		} catch (cause) {
+			failure = { cause };
+			this._callbackFailure ??= failure;
+		}
+		try {
+			cancelBroadcast?.();
+		} catch (cause) {
+			failure ??= { cause };
+		}
+		try {
+			this._end({ incomplete: true, reason: 'cancelled' });
+		} catch (cause) {
+			failure ??= { cause };
+		}
+		if (failure) throw failure.cause;
 	}
 
 	/**
@@ -540,13 +596,18 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	 * to the parser's emit queue and direct-write entity tracking. Throws if a
 	 * previous parse already ended on this DemoReader.
 	 */
-	_attachBroadcastSession(opts: { entities?: EntityMode } & ParseSettings = {}): ParseSession {
+	_attachBroadcastSession(
+		opts: { entities?: EntityMode } & ParseSessionOptions = {},
+		onCancel?: () => void
+	): ParseSession {
 		this.assertCanParse();
-		this._parsing = true;
-		this._parseStartTime = performance.now();
 		const entityMode = opts.entities ?? EntityMode.NONE;
+		const session = ParseSession.forBroadcast(entityMode, this._emitQueue, this, opts);
+		this._parsing = true;
+		this._cancelBroadcast = onCancel;
+		this._parseStartTime = performance.now();
 		this._directWriteMode = true;
 		this.gameEvents.entityMode = entityMode;
-		return ParseSession.forBroadcast(entityMode, this._emitQueue, this, opts);
+		return session;
 	}
 }

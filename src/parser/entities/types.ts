@@ -104,6 +104,7 @@ export interface OutputEvents extends OnDemandEvents, DemoFrameEvents {
 	usercommand: UserCommand;
 	chat: ChatMessage;
 	progress: number;
+	/** 2.0 result contract: incomplete is not a success flag; inspect error too. */
 	end: { incomplete: boolean; error?: any; reason?: EndReason };
 	error: { error: Error };
 	tickstart: number;

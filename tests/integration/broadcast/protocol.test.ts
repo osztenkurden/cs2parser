@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, spyOn } from 'bun:test';
 import snappy from 'snappy';
 import { DemoReader } from '../../../src/index.js';
 import { DemoReader as BrowserReader } from '../../../src/browser.js';
@@ -32,6 +32,236 @@ function notFound(): FragmentResponse {
 	return { ok: false, status: 404 };
 }
 
+describe('broadcast lifecycle safety', () => {
+	test('invalid session options leave the parser available', async () => {
+		const parser = new DemoReader();
+		const fetcher = new MockBroadcastFetcher({ sync: baseSync });
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', {
+			fetcher,
+			decryptionKey: new Uint8Array(1)
+		});
+		await expect(reader.start()).rejects.toThrow('exactly 16 bytes');
+		expect(fetcher.calls).toHaveLength(0);
+		expect(parser.hasEnded).toBe(false);
+		expect(await parser.parseDemo(new Uint8Array(0))).toEqual({ incomplete: true });
+	});
+
+	test('run rejects while start is pending without issuing delta requests', async () => {
+		const parser = new DemoReader();
+		const fetcher = new MockBroadcastFetcher({ sync: baseSync });
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', { fetcher });
+		const pending = reader.start();
+		await expect(reader.run()).rejects.toThrow('must be awaited');
+		expect(fetcher.calls.map(c => c.path)).toEqual(['sync']);
+		reader.stop();
+		await pending;
+		expect(await reader.run()).toEqual({ reason: 'cancelled' });
+	});
+
+	test.each(['stop', 'cancel', 'signal'] as const)('%s after start ends without run', async action => {
+		const parser = new DemoReader();
+		const signal = new AbortController();
+		const ticksBefore = parser.listenerCount('tickstart');
+		let ends = 0;
+		let releases = 0;
+		parser._snappy.release = () => {
+			releases++;
+		};
+		parser.on('end', () => {
+			ends++;
+		});
+		const fetcher = new MockBroadcastFetcher({
+			sync: baseSync,
+			defaultBytes: ok(new Uint8Array(0))
+		});
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', { fetcher, signal: signal.signal });
+		await reader.start();
+		if (action === 'stop') reader.stop();
+		else if (action === 'cancel') parser.cancel();
+		else signal.abort();
+		expect(parser.hasEnded).toBe(true);
+		expect(ends).toBe(1);
+		expect(releases).toBe(1);
+		expect(parser.listenerCount('tickstart')).toBe(ticksBefore);
+		expect(await reader.run()).toEqual({ reason: 'cancelled' });
+		reader.stop();
+		expect(ends).toBe(1);
+	});
+
+	test.each(['broadcastsync', 'gameeventlist', 'tickstart', 'end', 'onFragmentError'] as const)(
+		'%s exceptions reject startup and unhook listeners',
+		async event => {
+			const parser = new DemoReader();
+			const failure = new Error(event);
+			const signal = new AbortController();
+			const removeAbortListener = spyOn(signal.signal, 'removeEventListener');
+			let calls = 0;
+			let fragmentErrors = 0;
+			let releases = 0;
+			parser._snappy.release = () => {
+				releases++;
+			};
+			if (event !== 'onFragmentError')
+				parser.on(event, () => {
+					calls++;
+					throw failure;
+				});
+			if (event !== 'end')
+				parser.on('end', () => {
+					throw new Error('secondary end listener');
+				});
+			const ticksBefore = parser.listenerCount('tickstart');
+			const fetcher = new MockBroadcastFetcher({
+				sync: baseSync,
+				bytes: {
+					'0/start': ok(event === 'onFragmentError' ? Uint8Array.of(1) : syncFrag(1)),
+					'5/full': ok(endFrag())
+				}
+			});
+			const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', {
+				fetcher,
+				signal: signal.signal,
+				onFragmentError() {
+					fragmentErrors++;
+					if (event === 'onFragmentError') throw failure;
+					return 'continue';
+				}
+			});
+			await expect(reader.start()).rejects.toBe(failure);
+			expect(parser.hasEnded).toBe(true);
+			expect(releases).toBe(1);
+			expect(calls).toBe(event === 'onFragmentError' ? 0 : 1);
+			expect(fragmentErrors).toBe(event === 'onFragmentError' ? 1 : 0);
+			expect(parser.listenerCount('tickstart')).toBe(ticksBefore);
+			expect(removeAbortListener).toHaveBeenCalledTimes(1);
+			removeAbortListener.mockRestore();
+			reader.stop();
+		}
+	);
+
+	test('idle stop cleans up even if the end listener throws', async () => {
+		const parser = new DemoReader();
+		const failure = new Error('end');
+		const ticksBefore = parser.listenerCount('tickstart');
+		parser.prependListener('end', () => {
+			throw failure;
+		});
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', {
+			fetcher: new MockBroadcastFetcher({ sync: baseSync, defaultBytes: ok(new Uint8Array(0)) })
+		});
+		await reader.start();
+		expect(() => reader.stop()).toThrow(failure);
+		expect(parser.hasEnded).toBe(true);
+		expect(parser.listenerCount('tickstart')).toBe(ticksBefore);
+		reader.stop();
+		expect(await reader.run()).toEqual({ reason: 'cancelled' });
+	});
+
+	test.each(['tickstart', 'end', 'onFragmentError'] as const)('%s exceptions reject an active run', async event => {
+		const parser = new DemoReader();
+		const failure = new Error(event);
+		const fetcher = new MockBroadcastFetcher({
+			sync: baseSync,
+			defaultBytes: ok(new Uint8Array(0)),
+			bytes: {
+				'6/delta': ok(
+					event === 'onFragmentError' ? Uint8Array.of(1) : event === 'end' ? endFrag() : syncFrag(110)
+				)
+			}
+		});
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', {
+			fetcher,
+			deltaThrottle: 0,
+			onFragmentError() {
+				throw failure;
+			}
+		});
+		await reader.start();
+		if (event !== 'onFragmentError')
+			parser.on(event, () => {
+				throw failure;
+			});
+		const ticksBefore = parser.listenerCount('tickstart');
+		await expect(reader.run()).rejects.toBe(failure);
+		expect(parser.hasEnded).toBe(true);
+		expect(parser.listenerCount('tickstart')).toBe(ticksBefore - 1);
+	});
+
+	test('sync rejection preserves the fetch error when an end listener also throws', async () => {
+		const parser = new DemoReader();
+		const failure = new Error('sync fetch');
+		let endError: unknown;
+		parser.on('end', result => {
+			endError = result.error;
+			throw new Error('secondary');
+		});
+		const ticksBefore = parser.listenerCount('tickstart');
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', {
+			fetcher: new MockBroadcastFetcher({
+				sync() {
+					throw failure;
+				}
+			})
+		});
+		await expect(reader.start()).rejects.toBe(failure);
+		expect(endError).toBe(failure);
+		expect(parser.listenerCount('tickstart')).toBe(ticksBefore);
+	});
+
+	test.each(['0/start', '5/full'] as const)(
+		'%s fetch failures still resolve start and run with an error terminus',
+		async path => {
+			const failure = new Error(path);
+			const reader = new HttpBroadcastReader(new DemoReader(), 'https://unused.invalid/', {
+				fetcher: new MockBroadcastFetcher({
+					sync: baseSync,
+					defaultBytes: ok(new Uint8Array(0)),
+					bytes: { [path]: { error: failure } }
+				})
+			});
+			await reader.start();
+			expect(await reader.run()).toEqual({ reason: 'error', error: failure });
+		}
+	);
+
+	test('throwing parser cancel listeners cannot prevent pending fetch cancellation', async () => {
+		const parser = new DemoReader();
+		const failure = new Error('cancel');
+		parser.on('cancel', () => {
+			throw failure;
+		});
+		let entered!: () => void;
+		const fetching = new Promise<void>(resolve => {
+			entered = resolve;
+		});
+		let aborted = false;
+		const ticksBefore = parser.listenerCount('tickstart');
+		const reader = new HttpBroadcastReader(parser, 'https://unused.invalid/', {
+			fetcher: new MockBroadcastFetcher({
+				sync: ({ signal }: { signal?: AbortSignal }) =>
+					new Promise((_, reject) => {
+						signal!.addEventListener(
+							'abort',
+							() => {
+								aborted = true;
+								reject(new Error('custom abort error'));
+							},
+							{ once: true }
+						);
+						entered();
+					})
+			})
+		});
+		const pending = reader.start();
+		await fetching;
+		expect(() => parser.cancel()).toThrow(failure);
+		await expect(pending).rejects.toBe(failure);
+		expect(aborted).toBe(true);
+		expect(parser.hasEnded).toBe(true);
+		expect(parser.listenerCount('tickstart')).toBe(ticksBefore);
+	});
+});
+
 describe('HttpBroadcastReader (protocol shape)', () => {
 	test('happy path: sync → signup → full → delta → delta → end-marker', async () => {
 		const fetcher = new MockBroadcastFetcher({
@@ -60,14 +290,7 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 		expect(terminus.reason).toBe('stop');
 		expect(syncEvents.length).toBe(1);
 		expect(reader.sync?.protocol).toBe(5);
-		expect(fetcher.calls.map(c => c.path)).toEqual([
-			'sync',
-			'0/start',
-			'5/full',
-			'5/delta',
-			'6/delta',
-			'7/delta'
-		]);
+		expect(fetcher.calls.map(c => c.path)).toEqual(['sync', '0/start', '5/full', '5/delta', '6/delta', '7/delta']);
 	});
 
 	test("fetches the starting fragment's own /delta, not just its keyframe", async () => {
