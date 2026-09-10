@@ -12,7 +12,6 @@ comparison
 .re
 # voxel RE comparison dumps (regenerable via scripts/)
 voxel-*.tsv
-docs
 tools
 scripts/re
 # Optional local benchmark reports
