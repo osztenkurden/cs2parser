@@ -23,9 +23,9 @@ export const ECstrike15UserMessages = {
   CS_UM_Geiger: 302,
   CS_UM_Train: 303,
   CS_UM_HudText: 304,
-  CS_UM_SayText: 305,
-  CS_UM_SayText2: 306,
-  CS_UM_TextMsg: 307,
+  CS_UM_SayText_CSGOLegacy: 305,
+  CS_UM_SayText2_CSGOLegacy: 306,
+  CS_UM_TextMsg_CSGOLegacy: 307,
   CS_UM_HudMsg: 308,
   CS_UM_ResetHud: 309,
   CS_UM_GameTitle: 310,
@@ -45,7 +45,7 @@ export const ECstrike15UserMessages = {
   CS_UM_ProcessSpottedEntityUpdate: 325,
   CS_UM_ReloadEffect: 326,
   CS_UM_AdjustMoney: 327,
-  CS_UM_UpdateTeamMoney: 328,
+  CS_UM_UpdateTeamMoney_CSGOLegacy: 328,
   CS_UM_StopSpectatorMode: 329,
   CS_UM_KillCam: 330,
   CS_UM_DesiredTimescale: 331,
@@ -97,6 +97,7 @@ export const ECstrike15UserMessages = {
   CS_UM_RecurringMissionSchema: 387,
   CS_UM_SendPlayerLoadout: 388,
   CS_UM_WeaponMagDrop: 389,
+  CS_UM_CustomHudClicked: 390,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -107,9 +108,9 @@ export namespace ECstrike15UserMessages {
   export type CS_UM_Geiger = typeof ECstrike15UserMessages.CS_UM_Geiger;
   export type CS_UM_Train = typeof ECstrike15UserMessages.CS_UM_Train;
   export type CS_UM_HudText = typeof ECstrike15UserMessages.CS_UM_HudText;
-  export type CS_UM_SayText = typeof ECstrike15UserMessages.CS_UM_SayText;
-  export type CS_UM_SayText2 = typeof ECstrike15UserMessages.CS_UM_SayText2;
-  export type CS_UM_TextMsg = typeof ECstrike15UserMessages.CS_UM_TextMsg;
+  export type CS_UM_SayText_CSGOLegacy = typeof ECstrike15UserMessages.CS_UM_SayText_CSGOLegacy;
+  export type CS_UM_SayText2_CSGOLegacy = typeof ECstrike15UserMessages.CS_UM_SayText2_CSGOLegacy;
+  export type CS_UM_TextMsg_CSGOLegacy = typeof ECstrike15UserMessages.CS_UM_TextMsg_CSGOLegacy;
   export type CS_UM_HudMsg = typeof ECstrike15UserMessages.CS_UM_HudMsg;
   export type CS_UM_ResetHud = typeof ECstrike15UserMessages.CS_UM_ResetHud;
   export type CS_UM_GameTitle = typeof ECstrike15UserMessages.CS_UM_GameTitle;
@@ -129,7 +130,7 @@ export namespace ECstrike15UserMessages {
   export type CS_UM_ProcessSpottedEntityUpdate = typeof ECstrike15UserMessages.CS_UM_ProcessSpottedEntityUpdate;
   export type CS_UM_ReloadEffect = typeof ECstrike15UserMessages.CS_UM_ReloadEffect;
   export type CS_UM_AdjustMoney = typeof ECstrike15UserMessages.CS_UM_AdjustMoney;
-  export type CS_UM_UpdateTeamMoney = typeof ECstrike15UserMessages.CS_UM_UpdateTeamMoney;
+  export type CS_UM_UpdateTeamMoney_CSGOLegacy = typeof ECstrike15UserMessages.CS_UM_UpdateTeamMoney_CSGOLegacy;
   export type CS_UM_StopSpectatorMode = typeof ECstrike15UserMessages.CS_UM_StopSpectatorMode;
   export type CS_UM_KillCam = typeof ECstrike15UserMessages.CS_UM_KillCam;
   export type CS_UM_DesiredTimescale = typeof ECstrike15UserMessages.CS_UM_DesiredTimescale;
@@ -181,6 +182,7 @@ export namespace ECstrike15UserMessages {
   export type CS_UM_RecurringMissionSchema = typeof ECstrike15UserMessages.CS_UM_RecurringMissionSchema;
   export type CS_UM_SendPlayerLoadout = typeof ECstrike15UserMessages.CS_UM_SendPlayerLoadout;
   export type CS_UM_WeaponMagDrop = typeof ECstrike15UserMessages.CS_UM_WeaponMagDrop;
+  export type CS_UM_CustomHudClicked = typeof ECstrike15UserMessages.CS_UM_CustomHudClicked;
   export type UNRECOGNIZED = typeof ECstrike15UserMessages.UNRECOGNIZED;
 }
 
@@ -740,6 +742,11 @@ export interface CCSUsrMsg_SendPlayerLoadout_LoadoutItem {
   econ_item?: CEconItemPreviewDataBlock | undefined;
   team?: number | undefined;
   slot?: number | undefined;
+}
+
+export interface CCSUsrMsg_CustomHudClicked {
+  custom_hud_layout?: number | undefined;
+  button_id?: string | undefined;
 }
 
 export interface CVacNet_GetReviewerInfo_Request {
@@ -5005,6 +5012,44 @@ export const CCSUsrMsg_SendPlayerLoadout_LoadoutItem: MessageFns<CCSUsrMsg_SendP
           }
 
           message.slot = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCCSUsrMsg_CustomHudClicked(): CCSUsrMsg_CustomHudClicked {
+  return { custom_hud_layout: undefined, button_id: undefined };
+}
+
+export const CCSUsrMsg_CustomHudClicked: MessageFns<CCSUsrMsg_CustomHudClicked> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CCSUsrMsg_CustomHudClicked {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCCSUsrMsg_CustomHudClicked();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.custom_hud_layout = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.button_id = reader.string();
           continue;
         }
       }

@@ -86,6 +86,7 @@ export const SVC_Messages = {
   svc_HltvFixupOperatorStatus: 75,
   svc_UserCmds: 76,
   svc_NextMsgPredicted: 77,
+  svc_EncryptedData: 78,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -123,6 +124,7 @@ export namespace SVC_Messages {
   export type svc_HltvFixupOperatorStatus = typeof SVC_Messages.svc_HltvFixupOperatorStatus;
   export type svc_UserCmds = typeof SVC_Messages.svc_UserCmds;
   export type svc_NextMsgPredicted = typeof SVC_Messages.svc_NextMsgPredicted;
+  export type svc_EncryptedData = typeof SVC_Messages.svc_EncryptedData;
   export type UNRECOGNIZED = typeof SVC_Messages.UNRECOGNIZED;
 }
 
@@ -572,6 +574,12 @@ export interface CSVCMsg_VoiceData {
   tick?: number | undefined;
   passthrough?: number | undefined;
   entity?: number | undefined;
+  caster?: boolean | undefined;
+}
+
+export interface CSVCMsg_EncryptedData {
+  encrypted?: Uint8Array | undefined;
+  key_type?: number | undefined;
 }
 
 export interface CSVCMsg_PacketReliable {
@@ -3283,6 +3291,7 @@ function createBaseCSVCMsg_VoiceData(): CSVCMsg_VoiceData {
     tick: undefined,
     passthrough: undefined,
     entity: undefined,
+    caster: undefined,
   };
 }
 
@@ -3356,6 +3365,52 @@ export const CSVCMsg_VoiceData: MessageFns<CSVCMsg_VoiceData> = {
           }
 
           message.entity = reader.int32();
+          continue;
+        }
+        case 9: {
+          if (tag !== 72) {
+            break;
+          }
+
+          message.caster = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCSVCMsg_EncryptedData(): CSVCMsg_EncryptedData {
+  return { encrypted: undefined, key_type: undefined };
+}
+
+export const CSVCMsg_EncryptedData: MessageFns<CSVCMsg_EncryptedData> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CSVCMsg_EncryptedData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCSVCMsg_EncryptedData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.encrypted = reader.bytes();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.key_type = reader.int32();
           continue;
         }
       }

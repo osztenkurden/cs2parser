@@ -358,6 +358,7 @@ export interface CUserMessageSayText {
   playerindex?: number | undefined;
   text?: string | undefined;
   chat?: boolean | undefined;
+  textallchat?: boolean | undefined;
 }
 
 export interface CUserMessageSayText2 {
@@ -368,6 +369,7 @@ export interface CUserMessageSayText2 {
   param2?: string | undefined;
   param3?: string | undefined;
   param4?: string | undefined;
+  textallchat?: boolean | undefined;
 }
 
 export interface CUserMessageHudMsg {
@@ -1460,7 +1462,7 @@ export const CUserMessageScreenTilt: MessageFns<CUserMessageScreenTilt> = {
 };
 
 function createBaseCUserMessageSayText(): CUserMessageSayText {
-  return { playerindex: undefined, text: undefined, chat: undefined };
+  return { playerindex: undefined, text: undefined, chat: undefined, textallchat: undefined };
 }
 
 export const CUserMessageSayText: MessageFns<CUserMessageSayText> = {
@@ -1495,6 +1497,14 @@ export const CUserMessageSayText: MessageFns<CUserMessageSayText> = {
           message.chat = reader.bool();
           continue;
         }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.textallchat = reader.bool();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1514,6 +1524,7 @@ function createBaseCUserMessageSayText2(): CUserMessageSayText2 {
     param2: undefined,
     param3: undefined,
     param4: undefined,
+    textallchat: undefined,
   };
 }
 
@@ -1579,6 +1590,14 @@ export const CUserMessageSayText2: MessageFns<CUserMessageSayText2> = {
           }
 
           message.param4 = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.textallchat = reader.bool();
           continue;
         }
       }
