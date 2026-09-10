@@ -1,30 +1,6 @@
 {
   "serializers": {
     "CBodyComponentBaseAnimGraph": {
-      "m_animationController.m_animGraphNetworkedVars.m_flLastTeleportTime": "number",
-      "m_animationController.m_animGraphNetworkedVars.m_nBoolVariablesCount": "number",
-      "m_animationController.m_animGraphNetworkedVars.m_nOwnerOnlyBoolVariablesCount": "number",
-      "m_animationController.m_animGraphNetworkedVars.m_nRandomSeedOffset": "number",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetBoolVariables": "Uint32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetByteVariables": "Uint8Array",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetFloatVariables": "Float32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetGlobalSymbolVariables": "string[]",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetIntVariables": "Int32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetQuaternionVariables": "number[]",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetUInt16Variables": "Uint16Array",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetUInt32Variables": "Uint32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetUInt64Variables": "number[]",
-      "m_animationController.m_animGraphNetworkedVars.m_OwnerOnlyPredNetVectorVariables": "[number, number, number][]",
-      "m_animationController.m_animGraphNetworkedVars.m_PredBoolVariables": "Uint32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_PredByteVariables": "Uint8Array",
-      "m_animationController.m_animGraphNetworkedVars.m_PredFloatVariables": "Float32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_PredGlobalSymbolVariables": "string[]",
-      "m_animationController.m_animGraphNetworkedVars.m_PredIntVariables": "Int32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_PredQuaternionVariables": "number[]",
-      "m_animationController.m_animGraphNetworkedVars.m_PredUInt16Variables": "Uint16Array",
-      "m_animationController.m_animGraphNetworkedVars.m_PredUInt32Variables": "Uint32Array",
-      "m_animationController.m_animGraphNetworkedVars.m_PredUInt64Variables": "number[]",
-      "m_animationController.m_animGraphNetworkedVars.m_PredVectorVariables": "[number, number, number][]",
       "m_animationController.m_flPlaybackRate": "number",
       "m_animationController.m_flSeqFixedCycle": "number",
       "m_animationController.m_flSeqStartTime": "number",
@@ -33,27 +9,33 @@
       "m_animationController.m_nAnimationAlgorithm": "number",
       "m_animationController.m_nAnimLoopMode": "number",
       "m_animationController.m_nSecondarySkeletonMasterCount": "number",
-      "m_animationController.m_nSerializePoseRecipeSizeAG2": "number",
+      "m_animationController.m_nSerializePoseRecipeAG2ActiveSlot": "number",
       "m_animationController.m_nSerializePoseRecipeVersionAG2": "number",
       "m_animationController.m_nServerGraphInstanceIteration": "number",
       "m_animationController.m_nServerSerializationContextIteration": "number",
       "m_animationController.m_primaryGraphId": "bigint",
-      "m_animationController.m_serializedPoseRecipeAG2": "Uint8Array",
+      "m_animationController.m_SerializePoseRecipeAG2Dynamic": "Uint8Array",
+      "m_animationController.m_SerializePoseRecipeAG2Slots": "ReadonlyArray<{ readonly \"m_topology\"?: Uint8Array }>",
       "m_animationController.m_vecExternalClipIds": "BigUint64Array",
       "m_animationController.m_vecExternalGraphIds": "BigUint64Array",
       "m_animationController.m_vecSecondarySkeletons": "number[]",
+      "m_animationController.m_vecSecondarySkeletonSlotIDs": "string[]",
       "m_skeletonInstance.m_angRotation": "[number, number, number]",
-      "m_skeletonInstance.m_bIsAnimationEnabled": "boolean",
       "m_skeletonInstance.m_bUseParentRenderBounds": "boolean",
       "m_skeletonInstance.m_flScale": "number",
       "m_skeletonInstance.m_hierarchyAttachName": "number",
       "m_skeletonInstance.m_hParent": "number",
       "m_skeletonInstance.m_materialGroup": "number",
       "m_skeletonInstance.m_modelState.m_bClientClothCreationSuppressed": "boolean",
+      "m_skeletonInstance.m_modelState.m_flRootBoneOffset_x": "number",
+      "m_skeletonInstance.m_modelState.m_flRootBoneOffset_y": "number",
+      "m_skeletonInstance.m_modelState.m_flRootBoneOffset_z": "number",
       "m_skeletonInstance.m_modelState.m_hModel": "bigint",
       "m_skeletonInstance.m_modelState.m_MeshGroupMask": "bigint",
+      "m_skeletonInstance.m_modelState.m_nAnimStateNoInterpSerialNumber": "number",
       "m_skeletonInstance.m_modelState.m_nBodyGroupChoices": "Int32Array",
       "m_skeletonInstance.m_modelState.m_nIdealMotionType": "number",
+      "m_skeletonInstance.m_modelState.m_nRootBoneOffsetResetSerialNumber": "number",
       "m_skeletonInstance.m_name": "number",
       "m_skeletonInstance.m_nHitboxSet": "number",
       "m_skeletonInstance.m_vecOrigin.m_cellX": "number",
@@ -65,7 +47,7 @@
       "m_skeletonInstance.m_vecOrigin.m_vecZ": "number"
     },
     "CEntityIdentity": {
-      "m_nameStringableIndex": "number"
+      "m_nameStringTableIndex": "number"
     },
     "CDestructiblePartsComponent": {
       "m_hOwner": "number"
@@ -248,8 +230,6 @@
     },
     "CCSPlayer_WeaponServices": {
       "m_bBlockInspectUntilNextGraphUpdate": "boolean",
-      "m_bIsHoldingLookAtWeapon": "boolean",
-      "m_bIsLookingAtWeapon": "boolean",
       "m_flNextAttack": "number",
       "m_hActiveWeapon": "number",
       "m_hLastWeapon": "number",
@@ -287,19 +267,24 @@
       "m_bDucked": "boolean",
       "m_bDucking": "boolean",
       "m_bDuckOverride": "boolean",
+      "m_bHasEverProcessedCommand": "boolean",
       "m_bJumpApexPending": "boolean",
-      "m_bWasSurfing": "boolean",
+      "m_bUseFrictionStashedSpeed": "boolean",
+      "m_bUsingGroundTopologyOffset": "boolean",
+      "m_flBombPlantViewOffset": "number",
       "m_flDuckAmount": "number",
-      "m_flDuckOffset": "number",
+      "m_flDuckRootOffset": "number",
       "m_flDuckSpeed": "number",
+      "m_flDuckViewOffset": "number",
       "m_flFallVelocity": "number",
+      "m_flFrictionStashedSpeed": "number",
       "m_flLastDuckTime": "number",
       "m_flLastJumpFrac": "number",
       "m_flLastJumpVelocityZ": "number",
       "m_flMaxspeed": "number",
-      "m_flOffsetTickCompleteTime": "number",
-      "m_flOffsetTickStashedSpeed": "number",
       "m_flStamina": "number",
+      "m_flUseFrictionStashedSpeedUntilFrac": "number",
+      "m_flUsingGroundTopologyOffsetTransitionSmoothing": "number",
       "m_fStashGrenadeParameterWhen": "number",
       "m_LegacyJump.m_bOldJumpPressed": "boolean",
       "m_ModernJump.m_flLastActualJumpPressFrac": "number",
@@ -311,11 +296,7 @@
       "m_ModernJump.m_nLastActualJumpPressTick": "number",
       "m_ModernJump.m_nLastLandedTick": "number",
       "m_ModernJump.m_nLastUsableJumpPressTick": "number",
-      "m_nButtonDownMaskPrev": "bigint",
-      "m_nDuckJumpTimeMsecs": "number",
-      "m_nDuckTimeMsecs": "number",
       "m_nGameCodeHasMovedPlayerAfterCommand": "number",
-      "m_nJumpTimeMsecs": "number",
       "m_nLadderSurfacePropIndex": "number",
       "m_nLastJumpTick": "number",
       "m_nToggleButtonDownMask": "bigint"
@@ -335,19 +316,31 @@
       "m_weaponPurchasesThisMatch.m_weaponPurchases": "ReadonlyArray<{ readonly \"m_nCount\"?: number; readonly \"m_nItemDefIndex\"?: number }>",
       "m_weaponPurchasesThisRound.m_weaponPurchases": "ReadonlyArray<{ readonly \"m_nCount\"?: number; readonly \"m_nItemDefIndex\"?: number }>"
     },
+    "CCSPlayer_AimPunchServices": {
+      "m_predictableBaseAngle": "[number, number, number]",
+      "m_predictableBaseAngleVel": "[number, number, number]",
+      "m_predictableBaseTick": "number",
+      "m_predictableBaseTickInterpAmount": "number",
+      "m_unpredictableBaseAngle": "[number, number, number]",
+      "m_unpredictableBaseTick": "number"
+    },
     "CBodyComponentBaseModelEntity": {
       "m_skeletonInstance.m_angRotation": "[number, number, number]",
-      "m_skeletonInstance.m_bIsAnimationEnabled": "boolean",
       "m_skeletonInstance.m_bUseParentRenderBounds": "boolean",
       "m_skeletonInstance.m_flScale": "number",
       "m_skeletonInstance.m_hierarchyAttachName": "number",
       "m_skeletonInstance.m_hParent": "number",
       "m_skeletonInstance.m_materialGroup": "number",
       "m_skeletonInstance.m_modelState.m_bClientClothCreationSuppressed": "boolean",
+      "m_skeletonInstance.m_modelState.m_flRootBoneOffset_x": "number",
+      "m_skeletonInstance.m_modelState.m_flRootBoneOffset_y": "number",
+      "m_skeletonInstance.m_modelState.m_flRootBoneOffset_z": "number",
       "m_skeletonInstance.m_modelState.m_hModel": "bigint",
       "m_skeletonInstance.m_modelState.m_MeshGroupMask": "bigint",
+      "m_skeletonInstance.m_modelState.m_nAnimStateNoInterpSerialNumber": "number",
       "m_skeletonInstance.m_modelState.m_nBodyGroupChoices": "Int32Array",
       "m_skeletonInstance.m_modelState.m_nIdealMotionType": "number",
+      "m_skeletonInstance.m_modelState.m_nRootBoneOffsetResetSerialNumber": "number",
       "m_skeletonInstance.m_name": "number",
       "m_skeletonInstance.m_nHitboxSet": "number",
       "m_skeletonInstance.m_vecOrigin.m_cellX": "number",
@@ -387,6 +380,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -478,6 +472,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -502,7 +497,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -601,8 +595,7 @@
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CBaseGrenade": {
@@ -693,8 +686,7 @@
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
         "m_vecVelocity.m_vecX": "number",
         "m_vecVelocity.m_vecY": "number",
-        "m_vecVelocity.m_vecZ": "number",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vecVelocity.m_vecZ": "number"
       }
     },
     "CBasePlayerController": {
@@ -712,6 +704,7 @@
         "m_hPawn": "number",
         "m_iConnected": "number",
         "m_iDesiredFOV": "number",
+        "m_iMostConnected": "number",
         "m_iszPlayerName": "string",
         "m_iTeamNum": "number",
         "m_nNextThinkTick": "number",
@@ -792,7 +785,6 @@
         "m_flCreateTime": "number",
         "m_flDeathTime": "number",
         "m_flElasticity": "number",
-        "m_flexWeight": "Float32Array",
         "m_flFadeScale": "number",
         "m_flFriction": "number",
         "m_flGlowBackfaceMult": "number",
@@ -873,8 +865,7 @@
         "m_vecVelocity.m_vecZ": "number",
         "m_vecViewOffset.m_vecX": "number",
         "m_vecViewOffset.m_vecY": "number",
-        "m_vecViewOffset.m_vecZ": "number",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vecViewOffset.m_vecZ": "number"
       }
     },
     "CBasePlayerWeapon": {
@@ -984,8 +975,7 @@
         "m_RagdollPose.m_Transforms": "unknown[]",
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
-        "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>"
       }
     },
     "CC4": {
@@ -1013,6 +1003,7 @@
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBombPlacedAnimation": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -1107,6 +1098,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -1130,7 +1122,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -1516,6 +1507,35 @@
         "m_hPlayerPing": "number"
       }
     },
+    "CCSPlayerCamera": {
+      "serializers": [
+        "CBodyComponentPoint",
+        "CEntityIdentity"
+      ],
+      "ownFields": {
+        "m_bAnimatedEveryTick": "boolean",
+        "m_bEnabled": "boolean",
+        "m_bGravityDisabled": "boolean",
+        "m_bIsControllingAngles": "boolean",
+        "m_fEffects": "number",
+        "m_flAnimTime": "number",
+        "m_flCreateTime": "number",
+        "m_flElasticity": "number",
+        "m_flGravityScale": "number",
+        "m_flNavIgnoreUntilTime": "number",
+        "m_flSimulationTime": "number",
+        "m_hEffectEntity": "number",
+        "m_hOwnerEntity": "number",
+        "m_hPawn": "number",
+        "m_iTeamNum": "number",
+        "m_MoveCollide": "bigint",
+        "m_MoveType": "bigint",
+        "m_nBloodType": "number",
+        "m_nPlatformType": "number",
+        "m_nSubclassID": "number",
+        "m_ubInterpolationFrame": "number"
+      }
+    },
     "CCSPlayerController_InGameMoneyServices": {
       "serializers": [],
       "ownFields": {
@@ -1622,6 +1642,7 @@
         "m_iCompTeammateColor": "number",
         "m_iConnected": "number",
         "m_iDesiredFOV": "number",
+        "m_iMostConnected": "number",
         "m_iMusicKitID": "number",
         "m_iMusicKitMVPs": "number",
         "m_iMVPs": "number",
@@ -1663,8 +1684,6 @@
       "serializers": [],
       "ownFields": {
         "m_bBlockInspectUntilNextGraphUpdate": "boolean",
-        "m_bIsHoldingLookAtWeapon": "boolean",
-        "m_bIsLookingAtWeapon": "boolean",
         "m_flNextAttack": "number",
         "m_hActiveWeapon": "number",
         "m_hLastWeapon": "number",
@@ -1711,19 +1730,24 @@
         "m_bDucked": "boolean",
         "m_bDucking": "boolean",
         "m_bDuckOverride": "boolean",
+        "m_bHasEverProcessedCommand": "boolean",
         "m_bJumpApexPending": "boolean",
-        "m_bWasSurfing": "boolean",
+        "m_bUseFrictionStashedSpeed": "boolean",
+        "m_bUsingGroundTopologyOffset": "boolean",
+        "m_flBombPlantViewOffset": "number",
         "m_flDuckAmount": "number",
-        "m_flDuckOffset": "number",
+        "m_flDuckRootOffset": "number",
         "m_flDuckSpeed": "number",
+        "m_flDuckViewOffset": "number",
         "m_flFallVelocity": "number",
+        "m_flFrictionStashedSpeed": "number",
         "m_flLastDuckTime": "number",
         "m_flLastJumpFrac": "number",
         "m_flLastJumpVelocityZ": "number",
         "m_flMaxspeed": "number",
-        "m_flOffsetTickCompleteTime": "number",
-        "m_flOffsetTickStashedSpeed": "number",
         "m_flStamina": "number",
+        "m_flUseFrictionStashedSpeedUntilFrac": "number",
+        "m_flUsingGroundTopologyOffsetTransitionSmoothing": "number",
         "m_fStashGrenadeParameterWhen": "number",
         "m_LegacyJump.m_bOldJumpPressed": "boolean",
         "m_ModernJump.m_flLastActualJumpPressFrac": "number",
@@ -1735,11 +1759,7 @@
         "m_ModernJump.m_nLastActualJumpPressTick": "number",
         "m_ModernJump.m_nLastLandedTick": "number",
         "m_ModernJump.m_nLastUsableJumpPressTick": "number",
-        "m_nButtonDownMaskPrev": "bigint",
-        "m_nDuckJumpTimeMsecs": "number",
-        "m_nDuckTimeMsecs": "number",
         "m_nGameCodeHasMovedPlayerAfterCommand": "number",
-        "m_nJumpTimeMsecs": "number",
         "m_nLadderSurfacePropIndex": "number",
         "m_nLastJumpTick": "number",
         "m_nToggleButtonDownMask": "bigint"
@@ -1773,10 +1793,22 @@
         "m_weaponPurchasesThisRound.m_weaponPurchases": "ReadonlyArray<{ readonly \"m_nCount\"?: number; readonly \"m_nItemDefIndex\"?: number }>"
       }
     },
+    "CCSPlayer_AimPunchServices": {
+      "serializers": [],
+      "ownFields": {
+        "m_predictableBaseAngle": "[number, number, number]",
+        "m_predictableBaseAngleVel": "[number, number, number]",
+        "m_predictableBaseTick": "number",
+        "m_predictableBaseTickInterpAmount": "number",
+        "m_unpredictableBaseAngle": "[number, number, number]",
+        "m_unpredictableBaseTick": "number"
+      }
+    },
     "CCSPlayerPawn": {
       "serializers": [
         "CBodyComponentBaseAnimGraph",
         "CCSPlayer_ActionTrackingServices",
+        "CCSPlayer_AimPunchServices",
         "CCSPlayer_BulletServices",
         "CCSPlayer_BuyServices",
         "CCSPlayer_CameraServices",
@@ -1789,10 +1821,6 @@
         "CEntityIdentity"
       ],
       "ownFields": {
-        "m_aimPunchAngle": "[number, number, number]",
-        "m_aimPunchAngleVel": "[number, number, number]",
-        "m_aimPunchTickBase": "number",
-        "m_aimPunchTickFraction": "number",
         "m_angEyeAngles": "[number, number, number]",
         "m_ArmorValue": "number",
         "m_bAnimatedEveryTick": "boolean",
@@ -1880,14 +1908,11 @@
         "m_flGlowBackfaceMult": "number",
         "m_flGravityScale": "number",
         "m_flHealthShotBoostExpirationTime": "number",
-        "m_flHitHeading": "number",
         "m_flNavIgnoreUntilTime": "number",
         "m_flNextSprayDecalTime": "number",
         "m_flProgressBarStartTime": "number",
         "m_flShadowStrength": "number",
         "m_flSimulationTime": "number",
-        "m_flSlopeDropHeight": "number",
-        "m_flSlopeDropOffset": "number",
         "m_flTimeOfLastInjury": "number",
         "m_flTimeScale": "number",
         "m_flVelocityModifier": "number",
@@ -1933,7 +1958,6 @@
         "m_nEconGlovesChanged": "number",
         "m_nForceBone": "number",
         "m_nGroundBodyIndex": "number",
-        "m_nHitBodyPart": "number",
         "m_nLastKillerIndex": "bigint",
         "m_nNextThinkTick": "number",
         "m_nObjectCulling": "number",
@@ -1943,7 +1967,6 @@
         "m_nRenderMode": "bigint",
         "m_nSubclassID": "number",
         "m_nWhichBombZone": "number",
-        "m_PredictedDamageTags": "ReadonlyArray<{ readonly \"flFlinchModLarge\"?: number; readonly \"flFlinchModSmall\"?: number; readonly \"flFriendlyFireDamageReductionRatio\"?: number; readonly \"nTagTick\"?: number }>",
         "m_qDeathEyeAngles": "[number, number, number]",
         "m_RagdollPose.m_hOwner": "number",
         "m_RagdollPose.m_Transforms": "unknown[]",
@@ -1979,7 +2002,6 @@
         "m_skybox3d.scale": "number",
         "m_szLastPlaceName": "string",
         "m_szRagdollDamageWeaponName": "string",
-        "m_thirdPersonHeading": "[number, number, number]",
         "m_ubInterpolationFrame": "number",
         "m_unCurrentEquipmentValue": "number",
         "m_unFreezetimeEndEquipmentValue": "number",
@@ -1994,10 +2016,7 @@
         "m_vecViewOffset.m_vecX": "number",
         "m_vecViewOffset.m_vecY": "number",
         "m_vecViewOffset.m_vecZ": "number",
-        "m_vHeadConstraintOffset": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_vRagdollDamageForce": "[number, number, number]",
-        "m_vRagdollDamagePosition": "[number, number, number]",
         "m_vRagdollServerOrigin": "[number, number, number]"
       }
     },
@@ -2140,8 +2159,7 @@
         "m_vecVelocity.m_vecZ": "number",
         "m_vecViewOffset.m_vecX": "number",
         "m_vecViewOffset.m_vecY": "number",
-        "m_vecViewOffset.m_vecZ": "number",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vecViewOffset.m_vecZ": "number"
       }
     },
     "CCSPlayerResource": {
@@ -2202,6 +2220,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -2293,6 +2312,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -2317,7 +2337,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -2346,6 +2365,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -2435,6 +2455,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -2458,7 +2479,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -2486,6 +2506,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -2577,6 +2598,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -2601,7 +2623,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -2630,6 +2651,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -2731,6 +2753,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -2755,7 +2778,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -2854,8 +2876,7 @@
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CEnvDetailController": {
@@ -2999,6 +3020,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -3100,6 +3122,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -3124,7 +3147,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3222,8 +3244,7 @@
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CFogController": {
@@ -3278,6 +3299,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -3379,6 +3401,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -3403,7 +3426,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3501,8 +3523,7 @@
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CIncendiaryGrenade": {
@@ -3529,6 +3550,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -3630,6 +3652,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -3654,7 +3677,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3764,6 +3786,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bFirstAttack": "boolean",
@@ -3854,6 +3877,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -3877,7 +3901,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -3946,6 +3969,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -4047,6 +4071,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -4071,7 +4096,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -4170,8 +4194,7 @@
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
-        "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]"
+        "m_vInitialVelocity": "[number, number, number]"
       }
     },
     "CPlantedC4": {
@@ -4459,6 +4482,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -4560,6 +4584,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -4584,7 +4609,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -4688,7 +4712,6 @@
         "m_vecVelocity.m_vecZ": "number",
         "m_vInitialPosition": "[number, number, number]",
         "m_vInitialVelocity": "[number, number, number]",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_VoxelFrameData": "Uint8Array",
         "m_vSmokeColor": "[number, number, number]",
         "m_vSmokeDetonationPos": "[number, number, number]"
@@ -4790,6 +4813,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -4881,6 +4905,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -4905,7 +4930,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -4934,6 +4958,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5025,6 +5050,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5049,7 +5075,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5078,6 +5103,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5169,6 +5195,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5193,7 +5220,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5222,6 +5248,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5314,6 +5341,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5338,7 +5366,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5367,6 +5394,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5458,6 +5486,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5482,7 +5511,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5511,6 +5539,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5602,6 +5631,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5626,7 +5656,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5655,6 +5684,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5746,6 +5776,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5770,7 +5801,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5799,6 +5829,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -5890,6 +5921,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -5914,7 +5946,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -5943,6 +5974,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6034,6 +6066,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6058,7 +6091,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6087,6 +6119,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6178,6 +6211,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6202,7 +6236,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6231,6 +6264,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6322,6 +6356,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6346,7 +6381,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6375,6 +6409,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6466,6 +6501,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6490,7 +6526,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6519,6 +6554,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6610,6 +6646,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6634,7 +6671,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6663,6 +6699,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6754,6 +6791,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6778,7 +6816,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6807,6 +6844,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -6898,6 +6936,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -6922,7 +6961,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -6951,6 +6989,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7042,6 +7081,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7066,7 +7106,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7095,6 +7134,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7186,6 +7226,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7210,7 +7251,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7239,6 +7279,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7330,6 +7371,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7354,7 +7396,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7383,6 +7424,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7474,6 +7516,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7498,7 +7541,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7527,6 +7569,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7618,6 +7661,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7642,7 +7686,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7671,6 +7714,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7760,6 +7804,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7783,7 +7828,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -7811,6 +7855,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -7902,6 +7947,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -7926,7 +7972,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -7955,6 +8000,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8046,6 +8092,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8070,7 +8117,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8099,6 +8145,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8190,6 +8237,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8214,7 +8262,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8243,6 +8290,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8332,6 +8380,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8355,7 +8404,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -8383,6 +8431,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8474,6 +8523,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8498,7 +8548,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8527,6 +8576,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8618,6 +8668,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8642,7 +8693,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8671,6 +8721,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8762,6 +8813,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8786,7 +8838,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8815,6 +8866,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -8907,6 +8959,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -8931,7 +8984,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -8960,6 +9012,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -9051,6 +9104,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -9075,7 +9129,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9104,6 +9157,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -9195,6 +9249,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -9219,7 +9274,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9248,6 +9302,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -9339,6 +9394,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -9363,7 +9419,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
       }
@@ -9392,6 +9447,7 @@
         "m_bAnimatedEveryTick": "boolean",
         "m_bAnimGraphUpdateEnabled": "boolean",
         "m_bBurstMode": "boolean",
+        "m_bCanBePickedUp": "boolean",
         "m_bClientSideRagdoll": "boolean",
         "m_bDroppedNearBuyZone": "boolean",
         "m_bGravityDisabled": "boolean",
@@ -9481,6 +9537,7 @@
         "m_MoveCollide": "bigint",
         "m_MoveType": "bigint",
         "m_nBloodType": "number",
+        "m_nDeployTick": "number",
         "m_nDropTick": "number",
         "m_nextPrevOwnerUseTime": "number",
         "m_nFallbackPaintKit": "number",
@@ -9504,7 +9561,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecForce": "[number, number, number]",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
-        "m_vLookTargetPosition": "[number, number, number]",
         "m_weaponMode": "bigint"
       }
     },
@@ -9520,5 +9576,21 @@
         "m_vecSellbackPurchaseEntries": "ReadonlyArray<{ readonly \"m_bPrevHelmet\"?: boolean; readonly \"m_hItem\"?: bigint; readonly \"m_nCost\"?: number; readonly \"m_nPrevArmor\"?: number; readonly \"m_unDefIdx\"?: number }>"
       }
     }
+  },
+  "header": {
+    "demo_file_stamp": "PBDEMS2\u0000",
+    "patch_version": 14178,
+    "server_name": "Valve Counter-Strike 2 eu_north Server (srcds6005-sto1.186.63)",
+    "client_name": "SourceTV Demo",
+    "map_name": "de_nuke",
+    "game_directory": "/opt/srcds/cs2/csgo_v2000902/csgo",
+    "fullpackets_version": 2,
+    "allow_clientside_entities": true,
+    "allow_clientside_particles": true,
+    "addons": "",
+    "demo_version_name": "valve_demo_2",
+    "demo_version_guid": "8e9d71ab-04a1-4c01-bb61-acfede27c046",
+    "build_num": 10896,
+    "server_start_tick": 2128
   }
 }

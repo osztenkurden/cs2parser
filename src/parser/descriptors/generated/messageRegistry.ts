@@ -37,6 +37,7 @@ import {
 	CSVCMsg_ClearAllStringTables,
 	CSVCMsg_CmdKeyValues,
 	CSVCMsg_CreateStringTable,
+	CSVCMsg_EncryptedData,
 	CSVCMsg_FlattenedSerializer,
 	CSVCMsg_FullFrameSplit,
 	CSVCMsg_GetCvarValue,
@@ -152,6 +153,7 @@ import {
 	CCSUsrMsg_CounterStrafe,
 	CCSUsrMsg_CurrentRoundOdds,
 	CCSUsrMsg_CurrentTimescale,
+	CCSUsrMsg_CustomHudClicked,
 	CCSUsrMsg_Damage,
 	CCSUsrMsg_DamagePrediction,
 	CCSUsrMsg_DeepStats,
@@ -297,6 +299,7 @@ export const messageRegistry = {
 	svc_HltvFixupOperatorStatus: { id: SVC_Messages.svc_HltvFixupOperatorStatus, class: CSVCMsg_HltvFixupOperatorStatus },
 	svc_UserCmds: { id: SVC_Messages.svc_UserCmds, class: CSVCMsg_UserCommands },
 	svc_NextMsgPredicted: { id: SVC_Messages.svc_NextMsgPredicted, class: CSVCMsg_NextMsgPredicted },
+	svc_EncryptedData: { id: SVC_Messages.svc_EncryptedData, class: CSVCMsg_EncryptedData },
 
 	// EBaseUserMessages — engine user messages (101–166)
 	UM_AchievementEvent: { id: EBaseUserMessages.UM_AchievementEvent, class: CUserMessageAchievementEvent },
@@ -448,6 +451,7 @@ export const messageRegistry = {
 	CS_UM_RecurringMissionSchema: { id: ECstrike15UserMessages.CS_UM_RecurringMissionSchema, class: CCSUsrMsg_RecurringMissionSchema },
 	CS_UM_SendPlayerLoadout: { id: ECstrike15UserMessages.CS_UM_SendPlayerLoadout, class: CCSUsrMsg_SendPlayerLoadout },
 	CS_UM_WeaponMagDrop: { id: ECstrike15UserMessages.CS_UM_WeaponMagDrop, class: CCSUsrMsg_WeaponMagDrop },
+	CS_UM_CustomHudClicked: { id: ECstrike15UserMessages.CS_UM_CustomHudClicked, class: CCSUsrMsg_CustomHudClicked },
 
 	// ETEProtobufIds — temp entities (400–426)
 	TE_EffectDispatchId: { id: ETEProtobufIds.TE_EffectDispatchId, class: CMsgTEEffectDispatch },
