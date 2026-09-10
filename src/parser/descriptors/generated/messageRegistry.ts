@@ -9,10 +9,10 @@
 //
 // Enum members with no protobuf message in the current CS2 protos:
 //   EBaseUserMessages.UM_UserSentBugBug
-//   ECstrike15UserMessages.CS_UM_SayText
-//   ECstrike15UserMessages.CS_UM_SayText2
-//   ECstrike15UserMessages.CS_UM_TextMsg
-//   ECstrike15UserMessages.CS_UM_UpdateTeamMoney
+//   ECstrike15UserMessages.CS_UM_SayText2_CSGOLegacy
+//   ECstrike15UserMessages.CS_UM_SayText_CSGOLegacy
+//   ECstrike15UserMessages.CS_UM_TextMsg_CSGOLegacy
+//   ECstrike15UserMessages.CS_UM_UpdateTeamMoney_CSGOLegacy
 //   NET_Messages.net_Disconnect_Legacy
 
 import {

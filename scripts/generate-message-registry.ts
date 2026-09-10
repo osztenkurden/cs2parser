@@ -149,10 +149,10 @@ const OVERRIDES: Record<string, string> = {
  */
 const KNOWN_UNMAPPED = new Set([
 	'NET_Messages.net_Disconnect_Legacy', // dropped in Source 2
-	'ECstrike15UserMessages.CS_UM_SayText', // CS:GO-era; CS2 sends UM_SayText
-	'ECstrike15UserMessages.CS_UM_SayText2', // CS:GO-era; CS2 sends UM_SayText2
-	'ECstrike15UserMessages.CS_UM_TextMsg', // CS:GO-era; CS2 sends UM_TextMsg
-	'ECstrike15UserMessages.CS_UM_UpdateTeamMoney', // CS:GO-era, no CS2 proto
+	'ECstrike15UserMessages.CS_UM_SayText_CSGOLegacy', // CS:GO-era; CS2 sends UM_SayText
+	'ECstrike15UserMessages.CS_UM_SayText2_CSGOLegacy', // CS:GO-era; CS2 sends UM_SayText2
+	'ECstrike15UserMessages.CS_UM_TextMsg_CSGOLegacy', // CS:GO-era; CS2 sends UM_TextMsg
+	'ECstrike15UserMessages.CS_UM_UpdateTeamMoney_CSGOLegacy', // CS:GO-era, no CS2 proto
 	'EBaseUserMessages.UM_UserSentBugBug' // enum member added 2026-08; no message defined yet
 ]);
 
