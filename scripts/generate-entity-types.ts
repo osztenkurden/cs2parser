@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import { DemoReader } from '../src/parser/index.js';
 import type { Decoder } from '../src/parser/entities/constructorFields.js';
 import { EntityMode } from '../src/index.js';
+import type { CDemoFileHeader } from '../src/ts-proto/demo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, '..', 'src', 'generated');
@@ -54,6 +55,7 @@ function decoderToTsType(decoder: Decoder): string {
 }
 
 type SnapshotData = {
+	header: CDemoFileHeader | null;
 	// serializerName → { fieldName (without serializer prefix) → tsType }
 	serializers: Record<string, Record<string, string>>;
 	entities: Record<string, { serializers: string[]; ownFields: Record<string, string> }>;
@@ -61,6 +63,10 @@ type SnapshotData = {
 
 async function collectFromDemo(demoPath: string): Promise<SnapshotData> {
 	const parser = new DemoReader();
+	let header = null as CDemoFileHeader | null;
+	parser.on('header', h => {
+		header = h;
+	});
 	const end = await parser.parseDemo(demoPath, { entities: EntityMode.ALL, stream: false });
 	if (end.error) throw end.error;
 	if (end.incomplete) throw new Error('Demo parsing was incomplete; refusing to generate entity types.');
@@ -155,7 +161,7 @@ async function collectFromDemo(demoPath: string): Promise<SnapshotData> {
 	}
 
 	// Convert to serializable format
-	const result: SnapshotData = { serializers: {}, entities: {} };
+	const result: SnapshotData = { serializers: {}, entities: {}, header };
 	for (const [name, fields] of serializerMap) {
 		result.serializers[name] = Object.fromEntries([...fields.entries()].sort((a, b) => a[0].localeCompare(b[0])));
 	}
@@ -183,7 +189,11 @@ function loadSnapshot(): SnapshotData {
 function generateTypeScript(data: SnapshotData, demoName: string): string {
 	const lines: string[] = [];
 	lines.push('// AUTO-GENERATED - DO NOT EDIT');
-	lines.push(`// Generated from demo: ${demoName} on ${new Date().toISOString().split('T')[0]}`);
+	let line = `// Generated from demo: ${demoName} on ${new Date().toISOString().split('T')[0]}`;
+	if (data.header) {
+		line += ` (build: ${data.header.build_num}, patch: ${data.header.patch_version})`;
+	}
+	lines.push(line);
 	lines.push('');
 
 	// Utility type
