@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/osztenkurden/cs2parser/compare/v2.1.0...v2.2.0) (2026-09-12)
+
+
+### Features
+
+* improved smoke voxels support ([c7a943c](https://github.com/osztenkurden/cs2parser/commit/c7a943c9f109bde6d8afdef4ccd0393fb22006be))
+
+
+### Bug Fixes
+
+* small perf improvement & deps update ([32ef3e6](https://github.com/osztenkurden/cs2parser/commit/32ef3e6a06093232392f548a2b0ebd3910487baa))
+
 ## [2.1.0](https://github.com/osztenkurden/cs2parser/compare/v2.0.0...v2.1.0) (2026-09-10)
 
 
