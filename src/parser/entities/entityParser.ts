@@ -49,6 +49,7 @@ const getEntityType = (name: string) => {
 };
 
 type FieldPlan = {
+	meta: PropInfo | undefined;
 	decoder: Decoder;
 	propId: number;
 	isResize: boolean;
@@ -58,9 +59,11 @@ type FieldPlan = {
 	pathError: string;
 };
 
-// Each serializer's cloned fields carry class-local prop IDs. Plans never hold entity storage.
-const planField = (field: Field, depth: number, indexDepth: number): FieldPlan => {
+// Resolve metadata from this demo's class-local fields, never from serializer names
+// or generated snapshots. Plans belong to one EntityParser and hold no entity storage.
+const planField = (field: Field, depth: number, indexDepth: number, propInfo: (PropInfo | undefined)[]): FieldPlan => {
 	const plan: FieldPlan = {
+		meta: undefined,
 		decoder: Decoders.UnsignedDecoder,
 		propId: -1,
 		isResize: false,
@@ -81,7 +84,7 @@ const planField = (field: Field, depth: number, indexDepth: number): FieldPlan =
 		case FieldTypeEnum.Vector: {
 			const value = (field as Field<typeof FieldTypeEnum.Array | typeof FieldTypeEnum.Vector>).value;
 			// Nested containers retain the existing outermost-element indexing behavior.
-			plan.element = planField(value.field_enum, depth + 1, indexDepth === -1 ? depth + 1 : indexDepth);
+			plan.element = planField(value.field_enum, depth + 1, indexDepth === -1 ? depth + 1 : indexDepth, propInfo);
 			if (field.type === FieldTypeEnum.Vector && value.field_enum.type === FieldTypeEnum.Value) {
 				plan.propId = plan.element.propId;
 				plan.isResize = true;
@@ -92,7 +95,7 @@ const planField = (field: Field, depth: number, indexDepth: number): FieldPlan =
 		case FieldTypeEnum.Pointer: {
 			const value = (field as Field<typeof FieldTypeEnum.Serializer | typeof FieldTypeEnum.Pointer>).value;
 			plan.children = value.serializer.fields.map(child =>
-				child ? planField(child, depth + 1, indexDepth) : null
+				child ? planField(child, depth + 1, indexDepth, propInfo) : null
 			);
 			plan.pathError = field.type === FieldTypeEnum.Pointer ? 'ILLEGAL PATH #2x' : 'ILLEGAL PATH #1';
 			if (field.type === FieldTypeEnum.Pointer)
@@ -100,6 +103,7 @@ const planField = (field: Field, depth: number, indexDepth: number): FieldPlan =
 			break;
 		}
 	}
+	plan.meta = plan.propId === -1 ? undefined : propInfo[plan.propId];
 	return plan;
 };
 
@@ -207,8 +211,7 @@ export class EntityParser {
 	private cachedBitBuffer2 = new BitBuffer(new Uint8Array(0));
 	public tick = 0;
 	public directEntities:
-		| { className: string; classId: number; entityType: number; properties: Record<string, unknown> }[]
-		| null = null;
+		{ className: string; classId: number; entityType: number; properties: Record<string, unknown> }[] | null = null;
 	/** Property metadata indexed by prop id for direct entity updates. */
 	public directPropInfoById: (PropInfo | undefined)[] | null = null;
 	public onlyGameRules = false;
@@ -242,39 +245,56 @@ export class EntityParser {
 		const entProps = ent ? ent.properties : null;
 		const propNameById = this.classInfo.propNameById;
 		const propInfoById = this.directPropInfoById;
+		// Custom direct-write metadata still uses its own table; the normal session
+		// uses the same schema metadata that was resolved when building the plans.
+		const cachedMetadata = propInfoById === this.classInfo.propInfoById;
 		const emitEntityUpdates = !directEntities; // emit only when no direct-write target
 		// Update-local only: callers can replace properties or arrays between entity updates.
 		let containerKey: string | undefined;
 		let container: unknown[] | TypedArray | undefined;
 
+		// Select the value consumer once per entity, not once per field.
+		if (entProps) {
+			let i = 0;
+			while (i < nUpdates) {
+				const info = updates[i]!;
+				const arrayIndex = this.arrayIndices[i]!;
+				const meta = cachedMetadata ? info.meta : info.propId !== -1 ? propInfoById![info.propId] : undefined;
+				if (meta !== undefined) {
+					const result = constructorFieldHelper.decode(reader, info.decoder);
+					if (meta.containerKey !== undefined && arrayIndex !== -1 && !info.isResize) {
+						if (
+							containerKey !== meta.containerKey ||
+							container === undefined ||
+							(meta.elementCtor && meta.fixedLength === undefined && arrayIndex >= container.length)
+						) {
+							container = writeToContainer(entProps, meta, arrayIndex, result);
+							containerKey = meta.containerKey;
+						} else if (meta.subKey !== undefined) {
+							const elements = container as Record<string, unknown>[];
+							let element = elements[arrayIndex];
+							if (!element) elements[arrayIndex] = element = {};
+							element[meta.subKey] = result;
+						} else {
+							(container as unknown[])[arrayIndex] = result;
+						}
+					} else {
+						containerKey = undefined;
+						if (info.isResize) resizeContainer(entProps, meta, result as number);
+						else entProps[meta.name] = result;
+					}
+				} else {
+					constructorFieldHelper.skip(reader, info.decoder);
+				}
+				i++;
+			}
+			return i;
+		}
 		let i = 0;
 		while (i < nUpdates) {
 			const info = updates[i]!;
 			const arrayIndex = this.arrayIndices[i]!;
-			const meta = info.propId !== -1 && entProps ? propInfoById![info.propId] : undefined;
-			if (meta !== undefined) {
-				const result = constructorFieldHelper.decode(reader, info.decoder);
-				if (meta.containerKey !== undefined && arrayIndex !== -1 && !info.isResize) {
-					if (
-						containerKey !== meta.containerKey ||
-						container === undefined ||
-						(meta.elementCtor && meta.fixedLength === undefined && arrayIndex >= container.length)
-					) {
-						container = writeToContainer(entProps!, meta, arrayIndex, result);
-						containerKey = meta.containerKey;
-					} else if (meta.subKey !== undefined) {
-						const elements = container as Record<string, unknown>[];
-						let element = elements[arrayIndex];
-						if (!element) elements[arrayIndex] = element = {};
-						element[meta.subKey] = result;
-					} else {
-						(container as unknown[])[arrayIndex] = result;
-					}
-				} else {
-					containerKey = undefined;
-					applyPropUpdate(entProps!, meta, result, arrayIndex, info.isResize);
-				}
-			} else if (info.propId !== -1 && emitEntityUpdates && propNameById[info.propId] !== undefined) {
+			if (info.propId !== -1 && emitEntityUpdates && propNameById[info.propId] !== undefined) {
 				const result = constructorFieldHelper.decode(reader, info.decoder);
 				this.enqueueEvent('entityupdated', {
 					entityId,
@@ -303,7 +323,9 @@ export class EntityParser {
 		if (this.planSerializer !== serializer) {
 			let roots = this.plans.get(serializer);
 			if (!roots) {
-				roots = serializer.fields.map(field => (field ? planField(field, 0, -1) : null));
+				roots = serializer.fields.map(field =>
+					field ? planField(field, 0, -1, this.classInfo.propInfoById) : null
+				);
 				this.plans.set(serializer, roots);
 			}
 			this.planSerializer = serializer;

@@ -9619,9 +9619,9 @@
   "header": {
     "demo_file_stamp": "PBDEMS2\u0000",
     "patch_version": 14181,
-    "server_name": "Valve Counter-Strike 2 us_south_central Server (srcds1001-dfw2.404.248)",
+    "server_name": "Valve Counter-Strike 2 eu_north Server (srcds7024-sto1.187.136)",
     "client_name": "SourceTV Demo",
-    "map_name": "de_ancient",
+    "map_name": "de_anubis",
     "game_directory": "/opt/srcds/cs2/csgo_v2000908/csgo",
     "fullpackets_version": 2,
     "allow_clientside_entities": true,
@@ -9630,6 +9630,6 @@
     "demo_version_name": "valve_demo_2",
     "demo_version_guid": "8e9d71ab-04a1-4c01-bb61-acfede27c046",
     "build_num": 10896,
-    "server_start_tick": 2449
+    "server_start_tick": 2228
   }
 }

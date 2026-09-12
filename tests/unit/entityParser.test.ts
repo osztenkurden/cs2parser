@@ -11,6 +11,7 @@ import {
 import type { ClassInfo } from '../../src/parser/entities/classInfo.js';
 import type { FieldPath } from '../../src/parser/entities/fieldPathOps.js';
 import { BitBuffer } from '../../src/parser/ubitreader.js';
+import { getQuantalizedFloat } from '../../src/parser/entities/quantizedFloat.js';
 
 const bits = (...parts: [number, number][]): Uint8Array => {
 	const length = parts.reduce((n, [, width]) => n + width, 0);
@@ -436,4 +437,71 @@ describe('EntityParser compact updates', () => {
 			expect(() => write(path(0, 0), 0)).toThrow('ILLEGAL PATH');
 		}
 	);
+});
+
+describe('demo-derived plans', () => {
+	test('an explicit direct-write metadata table still controls destinations after planning', () => {
+		const demo = setup([valueField('count', Decoders.UnsignedDecoder)], true);
+		demo.create();
+		demo.write(path(0), 0);
+		demo.parser.directPropInfoById = [{ ...demo.classInfo.propInfoById[0]!, name: 'custom.count' }];
+		demo.parser.decodeEntityUpdate(new BitBuffer(Uint8Array.of(42)), 7, 1);
+		expect(demo.parser.directEntities![7]!.properties).toEqual({ 'custom.count': 42 });
+	});
+
+	test('quantized float parameters and bit widths come from each serializer definition', () => {
+		for (const [width, low, high] of [
+			[4, 0, 15],
+			[8, -100, 100],
+			[4, 0, 15]
+		] as const) {
+			const decoder: Decoder = { type: 0, decoder: getQuantalizedFloat(width, 0, low, high) };
+			const demo = setup([valueField('value', decoder)], true);
+			demo.create();
+			demo.write(path(0), 0);
+			const input = bits([(1 << width) - 1, width], [0xab, 8]);
+			const reader = new BitBuffer(input);
+			demo.parser.decodeEntityUpdate(reader, 7, 1);
+			expect(demo.parser.directEntities![7]!.properties['CWeaponTest.value']).toBeCloseTo(high, 5);
+			expect(reader.ReadByte()).toBe(0xab);
+		}
+	});
+
+	test('same serializer name can have reordered fields and different decoders in consecutive demos', () => {
+		const first = setup(
+			[valueField('count', Decoders.UnsignedDecoder), valueField('label', Decoders.StringDecoder)],
+			true
+		);
+		const second = setup(
+			[valueField('label', Decoders.StringDecoder), valueField('count', Decoders.SignedDecoder)],
+			true
+		);
+		for (const [demo, bytes, expected] of [
+			[first, Uint8Array.of(42, 65, 0), { 'CWeaponTest.count': 42, 'CWeaponTest.label': 'A' }],
+			[second, Uint8Array.of(66, 0, 3), { 'CWeaponTest.label': 'B', 'CWeaponTest.count': -2 }],
+			[first, Uint8Array.of(7, 67, 0), { 'CWeaponTest.count': 7, 'CWeaponTest.label': 'C' }]
+		] as const) {
+			demo.create();
+			demo.write(path(0), 0);
+			demo.write(path(1), 1);
+			const reader = new BitBuffer(bytes);
+			demo.parser.decodeEntityUpdate(reader, 7, 2);
+			expect(reader.RemainingBits).toBe(0);
+			expect(demo.parser.directEntities![7]!.properties).toEqual(expected);
+		}
+	});
+
+	test('a replacement serializer object with the same name gets fresh decoder plans', () => {
+		const first = setup([valueField('count', Decoders.UnsignedDecoder)], true);
+		const second = setup([valueField('label', Decoders.StringDecoder)], true);
+		first.create();
+		first.write(path(0), 0);
+		first.parser.decodeEntityUpdate(new BitBuffer(Uint8Array.of(42)), 7, 1);
+		Object.assign(first.classInfo, second.classInfo);
+		first.parser.directPropInfoById = first.classInfo.propInfoById;
+		first.create();
+		first.write(path(0), 0);
+		first.parser.decodeEntityUpdate(new BitBuffer(Uint8Array.of(65, 0)), 7, 1);
+		expect(first.parser.directEntities![7]!.properties).toEqual({ 'CWeaponTest.label': 'A' });
+	});
 });

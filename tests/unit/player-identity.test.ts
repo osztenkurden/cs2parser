@@ -167,3 +167,21 @@ describe('player identity', () => {
 		expect(event.player).toBe(victim);
 	});
 });
+
+test('Steam ID conversion follows value changes, property replacement, and entity deletion', () => {
+	const reader = new DemoReader();
+	const player = controller(reader, 0, 9007199254740993n);
+	expect(player.steamId).toBe('9007199254740993');
+	expect(player.steamId).toBe('9007199254740993');
+	const entity = player.entity!;
+	Object.assign(entity.properties, { 'CCSPlayerController.m_steamID': 76561198277347755n });
+	expect(player.steamId).toBe('76561198277347755');
+	entity.properties = { 'CCSPlayerController.m_steamID': 0n };
+	expect(player.steamId).toBe('0');
+	entity.properties = {};
+	expect(player.steamId).toBe('');
+	entity.properties = { 'CCSPlayerController.m_steamID': 9007199254740993n };
+	expect(player.steamId).toBe('9007199254740993');
+	delete reader.entities[player.entityId];
+	expect(player.steamId).toBe('');
+});

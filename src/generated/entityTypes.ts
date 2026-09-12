@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: 10_09_2026.dem on 2026-09-10 (build: 10896, patch: 14181)
+// Generated from demo: DEMO.dem on 2026-09-12 (build: 10896, patch: 14181)
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {

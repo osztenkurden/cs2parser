@@ -16,7 +16,7 @@ test('editable protobuf reader resets position and uses exactly bounded views', 
 		expect(view.buffer).toBe(bytes.buffer);
 		expect(view.byteOffset).toBe(bytes.byteOffset);
 		expect(view.byteLength).toBe(bytes.byteLength);
-		expect(reader.buf).toBe(bytes);
+		expect(Reflect.get(reader, 'buf')).toBe(bytes);
 		expect(reader.len).toBe(bytes.length);
 		expect(reader.pos).toBe(0);
 		expect(reader.fixed32()).toBe(new BinaryReader(bytes).fixed32());
@@ -56,7 +56,7 @@ test('editable protobuf reader bounds varints and bytes to each new slice and re
 		const backing = Uint8Array.of(99, ...bytes, 0, 0, 0, 0);
 		reader.setTo(backing);
 		reader.setTo(backing.subarray(1, 1 + bytes.length));
-		expect(() => new BinaryReader(reader.buf)[method]()).toThrow();
+		expect(() => new BinaryReader(backing.subarray(1, 1 + bytes.length))[method]()).toThrow();
 		expect(() => reader[method]()).toThrow();
 	}
 	const encoded = new BinaryWriter().uint32(300).bytes(Uint8Array.of(1, 2)).float(1.5).double(-123.25).finish();
@@ -71,4 +71,21 @@ test('editable protobuf reader bounds varints and bytes to each new slice and re
 	reader.setTo(Uint8Array.of(0));
 	expect(reader.uint32()).toBe(0);
 	expect(retained).toEqual(Uint8Array.of(1, 2));
+});
+
+test('reuse remains an upstream reader and resets 64-bit varint decoding state', () => {
+	const reader = new BinaryReaderEditable(new Uint8Array(0));
+	expect(reader).toBeInstanceOf(BinaryReader);
+	for (const value of [18446744073709551615n, 0n, 9007199254740993n, 1n]) {
+		const encoded = new BinaryWriter().uint64(value).sint64(-123n).bool(true).string('世界').finish();
+		const backing = Uint8Array.of(99, ...encoded, 99);
+		const bytes = backing.subarray(1, 1 + encoded.length);
+		reader.setTo(bytes);
+		const reference = new BinaryReader(bytes);
+		expect(reader.uint64()).toBe(reference.uint64());
+		expect(reader.sint64()).toBe(reference.sint64());
+		expect(reader.bool()).toBe(reference.bool());
+		expect(reader.string()).toBe(reference.string());
+		expect(reader.pos).toBe(reference.pos);
+	}
 });

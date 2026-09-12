@@ -7,6 +7,9 @@ import { EntityHelper } from './entityHelper.js';
 const PLAYER_ENTITY_HANDLE_MISSING = 2047;
 
 export class Player extends EntityHelper<'CCSPlayerController'> {
+	private cachedSteamIdValue: bigint | undefined;
+	private cachedSteamId = '';
+
 	constructor(parser: DemoReader, entityId: number) {
 		super(parser, entityId);
 	}
@@ -19,7 +22,11 @@ export class Player extends EntityHelper<'CCSPlayerController'> {
 
 	get steamId(): string {
 		const raw = this.prop('CCSPlayerController.m_steamID');
-		return raw !== undefined ? String(raw) : '';
+		if (raw !== this.cachedSteamIdValue) {
+			this.cachedSteamIdValue = raw;
+			this.cachedSteamId = raw !== undefined ? String(raw) : '';
+		}
+		return this.cachedSteamId;
 	}
 
 	get isConnected(): boolean {
