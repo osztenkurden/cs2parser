@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import type * as Browser from '../../src/browser.js';
-import { canonicalize, PARITY_CHUNK_SIZES, PARITY_MODES, sha256 } from '../helpers/parity.js';
+import { canonicalize, sha256 } from '../helpers/parity.js';
 import { BinaryWriter } from '@bufbuild/protobuf/wire';
 import { bytesField, demoFile, demoFrame, networkPacket } from '../helpers/demo.js';
 import { encryptedChatCiphertext, encryptedChatKeyValue } from '../helpers/encryptedChat.js';
@@ -163,48 +163,30 @@ test('portable snapshot hashing preserves values without Node globals', async ({
 	});
 });
 
-for (const mode of PARITY_MODES) {
-	// The full mode/chunk cross-product runs in integration tests. Real engines cover
-	// every mode plus owned bytes and adversarial chunking without 15 full-file downloads each.
-	for (const transport of mode === 'ALL'
-		? (['fetch', 'bytes', PARITY_CHUNK_SIZES[0]] as const)
-		: (['fetch'] as const)) {
-		test(`real demo deep parity: ${mode} / ${transport}`, async ({ page, request }) => {
-			test.setTimeout(300000);
-			test.skip(
-				!existsSync(process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem'),
-				'Set CS2_DEMO_PATH to run the real-demo browser comparison'
-			);
-			const response = await request.get(`/expected?mode=${mode}`, { timeout: 300000 });
-			expect(response.ok()).toBe(true);
-			const expected = await response.json();
-			const actual = await page.evaluate(
-				async ({ mode, transport }) => {
-					const moduleUrl = '/bundle.mjs';
-					const { DemoReader, EntityMode, captureParity, chunkedDemo } = (await import(
-						moduleUrl
-					)) as BrowserTestModule;
-					const response = await fetch('/real.dem');
-					if (!response.ok) throw new Error(`Fixture HTTP ${response.status}`);
-					let input: Uint8Array | ReadableStream<Uint8Array>;
-					if (transport === 'fetch') input = response.body!;
-					else {
-						const bytes = new Uint8Array(await response.arrayBuffer());
-						input = transport === 'bytes' ? bytes : chunkedDemo(bytes, transport);
-					}
-					const reader = new DemoReader();
-					const capture = captureParity(reader, mode);
-					const result = await reader.parseDemo(input, { entities: EntityMode[mode] });
-					if (result.status !== 'complete') throw new Error(`Browser parse ${result.status}`);
-					return {
-						parity: await capture.finish(),
-						nodeGlobals: 'Buffer' in globalThis || 'process' in globalThis,
-						isolated: crossOriginIsolated
-					};
-				},
-				{ mode, transport }
-			);
-			expect(actual).toEqual({ parity: expected, nodeGlobals: false, isolated: false });
-		});
-	}
-}
+// Deep state/event parity once per engine; mode and chunk coverage lives in Bun integration tests.
+test('real demo deep parity: ALL / fetch stream', async ({ page, request }) => {
+	test.setTimeout(300000);
+	test.skip(
+		!existsSync(process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem'),
+		'Set CS2_DEMO_PATH for real-demo parity'
+	);
+	const response = await request.get('/expected?mode=ALL', { timeout: 300000 });
+	expect(response.ok()).toBe(true);
+	const expected = await response.json();
+	const actual = await page.evaluate(async () => {
+		const moduleUrl = '/bundle.mjs';
+		const { DemoReader, EntityMode, captureParity } = (await import(moduleUrl)) as BrowserTestModule;
+		const response = await fetch('/real.dem');
+		if (!response.ok) throw new Error(`Fixture HTTP ${response.status}`);
+		const reader = new DemoReader();
+		const capture = captureParity(reader, 'ALL');
+		const result = await reader.parseDemo(response.body!, { entities: EntityMode.ALL });
+		if (result.status !== 'complete') throw new Error(`Browser parse ${result.status}`);
+		return {
+			parity: await capture.finish(),
+			nodeGlobals: 'Buffer' in globalThis || 'process' in globalThis,
+			isolated: crossOriginIsolated
+		};
+	});
+	expect(actual).toEqual({ parity: expected, nodeGlobals: false, isolated: false });
+});

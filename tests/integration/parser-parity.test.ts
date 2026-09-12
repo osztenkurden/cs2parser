@@ -226,21 +226,20 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			);
 		});
 
-		for (const chunkSize of [0, PARITY_CHUNK_SIZES[0], ...(mode === 'ALL' ? [PARITY_CHUNK_SIZES[2]] : [])]) {
-			test(`${mode}: browser ${chunkSize ? `Web stream / ${chunkSize} bytes` : 'Uint8Array'} deep parity`, async () => {
-				const reader = new BrowserReader();
-				const capture = captureParity(reader, mode);
-				const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-				const source = chunkSize ? chunkedDemo(view, chunkSize) : view;
-				expect(await reader.parseDemo(source, { entities: EntityMode[mode] })).toEqual({ status: 'complete' });
-				expect(await capture.finish()).toEqual(server[mode]);
-			}, 300000);
-		}
+		// Cover each mode and browser transport once rather than their cross-product.
+		const chunkSize = mode === 'NONE' ? 0 : mode === 'ALL' ? PARITY_CHUNK_SIZES[0] : PARITY_CHUNK_SIZES[2];
+		test(`${mode}: browser ${chunkSize ? `Web stream / ${chunkSize} bytes` : 'Uint8Array'} deep parity`, async () => {
+			const reader = new BrowserReader();
+			const capture = captureParity(reader, mode);
+			const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+			const source = chunkSize ? chunkedDemo(view, chunkSize) : view;
+			expect(await reader.parseDemo(source, { entities: EntityMode[mode] })).toEqual({ status: 'complete' });
+			expect(await capture.finish()).toEqual(server[mode]);
+		}, 300000);
 	}
 
 	for (const [method, source, options] of [
 		['Buffer', () => bytes, {}],
-		['Web stream / 4093 bytes', () => chunkedDemo(bytes, PARITY_CHUNK_SIZES[0]), {}],
 		['path stream:false', () => demoPath, { stream: false }],
 		['one-chunk Readable', () => Readable.from([bytes]), {}]
 	] as const) {

@@ -27,7 +27,12 @@ The test hashes the input before selecting the golden. Other recordings receive 
 
 `tests/helpers/parity.ts` captures full entity, game-rule, and userinfo state at nine checkpoints and completion, plus the header, tick count, ordered raw events, and synthetic round payloads. Capture is synchronous before mutable state can change; SHA-256 hashing runs afterward. Tagged canonicalization preserves key/array order rules, sparse holes, undefined, BigInts, negative zero, nonfinite floats, and typed-array identity; Buffer normalizes to Uint8Array. Cyclic helpers and unsupported objects are rejected rather than silently omitted.
 
-The selected integration matrix uses 14 full parses across modes, both exports, Node/Web streams, buffered inputs, and small/large chunks. It separately checks one-chunk yielding/cancellation. Playwright tests the published browser export in Chromium, Firefox, and WebKit. On memory-constrained runners, a case can run separately, for example `--project=firefox --grep 'real demo deep parity: ALL / 4093$'`; a browser crash is not a parity pass.
+Integration parity uses nine full parses: all three entity modes through the server
+path, one browser input per mode (bytes, small chunks, large chunks), and the
+remaining server input forms. One-chunk yielding/cancellation is checked separately.
+Playwright keeps the small browser API checks and one ALL-mode fetch-stream deep
+comparison in each of Chromium, Firefox and WebKit. To run one engine:
+`--project=firefox`.
 
 ```sh
 CS2_DEMO_PATH=/path/to/demo.dem bun test tests/integration/parser-parity.test.ts --timeout 300000

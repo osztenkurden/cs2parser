@@ -18,6 +18,8 @@ describe.skipIf(!demoAvailable)('usercommand reconstruction', () => {
 	let resolved = 0;
 	let diagnostics: string[] = [];
 	let sample: UserCommand | null = null;
+	const still = { n: 0, exact: 0, sum: 0 };
+	const control = { n: 0, far: 0 };
 
 	beforeAll(async () => {
 		const reader = new DemoReader();
@@ -34,47 +36,6 @@ describe.skipIf(!demoAvailable)('usercommand reconstruction', () => {
 				if (!sample && command.isDelta && command.cmd.base?.viewangles) sample = command;
 			}
 		});
-		await reader.parseDemo(demoPath);
-	});
-
-	test('every command resolves to a decoded payload', () => {
-		expect(total).toBeGreaterThan(0);
-		expect(resolved).toBe(total);
-		// The health report only fires when something failed.
-		expect(diagnostics).toEqual([]);
-	});
-
-	test('full and delta commands are both accounted for', () => {
-		expect(full + delta).toBe(total);
-		expect(full).toBeGreaterThan(0);
-	});
-
-	test.skipIf(!demoAvailable)('a resolved delta carries real payload fields', () => {
-		if (delta === 0) return; // demo predates delta-encoded user commands
-		expect(sample).not.toBeNull();
-		const base = sample!.cmd!.base!;
-		expect(base.viewangles).toBeDefined();
-		expect(Math.abs(base.viewangles!.x ?? 0)).toBeLessThanOrEqual(90.5);
-		expect(Math.abs(base.viewangles!.y ?? 0)).toBeLessThanOrEqual(180.5);
-		expect(sample!.deltaData).toBeInstanceOf(Uint8Array);
-	});
-});
-
-/**
- * Cross-checks the reconstruction against a completely independent decode path:
- * the pawn's `m_angEyeAngles` from the entity bitstream.
- *
- * A command names the pawn it drives via `pawn_entity_handle`, so there is no
- * slot-mapping guesswork. When the player is not turning, the angle the server
- * publishes must be the angle the command carried — any error in the delta decode
- * shows up immediately here.
- */
-describe.skipIf(!demoAvailable)('usercommand vs entity eye angles', () => {
-	let still = { n: 0, exact: 0, sum: 0 };
-	let control = { n: 0, far: 0 };
-
-	beforeAll(async () => {
-		const reader = new DemoReader();
 		const WINDOW = 4;
 		const recent = new Map<number, { x: number; y: number }[]>();
 		const prevEye = new Map<number, { pitch: number; yaw: number }>();
@@ -130,9 +91,30 @@ describe.skipIf(!demoAvailable)('usercommand vs entity eye angles', () => {
 			}
 		});
 
-		await reader.parseDemo(demoPath, { entities: EntityMode.ALL });
+		expect(await reader.parseDemo(demoPath, { entities: EntityMode.ALL })).toEqual({ status: 'complete' });
 	});
 
+	test('every command resolves to a decoded payload', () => {
+		expect(total).toBeGreaterThan(0);
+		expect(resolved).toBe(total);
+		// The health report only fires when something failed.
+		expect(diagnostics).toEqual([]);
+	});
+
+	test('full and delta commands are both accounted for', () => {
+		expect(full + delta).toBe(total);
+		expect(full).toBeGreaterThan(0);
+	});
+
+	test.skipIf(!demoAvailable)('a resolved delta carries real payload fields', () => {
+		if (delta === 0) return; // demo predates delta-encoded user commands
+		expect(sample).not.toBeNull();
+		const base = sample!.cmd!.base!;
+		expect(base.viewangles).toBeDefined();
+		expect(Math.abs(base.viewangles!.x ?? 0)).toBeLessThanOrEqual(90.5);
+		expect(Math.abs(base.viewangles!.y ?? 0)).toBeLessThanOrEqual(180.5);
+		expect(sample!.deltaData).toBeInstanceOf(Uint8Array);
+	});
 	test('a stationary aim matches the reconstructed command exactly', () => {
 		expect(still.n).toBeGreaterThan(1000);
 		expect(still.exact / still.n).toBeGreaterThan(0.99);

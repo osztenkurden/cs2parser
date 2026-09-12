@@ -5,8 +5,8 @@ on:
     branches: [master]
 
 jobs:
-  lint-and-typecheck:
-    name: Lint & Typecheck
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -21,24 +21,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: npm run format:check
-      - run: npm run typecheck
-
-  build-and-test:
-    name: Build & Test
-    runs-on: ubuntu-latest
-    needs: lint-and-typecheck
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: oven-sh/setup-bun@v2
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-
-      - run: bun install --frozen-lockfile
-
+      # Build includes typechecking and generated-source checks.
       - run: npm run build
       - run: npm run test:node
 
