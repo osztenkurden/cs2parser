@@ -1,6 +1,12 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import fs from 'fs';
-import { DemoReader, EntityMode, decodeSmokeVoxelJournal } from '../../src/index.js';
+import {
+	DemoReader,
+	EntityMode,
+	decodeSmokeVoxelJournal,
+	decodeSmokeVoxelFrame,
+	getSmokeVoxelStateAt
+} from '../../src/index.js';
 
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 const demoAvailable = fs.existsSync(demoPath);
@@ -9,8 +15,8 @@ const KEY = 'CSmokeGrenadeProjectile.m_VoxelFrameData';
 const SIZE_KEY = 'CSmokeGrenadeProjectile.m_nVoxelFrameDataSize';
 
 describe.skipIf(!demoAvailable)('smoke voxel journal and SmokeHelper (integration)', () => {
-	// Largest journal captured per smoke entity.
-	const best = new Map<number, { data: Uint8Array; size: number }>();
+	// Entity slots are reused; key by entity object to retain each lifetime.
+	const best = new Map<object, { data: Uint8Array; size: number }>();
 	// Smokes disappear, so capture the first populated live helper state per entity.
 	const snaps: {
 		count: number;
@@ -29,14 +35,14 @@ describe.skipIf(!demoAvailable)('smoke voxel journal and SmokeHelper (integratio
 				const data = p[KEY];
 				const size = p[SIZE_KEY] as number | undefined;
 				if (!(data instanceof Uint8Array) || data.length === 0 || !size) continue;
-				const cur = best.get(i);
-				if (!cur || size > cur.size) best.set(i, { data: data.slice(), size });
+				const cur = best.get(e);
+				if (!cur || size > cur.size) best.set(e, { data: data.slice(), size });
 			}
 		});
 		reader.on('tickend', () => {
 			for (const smoke of reader.smokes) {
 				if (seen.has(smoke.entityId) || !smoke.hasVoxelData) continue;
-				const voxels = smoke.voxels;
+				const voxels = smoke.seeds;
 				const det = smoke.detonationPos;
 				if (voxels.length === 0 || !det) continue;
 				seen.add(smoke.entityId);
@@ -76,6 +82,23 @@ describe.skipIf(!demoAvailable)('smoke voxel journal and SmokeHelper (integratio
 		// Heartbeats dominate a settled smoke.
 		const heartbeats = frames.filter(f => f.isHeartbeat).length;
 		expect(heartbeats).toBeGreaterThan(0);
+	});
+
+	test('all real frames decode fully and rejection updates accumulate', () => {
+		let updates = 0;
+		for (const { data, size } of best.values()) {
+			const frames = decodeSmokeVoxelJournal(data, size);
+			const expected = new BigUint64Array(512);
+			for (const frame of frames) {
+				const inputs = decodeSmokeVoxelFrame(frame.payload);
+				for (const { index, mask } of inputs.blockedUpdates) {
+					expected[index] = mask;
+					updates++;
+				}
+			}
+			expect(getSmokeVoxelStateAt(frames)!.blockedMask).toEqual(expected);
+		}
+		expect(updates).toBeGreaterThan(0);
 	});
 
 	test('parser.smokes yields helpers with decodable voxels', () => {

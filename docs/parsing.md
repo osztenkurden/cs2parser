@@ -108,7 +108,8 @@ await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, svc_UserCmds: fal
 | `players`           | `CMsgPlayerInfo[]`        | Userinfo rows from the string table, sparse-indexed by `userid & 0xff`                                                                                                      |
 | `playerControllers` | `Player[]`                | All live `CCSPlayerController` entities wrapped as `Player` (requires `EntityMode.ALL`)                                                                                     |
 | `teams`             | `Team[]`                  | All live `CCSTeam` entities (requires `EntityMode.ALL`)                                                                                                                     |
-| `smokes`            | `SmokeHelper[]`           | All live `CSmokeGrenadeProjectile` smoke clouds (requires `EntityMode.ALL`)                                                                                                 |
+| `smokes`            | [`SmokeHelper[]`](smokes.md)           | All live `CSmokeGrenadeProjectile` smoke clouds (requires `EntityMode.ALL`)                                                                                                 |
+| `smokeDensityThreshold` | `number` | Minimum raw density for smoke `.voxels` and `.voxelCount`; exclusive, defaults to 5 |
 | `gameRules`         | `GameRules \| null`       | Wrapper around the current `CCSGameRulesProxy` entity                                                                                                                       |
 
 ### Cancelling a parse

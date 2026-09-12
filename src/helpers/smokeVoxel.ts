@@ -3,35 +3,29 @@
  * smoke voxel stream.
  *
  * The byte blob is a journal of per-frame records that the game client replays
- * in order to reconstruct the smoke volume. This module decodes the journal
- * layer (fully reverse-engineered and verified byte-for-byte against the game
- * client) and exposes the 32³ Morton grid index mapping.
- *
- * See `docs/smoke-voxel-format.md` for the full format and the limits of the
- * per-frame payload decode.
+ * in order to reconstruct the smoke volume. This module decodes simulation
+ * inputs, not the resulting smoke density. See docs/smokes.md for
+ * usage, supported inputs and rendering limits.
  */
 
 /** Edge length of the smoke voxel grid along each axis (32 → 5 bits/axis). */
 export const VOXEL_GRID_DIM = 32;
 
 /**
- * World units per voxel cell. From `client.dll`: the world→grid scale constant
- * `DAT_18192dc50` is 0.05 voxels/unit, i.e. 20 units/voxel. The grid is centred
- * on the detonation origin (`+16` = half the 32-wide grid).
+ * World units per voxel cell. The native world-to-grid scale is 0.05;
+ * the grid is centred on the detonation origin (half its 32-cell extent).
  */
 export const VOXEL_WORLD_SIZE = 20;
 /** Half the grid dimension — the grid centre in voxel coordinates. */
 export const VOXEL_GRID_CENTER = VOXEL_GRID_DIM / 2;
 
 /**
- * Per-axis sign relating voxel grid axes to CS2 world axes (X east, Y north,
- * Z up). The grid's X axis is mirrored relative to world X; Y and Z align.
- * Verified visually on a radar; the magnitudes (scale 20, centre 16) come
- * straight from `client.dll`.
+ * Grid axes have the same orientation as world axes. Radar image coordinates
+ * must be transformed separately; they do not change the world-space grid.
  */
-export const VOXEL_AXIS_SIGN: readonly [number, number, number] = [-1, 1, 1];
+export const VOXEL_AXIS_SIGN: readonly [number, number, number] = [1, 1, 1];
 
-/** A single occupied voxel from a decoded frame. */
+/** A seed entry from a decoded frame, not a cell of the simulated cloud. */
 export type SmokeVoxel = {
 	/** Grid coordinates in [0, 32). */
 	x: number;
@@ -49,8 +43,8 @@ export type SmokeVoxelFrame = {
 	payload: Uint8Array;
 	/**
 	 * True for a "nothing changed this frame" record. These are the short
-	 * (3-byte, all-zero) heartbeats the server emits while the cloud is stable;
-	 * a non-heartbeat frame means the volume was modified (bullet / HE / fire).
+	 * (3-byte, all-zero) records carry no new inputs. Simulation can still advance;
+	 * non-heartbeats can also carry initialisation or stop-seeding instructions.
 	 */
 	isHeartbeat: boolean;
 };
@@ -66,7 +60,10 @@ const HEARTBEAT_LEN = 3;
  * @throws if a record's payload overruns `size` (malformed / truncated buffer)
  */
 export function decodeSmokeVoxelJournal(data: Uint8Array, size = data.length): SmokeVoxelFrame[] {
-	const end = Math.min(size, data.length);
+	if (!Number.isSafeInteger(size) || size < 0 || size > data.length) {
+		throw new RangeError('smoke voxel valid size must be an integer within the supplied buffer');
+	}
+	const end = size;
 	const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
 	const frames: SmokeVoxelFrame[] = [];
 	let off = 0;
@@ -83,6 +80,7 @@ export function decodeSmokeVoxelJournal(data: Uint8Array, size = data.length): S
 		frames.push({ seq, payload, isHeartbeat: isHeartbeatPayload(payload) });
 		off = payloadOff + len;
 	}
+	if (off !== end) throw new RangeError(`truncated smoke voxel record header at offset ${off}`);
 	return frames;
 }
 
@@ -93,8 +91,8 @@ function isHeartbeatPayload(payload: Uint8Array): boolean {
 }
 
 /**
- * How many frames in the journal actually modified the volume (non-heartbeat).
- * A useful proxy for "how disturbed was this smoke" without a full decode.
+ * Count non-heartbeat records. Despite the historical name, this includes
+ * initialisation and stop-seeding records, not just external disturbances.
  */
 export function countSmokeDisturbanceFrames(data: Uint8Array, size = data.length): number {
 	let n = 0;
@@ -104,14 +102,15 @@ export function countSmokeDisturbanceFrames(data: Uint8Array, size = data.length
 
 // --- Per-frame occupancy ---------------------------------------------------
 //
-// A frame payload (client.dll FUN_180756800) begins:
-//   u8 activeFlag
+// A modern frame payload begins (see scripts/verify-smoke-native.py):
+//   u8 stopSeeding
 //   u8 sectionFlags
-//   if (sectionFlags & 1):  // occupancy list (full replace of the voxel set)
+//   if (sectionFlags & 1):  // replacement seed list
 //       u8 count
-//       count × 8-byte entries: [z, y, x, state0..state4]
-//   if (sectionFlags & 2):  // extended per-cell data (density/palette) — skipped here
-//       ...
+//       count × 8-byte entries: [x, y, z, state0..state4]
+//   if (sectionFlags & 2):
+//       u16 count; count × [u16 wordIndex, u64 rejectionMask] (little-endian)
+//   u8 extraCount; extraCount × 20-byte records (semantics not exposed)
 // All fields are byte-aligned in practice, so we parse bytes directly.
 
 const SECTION_OCCUPANCY = 1;
@@ -121,25 +120,27 @@ const ENTRY_SIZE = 8;
  * Decode the occupancy voxel list from one frame payload. Returns `null` if the
  * frame carries no occupancy section (heartbeat or extended-data-only frame).
  *
- * Each bit-0 frame is a *full replacement* of the active voxel set (the client
- * clears the previous set before applying this one), so the returned list is the
- * complete occupancy as of that frame.
+ * Each bit-0 frame replaces the seed list. This historical API name does not
+ * mean the returned entries are the complete occupied smoke volume.
  */
 export function decodeVoxelFrameOccupancy(payload: Uint8Array): SmokeVoxel[] | null {
-	if (payload.length < 2) return null;
+	if (payload.length < 2) throw new RangeError('truncated smoke voxel frame header');
 	const sectionFlags = payload[1]!;
 	if ((sectionFlags & SECTION_OCCUPANCY) === 0) return null;
-	if (payload.length < 3) return null;
+	if (payload.length < 3) throw new RangeError('truncated smoke voxel seed count');
 
 	const count = payload[2]!;
+	if (3 + count * ENTRY_SIZE > payload.length) throw new RangeError('truncated smoke voxel seed entries');
 	const voxels: SmokeVoxel[] = [];
 	let off = 3;
 	for (let i = 0; i < count; i++) {
-		if (off + ENTRY_SIZE > payload.length) break; // truncated/section boundary
+		if (payload[off]! >= 32 || payload[off + 1]! >= 32 || payload[off + 2]! >= 32) {
+			throw new RangeError('smoke voxel seed coordinate outside the 32³ grid');
+		}
 		voxels.push({
-			z: payload[off]!,
+			x: payload[off]!,
 			y: payload[off + 1]!,
-			x: payload[off + 2]!,
+			z: payload[off + 2]!,
 			state: payload.subarray(off + 3, off + ENTRY_SIZE)
 		});
 		off += ENTRY_SIZE;
@@ -148,9 +149,8 @@ export function decodeVoxelFrameOccupancy(payload: Uint8Array): SmokeVoxel[] | n
 }
 
 /**
- * Get the smoke's occupancy as of `targetSeq` (default: the last frame) by
- * finding the most recent occupancy frame at or before it. Because occupancy
- * frames fully replace the set, no accumulation across frames is needed.
+ * Get the last transmitted seed list at or before `targetSeq`. This does not
+ * advance the client simulation or account for its stop-seeding instruction.
  */
 export function getSmokeOccupancyAt(
 	frames: SmokeVoxelFrame[],
@@ -166,10 +166,8 @@ export function getSmokeOccupancyAt(
 }
 
 /**
- * Convert a voxel grid coordinate to a world position, given the smoke's
- * detonation origin. Inverse of the client's world→grid transform
- * `grid = (world - origin) * 0.05 + 16`, with the per-axis {@link VOXEL_AXIS_SIGN}
- * applied (world X is mirrored relative to the grid).
+ * Convert a grid cell to its world-space centre: `(grid - 16 + 0.5) * 20 + origin`.
+ * The half-cell offset matches the client's grid-to-world function.
  */
 export function voxelToWorld(
 	x: number,
@@ -181,16 +179,16 @@ export function voxelToWorld(
 	sign: readonly [number, number, number] = VOXEL_AXIS_SIGN
 ): [number, number, number] {
 	return [
-		sign[0] * (x - center) * voxelSize + origin[0],
-		sign[1] * (y - center) * voxelSize + origin[1],
-		sign[2] * (z - center) * voxelSize + origin[2]
+		sign[0] * (x - center + 0.5) * voxelSize + origin[0],
+		sign[1] * (y - center + 0.5) * voxelSize + origin[1],
+		sign[2] * (z - center + 0.5) * voxelSize + origin[2]
 	];
 }
 
 // --- 3D Morton (Z-order) index mapping for the 32³ grid -------------------
 //
 // The client folds a voxel's (x,y,z) into a linear grid index by interleaving
-// the low bits of each axis. Index = spread(z) | spread(y)<<1 | spread(x)<<2.
+// the low bits of each axis. Index = spread(x) | spread(y)<<1 | spread(z)<<2.
 
 /** Spread the low 10 bits of `v` so each bit lands every 3rd position. */
 function spread3(v: number): number {
@@ -212,12 +210,85 @@ function compact3(v: number): number {
 	return v >>> 0;
 }
 
-/** Encode voxel coordinates to the grid's Morton index (z = least-significant axis). */
+/** Encode voxel coordinates to the grid's Morton index (x = least-significant axis). */
 export function mortonEncode3(x: number, y: number, z: number): number {
-	return (spread3(z) | (spread3(y) << 1) | (spread3(x) << 2)) >>> 0;
+	return (spread3(x) | (spread3(y) << 1) | (spread3(z) << 2)) >>> 0;
 }
 
 /** Decode a Morton grid index back to `[x, y, z]` voxel coordinates. */
 export function mortonDecode3(index: number): [x: number, y: number, z: number] {
-	return [compact3(index >>> 2), compact3(index >>> 1), compact3(index)];
+	return [compact3(index), compact3(index >>> 1), compact3(index >>> 2)];
+}
+
+/** Decoded inputs to one client simulation step. Byte views alias the payload. */
+export type SmokeVoxelInputs = {
+	stopSeeding: boolean;
+	sectionFlags: number;
+	/** Null preserves the previous seed list; an empty array replaces it. */
+	seeds: SmokeVoxel[] | null;
+	/** Replace these words in the rejection mask. A set bit excludes that cell. */
+	blockedUpdates: { index: number; mask: bigint }[];
+	/** Additional 20-byte simulation records; their meaning is not yet exposed. */
+	extraRecords: Uint8Array[];
+};
+
+/** Decode the complete modern (patch version > 13963) frame payload. */
+export function decodeSmokeVoxelFrame(payload: Uint8Array): SmokeVoxelInputs {
+	if (payload.length < 3) throw new RangeError('truncated smoke voxel frame');
+	const sectionFlags = payload[1]!;
+	if (sectionFlags & ~3) throw new RangeError(`unsupported smoke voxel section flags: ${sectionFlags}`);
+	const seeds = decodeVoxelFrameOccupancy(payload);
+	let off = seeds === null ? 2 : 3 + seeds.length * ENTRY_SIZE;
+	const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+	const need = (bytes: number) => {
+		if (off + bytes > payload.length) throw new RangeError(`truncated smoke voxel section at offset ${off}`);
+	};
+	const blockedUpdates: SmokeVoxelInputs['blockedUpdates'] = [];
+	if (sectionFlags & 2) {
+		need(2);
+		const count = view.getUint16(off, true);
+		off += 2;
+		need(count * 10);
+		for (let i = 0; i < count; i++, off += 10) {
+			const index = view.getUint16(off, true);
+			if (index >= 512) throw new RangeError('smoke voxel rejection word index outside the 32³ grid');
+			blockedUpdates.push({ index, mask: view.getBigUint64(off + 2, true) });
+		}
+	}
+	need(1);
+	const count = payload[off++]!;
+	need(count * 20);
+	const extraRecords: Uint8Array[] = [];
+	for (let i = 0; i < count; i++, off += 20) extraRecords.push(payload.subarray(off, off + 20));
+	if (off !== payload.length) throw new RangeError('unexpected trailing smoke voxel payload data');
+	return { stopSeeding: payload[0] !== 0, sectionFlags, seeds, blockedUpdates, extraRecords };
+}
+
+/** Accumulated journal inputs, not simulated smoke occupancy or density. */
+export type SmokeVoxelState = {
+	seq: number;
+	stopSeeding: boolean;
+	seeds: SmokeVoxel[];
+	/** 512 words, indexed by Morton index >> 6; bit 1 means rejected. */
+	blockedMask: BigUint64Array;
+	extraRecords: Uint8Array[];
+};
+
+/** Replay a complete journal prefix (starting at sequence 0) through targetSeq. */
+export function getSmokeVoxelStateAt(frames: SmokeVoxelFrame[], targetSeq = Infinity): SmokeVoxelState | null {
+	let state: SmokeVoxelState | null = null;
+	let expected = 0;
+	for (const frame of frames) {
+		if (frame.seq > targetSeq) break;
+		if (frame.seq !== expected++)
+			throw new RangeError('smoke voxel state requires contiguous frames starting at 0');
+		const inputs = decodeSmokeVoxelFrame(frame.payload);
+		state ??= { seq: 0, stopSeeding: false, seeds: [], blockedMask: new BigUint64Array(512), extraRecords: [] };
+		state.seq = frame.seq;
+		state.stopSeeding = inputs.stopSeeding;
+		if (inputs.seeds !== null) state.seeds = inputs.seeds;
+		for (const { index, mask } of inputs.blockedUpdates) state.blockedMask[index] = mask;
+		state.extraRecords = inputs.extraRecords;
+	}
+	return state;
 }

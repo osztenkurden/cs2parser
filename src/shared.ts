@@ -8,12 +8,14 @@ export { PlayerPawn, type Vector } from './helpers/playerPawn.js';
 export { Team, TeamNumber } from './helpers/team.js';
 export { GameRules, WinRoundReason } from './helpers/gameRules.js';
 export { EntityHelper } from './helpers/entityHelper.js';
-export { SmokeHelper } from './helpers/smoke.js';
+export { SmokeHelper, type SmokeDensityVoxel } from './helpers/smoke.js';
 // Low-level voxel decode utilities — most consumers want SmokeHelper instead.
 export {
 	decodeSmokeVoxelJournal,
 	decodeVoxelFrameOccupancy,
+	decodeSmokeVoxelFrame,
 	getSmokeOccupancyAt,
+	getSmokeVoxelStateAt,
 	countSmokeDisturbanceFrames,
 	voxelToWorld,
 	mortonEncode3,
@@ -23,6 +25,8 @@ export {
 	VOXEL_GRID_CENTER,
 	VOXEL_AXIS_SIGN,
 	type SmokeVoxelFrame,
+	type SmokeVoxelInputs,
+	type SmokeVoxelState,
 	type SmokeVoxel
 } from './helpers/smokeVoxel.js';
 export { isEntityClass } from './generated/entityTypes.js';
@@ -48,3 +52,5 @@ export type {
 	BroadcastFetcher,
 	FetchResult
 } from './broadcast/index.js';
+
+export { SmokeDensitySimulation, type SmokeDensitySnapshot } from './helpers/smokeDensity.js';

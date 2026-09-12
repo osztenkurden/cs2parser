@@ -63,6 +63,17 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	private _directWriteMode = false;
 	private tickInterval = NaN;
 	currentTick = -1;
+	private _smokeDensityThreshold = 5;
+
+	/** Include smoke cells whose raw density exceeds this value. Defaults to 5. */
+	get smokeDensityThreshold(): number {
+		return this._smokeDensityThreshold;
+	}
+	set smokeDensityThreshold(value: number) {
+		if (!Number.isFinite(value) || value < 0)
+			throw new RangeError('smoke density threshold must be finite and nonnegative');
+		this._smokeDensityThreshold = value;
+	}
 
 	private _playerInfoMap: (CMsgPlayerInfo | undefined)[] = [];
 

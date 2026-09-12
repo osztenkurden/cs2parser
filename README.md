@@ -78,7 +78,8 @@ Uses the same events as demo parsing. See [Live HTTP broadcasts](docs/http-broad
 | [Browser usage](docs/browser.md) | Files, web streams, metadata, and WASM Snappy |
 | [Live HTTP broadcasts](docs/http-broadcast.md) | GOTV relays, options, descriptors, and wire format |
 | [Players and pawns](docs/players.md) | Rosters, lookups, bot analysis, and helper properties |
-| [Entities and match state](docs/entities.md) | Teams, game rules, smokes, and typed entity access |
+| [Entities and match state](docs/entities.md) | Teams, game rules, and typed entity access |
+| [Smokes](docs/smokes.md) | Seed voxels, density simulation, and visual comparison |
 | [Game and parser events](docs/events.md) | Typed game events and parser lifecycle events |
 | [Network messages](docs/network-messages.md) | Subscriptions, user commands, and message discovery |
 | [Encrypted demo chat](docs/encrypted-chat.md) | Match keys, public chat decryption, and browser support |
