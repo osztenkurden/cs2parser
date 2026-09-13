@@ -173,6 +173,3 @@ preserved. Seeking accepts ticks, not round numbers.
 Run `bun build src/browser.ts --target browser --outfile dist/replay-browser.js`,
 serve the repository over HTTP, and open
 [examples/replay.html](../examples/replay.html).
-
-For a manual `EntityMode.NONE` seek-versus-full-parse benchmark matching `sdf.ts`,
-open [examples/sdf.html](../examples/sdf.html) using the same browser bundle.
