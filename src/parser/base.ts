@@ -61,6 +61,9 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	private _failure: { cause: unknown } | undefined;
 	private _cleanupBroadcast: (() => void) | undefined;
 	private _seekSession: SeekSession | undefined;
+	private _seekIndex: Record<number, number> = {};
+	private _seekIndexCount = 0;
+	private _seekIndexLimits: SeekLimits = {};
 	private readonly _internalEvents = new TypedEventEmitter<any>();
 	/** @internal Suppress application notifications while preserving decoder effects. */
 	_silent = false;
@@ -122,6 +125,50 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 		return this._seekSession.seekTo(tick, options);
 	}
 
+	/** Copy the FullPacket tick -> raw .dem byte offset index, including after parsing ends. */
+	getSeekIndex(): Record<number, number> {
+		return this._seekSession
+			? Object.fromEntries(this._seekSession.fullPackets.map(({ tick, offset }) => [tick, offset]))
+			: { ...this._seekIndex };
+	}
+
+	/** Trust an index for the same raw demo and skip discovery. Call before parsing or while paused. */
+	setSeekIndex(index: Record<number, number>): void {
+		if (this._hasEnded || (this._parsing && !this._paused) || this.isSeeking)
+			throw new Error('Set the seek index before parsing or await pause()');
+		if (!index || typeof index !== 'object' || Array.isArray(index))
+			throw new TypeError('Expected a seek index record');
+		const copy: Record<number, number> = {};
+		let previousOffset = 15;
+		const entries = Object.entries(index).sort(([a], [b]) => Number(a) - Number(b));
+		for (const [key, offset] of entries) {
+			const tick = Number(key);
+			if (!Number.isSafeInteger(tick) || tick < -1 || String(tick) !== key)
+				throw new RangeError('Invalid seek index tick');
+			if (!Number.isSafeInteger(offset) || offset <= previousOffset)
+				throw new RangeError('Seek index offsets must be increasing integers starting at 16');
+			copy[tick] = offset;
+			previousOffset = offset;
+		}
+		if (this._seekSession) this._seekSession.setSeekIndex(copy);
+		else {
+			this._seekIndex = copy;
+			this._seekIndexCount = entries.length;
+		}
+	}
+
+	/** @internal Record raw file offsets during sequential stream parsing. */
+	_recordFullPacket(tick: number, offset: number): void {
+		if (!(tick in this._seekIndex)) {
+			if (this._seekIndexCount >= (this._seekIndexLimits.maxFullPackets ?? 4096))
+				throw new Error('FullPacket location capacity exceeded');
+			if ((this._seekIndexCount + 1) * 80 + 32 > (this._seekIndexLimits.maxSeekBytes ?? 32 * 1024 * 1024))
+				throw new Error('Seek metadata exceeds maxSeekBytes');
+			this._seekIndexCount++;
+		}
+		this._seekIndex[tick] = offset;
+	}
+
 	private async _pauseBoundary(): Promise<void> {
 		if (!this._pauseRequest || this._hasEnded) return;
 		const request = this._pauseRequest;
@@ -171,6 +218,9 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 				() => new (this.constructor as new () => BaseDemoReader)()
 			);
 			this._seekSession = session;
+			if (this._seekIndexCount) session.setSeekIndex(this._seekIndex);
+			this._seekIndex = {};
+			this._seekIndexCount = 0;
 			this._directWriteMode = true;
 			this.gameEvents.entityMode = options.entities ?? EntityMode.NONE;
 			// Let an immediate pause() request register before the first tick.
@@ -215,7 +265,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 		return this._seekSession?.bytesRead ?? 0;
 	}
 	get seekMemoryBytes(): number {
-		return this._seekSession?.memoryBytes ?? 0;
+		return this._seekSession?.memoryBytes ?? (this._seekIndexCount ? this._seekIndexCount * 80 + 32 : 0);
 	}
 
 	/** @internal Reuse the reader and its subscriptions, discard the old world. */
@@ -717,6 +767,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	/** Runtime adapters supply a reader directly, without an extra Web Stream queue. */
 	protected parseSource(source: Uint8Array | (() => DemoStreamReader), opts: ParseOptions) {
 		this.assertCanParse(opts);
+		this._seekIndexLimits = opts;
 		this._parsing = true;
 		this._parseStartTime = performance.now();
 		return this._parse(source, opts);

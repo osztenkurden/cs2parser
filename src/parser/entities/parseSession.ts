@@ -626,6 +626,8 @@ export class ParseSession {
 			if (this.parser.hasEnded) return false;
 		}
 
+		if ((commandBase & ~EDemoCommands.DEM_IsCompressed) === EDemoCommands.DEM_FullPacket)
+			this.parser._recordFullPacket(tick, this._inputOffset + this._frameMarked);
 		return this.handleCommand(commandBase, size);
 	}
 
@@ -752,7 +754,12 @@ export class ParseSession {
 				this.parsePacket(this.baseParse(decoders[EDemoCommands.DEM_Packet].decode, size, isCompressed));
 				break;
 			case EDemoCommands.DEM_FullPacket: {
-				const fullPacket = this.baseParse(decoder.decode, size, isCompressed);
+				const subscribed = this.parser.listenerCount('DEM_FullPacket') > 0;
+
+				const fullPacket = subscribed
+					? decoder.decode(this.decompressIfNeeded(size, isCompressed, true))
+					: this.baseParse(decoder.decode, size, isCompressed);
+
 				if (fullPacket.string_table) {
 					for (const snapshot of fullPacket.string_table.tables) {
 						const result = applyStringTableSnapshot(snapshot, this.baselines);
@@ -777,6 +784,8 @@ export class ParseSession {
 					}
 				}
 				if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
+				if (subscribed) this.enqueueEvent('DEM_FullPacket', fullPacket);
+
 				break;
 			}
 			default: {

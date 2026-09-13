@@ -94,10 +94,49 @@ Negative, fractional or unsafe ticks, malformed decoder data and exceeded limits
 reject the promise. A cancelled or failed reconstruction requires a successful
 seek before resuming. An already-aborted signal leaves the current position intact.
 
+## Reusing a seek index
+
+`getSeekIndex(): Record<number, number>` returns a copy mapping FullPacket ticks to
+byte offsets in the raw `.dem`. Both seekable and sequential stream parsing collect
+these offsets; the index remains available after parsing ends. It can be JSON
+serialized or passed to another worker.
+
+`setSeekIndex(index: Record<number, number>): void` replaces the index before
+`parseDemo()` or while paused, with no seek in progress. It copies and trusts the
+supplied index and skips the initial command-header discovery scan. Offsets must
+belong to the **same unchanged raw demo**, with all FullPackets included from the
+beginning through the indexed position: earlier snapshots can carry incremental
+metadata. An index exported partway through parsing only accelerates seeks through
+that prefix; later targets reconstruct forward from its last checkpoint.
+
+```ts
+// Retain the offsets from an initial pass, including a streamed/decompressed pass.
+await firstReader.parseDemo(stream);
+const index = firstReader.getSeekIndex();
+
+const replay = new DemoReader();
+replay.setSeekIndex(index);
+const parsing = replay.parseDemo(file, { entities: EntityMode.ALL });
+await replay.pause();
+const result = await replay.seekTo(roundStartTick);
+if (result.status === 'complete') replay.resume();
+else replay.cancel();
+await parsing;
+```
+
+Ticks and offsets must be safe integers, ticks at least `-1`, and offsets strictly
+increasing with ticks and at least `16`. Source bounds and configured index limits
+are checked when the index is applied to the seekable source. This does not verify
+the demo's identity. `setSeekIndex({})` clears the index and restores discovery.
+Seeking still hydrates decoder metadata and replays from a usable checkpoint; the
+index contains no entity snapshots. If several FullPackets share a tick, the record
+contains the last one's offset.
+
 ## Progress and memory
 
 - `isSeeking`: whether reconstruction is active.
 - `fullPackets`: readonly copy of discovered `{ tick, offset }` locations.
+- `getSeekIndex()`: transferable copy of collected or supplied tick-to-offset entries.
 - `seekBytesRead`: cumulative bytes fetched; subtract readings to measure an operation.
 - `seekMemoryBytes`: estimated retained checkpoint metadata and location bytes.
 - `currentTick`: the tick of the reconstructed state. The seek result's `tick` is
@@ -134,3 +173,6 @@ preserved. Seeking accepts ticks, not round numbers.
 Run `bun build src/browser.ts --target browser --outfile dist/replay-browser.js`,
 serve the repository over HTTP, and open
 [examples/replay.html](../examples/replay.html).
+
+For a manual `EntityMode.NONE` seek-versus-full-parse benchmark matching `sdf.ts`,
+open [examples/sdf.html](../examples/sdf.html) using the same browser bundle.

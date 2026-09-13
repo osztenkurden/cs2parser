@@ -36,7 +36,7 @@ class Commands {
 	private cache: Uint8Array = new Uint8Array(0);
 	private cacheOffset = 0;
 	private pending?: { offset: number; promise: Promise<Uint8Array>; abort: AbortController };
-	private readonly size: number;
+	readonly size: number;
 	bytesRead = 0;
 	readAhead = 64 * 1024;
 	constructor(
@@ -169,12 +169,13 @@ export class SeekSession {
 	private headerValidated = false;
 	private readingTrailer = false;
 	private readonly abort = new AbortController();
-	private readonly locations: Location[] = [];
+	private locations: Location[] = [];
 	private readonly bad = new Set<number>();
 	private seed: DecoderCheckpoint | undefined;
 	private seedBytes = 0;
 	private scanOffset = 16;
 	private scannedToEnd = false;
+	private importedIndex = false;
 	private lastTick = -1;
 	private lastYield = 0;
 	private async cooperate(signal?: AbortSignal) {
@@ -188,6 +189,24 @@ export class SeekSession {
 	isSeeking = false;
 	get fullPackets(): readonly Location[] {
 		return Object.freeze(this.locations.slice());
+	}
+	setSeekIndex(index: Record<number, number>): void {
+		const locations = Object.entries(index)
+			.map(([tick, offset]) => Object.freeze({ tick: Number(tick), offset }))
+			.sort((a, b) => a.offset - b.offset);
+		if (locations.some(location => location.offset > this.commands.size - 3))
+			throw new RangeError('Seek index offset is outside the demo');
+		if (locations.length > (this.options.maxFullPackets ?? 4096))
+			throw new Error('FullPacket location capacity exceeded');
+		if (locations.length * 80 + 32 > (this.options.maxSeekBytes ?? 32 * 1024 * 1024))
+			throw new Error('Seek metadata exceeds maxSeekBytes');
+		this.locations = locations;
+		this.bad.clear();
+		this.seed = undefined;
+		this.seedBytes = 0;
+		this.importedIndex = locations.length > 0;
+		this.scanOffset = 16;
+		this.scannedToEnd = false;
 	}
 	get memoryBytes() {
 		return this.seedBytes + this.locations.length * 80 + 32;
@@ -342,7 +361,7 @@ export class SeekSession {
 					throw new Error('Seeking requires a raw PBDEMS2 .dem');
 				this.headerValidated = true;
 			}
-			await this.discover(target, options.signal);
+			if (!this.importedIndex) await this.discover(target, options.signal);
 			if (this.scannedToEnd && target > this.lastTick) return { status: 'incomplete' };
 			const candidates = this.locations.filter(c => c.tick < target && !this.bad.has(c.offset)).reverse();
 			for (const candidate of [...candidates, undefined]) {
@@ -356,6 +375,7 @@ export class SeekSession {
 					let frame = await this.commands.frame(this.offset, options.signal);
 					while (frame.tick < target && frame.command !== 0) {
 						await this.cooperate(options.signal);
+						this.note(frame);
 						if (frame.tick !== activeTick) {
 							this.session.endTick();
 							this.session.startTick(frame.tick);

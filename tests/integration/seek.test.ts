@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { DemoReader, EntityMode, Player, fileDemoSource } from '../../src/index.js';
 import { pausedParser, oneTick } from '../helpers/pausedParser.js';
@@ -56,7 +56,7 @@ test.skipIf(!existsSync(path))(
 			last = tick;
 			if (smoke < 0 && probe.smokes.some(s => s.entity)) smoke = tick;
 		});
-		await probe.parseDemo(path, { entities: EntityMode.ALL });
+		await probe.parseDemo(createReadStream(path), { entities: EntityMode.ALL });
 		const { reader, parsing } = await pausedParser(source);
 		const far = Math.max(0, last - 20);
 		expect((await reader.seekTo(far)).status).toBe('complete');
@@ -112,6 +112,16 @@ test.skipIf(!existsSync(path))(
 		expect(reader.seekBytesRead - before).toBeLessThan(source.size / 3);
 		reader.cancel();
 		await parsing;
+
+		// Transfer the streaming pass's offsets to a fresh reader, without discovering again.
+		const indexed = await pausedParser(source);
+		indexed.reader.setSeekIndex(JSON.parse(JSON.stringify(probe.getSeekIndex())));
+		expect(await indexed.reader.seekTo(far)).toEqual({ status: 'complete', tick: far });
+		expect(indexed.reader.seekBytesRead).toBeLessThan(source.size / 3);
+		const tick = await oneTick(indexed.reader);
+		expect(state(indexed.reader)).toBe(expected.get(tick)!.state);
+		indexed.reader.cancel();
+		await indexed.parsing;
 	},
 	300000
 );
