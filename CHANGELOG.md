@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.3.0](https://github.com/osztenkurden/cs2parser/compare/v2.2.0...v2.3.0) (2026-09-13)
+
+
+### Features
+
+* added seeking ([4498743](https://github.com/osztenkurden/cs2parser/commit/4498743601cde736aa57d5a17fadd71d45379dd3))
+
+
+### Bug Fixes
+
+* test fixtures ([5668993](https://github.com/osztenkurden/cs2parser/commit/566899368118312ed1ba8c5e0e4bd7d2fa36cb1d))
+
+
+### Performance Improvements
+
+* improved seeking performance ([a4539bb](https://github.com/osztenkurden/cs2parser/commit/a4539bbe39027b1d72587dc86aec8b121b3da626))
+
 ## [2.2.0](https://github.com/osztenkurden/cs2parser/compare/v2.1.0...v2.2.0) (2026-09-12)
 
 
