@@ -74,7 +74,7 @@ Listeners are synchronous notifications. Returned promises from `async` listener
 
 File paths always read on demand; the accepted `stream` option does not select a
 separate parsing mode. File paths, bytes, Blobs and `DemoByteSource` inputs support
-[pause, seek and resume](replay.md). Streams and broadcasts remain sequential.
+[pause, seek and resume](seeking.md). Streams and broadcasts remain sequential.
 
 ### Parse Settings
 

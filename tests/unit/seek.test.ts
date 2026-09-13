@@ -1,9 +1,97 @@
 import { expect, test } from 'bun:test';
 import { DemoReader, EntityMode, blobDemoSource } from '../../src/index.js';
 import { checkpointDemo } from '../helpers/checkpointDemo.js';
+import { demoFile, demoFrame } from '../helpers/demo.js';
 import { pausedParser, oneTick } from '../helpers/pausedParser.js';
 
 const source = (bytes: Uint8Array = checkpointDemo()) => blobDemoSource(new Blob([Uint8Array.from(bytes)]));
+
+test('one speculative read is bounded while paused and aborted on seek or cancellation', async () => {
+	for (const action of ['seek', 'cancel']) {
+		const bytes = checkpointDemo({ paddingBytes: 256 * 1024 });
+		const reader = new DemoReader();
+		let reads = 0;
+		let speculativeSignal: AbortSignal | undefined;
+		const ticks: number[] = [];
+		reader.on('tickend', tick => {
+			ticks.push(tick);
+			if (tick === 0) void reader.pause();
+		});
+		const paused = new Promise<void>(resolve => reader.once('paused', resolve));
+		const parsing = reader.parseDemo(
+			{
+				size: bytes.length,
+				async read(offset, length, signal) {
+					if (++reads === 2) {
+						speculativeSignal = signal;
+						await new Promise<void>((_resolve, reject) =>
+							signal!.addEventListener('abort', () => reject(signal!.reason), { once: true })
+						);
+					}
+					return bytes.subarray(offset, offset + length);
+				}
+			},
+			{ entities: EntityMode.ALL }
+		);
+		await paused;
+		expect(reads).toBe(2);
+		expect(speculativeSignal?.aborted).toBe(false);
+		if (action === 'seek') expect(await reader.seekTo(41)).toEqual({ status: 'complete', tick: 41 });
+		reader.cancel();
+		expect(await parsing).toEqual({ status: 'cancelled' });
+		expect(speculativeSignal?.aborted).toBe(true);
+		expect(ticks).toEqual([0]);
+	}
+});
+
+test('a speculative read failure rejects parsing when its bytes are needed', async () => {
+	const bytes = checkpointDemo({ paddingBytes: 256 * 1024 });
+	const reader = new DemoReader();
+	const error = new Error('Read failed');
+	let reads = 0;
+	const ticks: number[] = [];
+	reader.on('tickend', tick => ticks.push(tick));
+	await expect(
+		reader.parseDemo({
+			size: bytes.length,
+			async read(offset, length) {
+				if (++reads === 2) throw error;
+				return bytes.subarray(offset, offset + length);
+			}
+		})
+	).rejects.toBe(error);
+	expect(ticks).toEqual([0]);
+	expect(reader.hasEnded).toBe(true);
+});
+
+test('sequential reads use 64 KiB windows without rereading split headers or payloads', async () => {
+	for (const padding of [65530, 65531, 65532, 2 * 65536 + 37]) {
+		const bytes = demoFile(
+			demoFrame(10, new Uint8Array(padding), 0),
+			demoFrame(10, new Uint8Array(65536 + 13), 1),
+			demoFrame(0, undefined, 2)
+		);
+		const reader = new DemoReader();
+		const ticks: number[] = [];
+		reader.on('tickend', tick => ticks.push(tick));
+		let end = 16;
+		let reads = 0;
+		expect(
+			await reader.parseDemo({
+				size: bytes.length,
+				async read(offset, length) {
+					expect(offset).toBe(end);
+					if (reads++ === 0) expect(length).toBe(64 * 1024);
+					end = offset + length;
+					return bytes.subarray(offset, end);
+				}
+			})
+		).toEqual({ status: 'complete' });
+		expect(end).toBe(bytes.length);
+		expect(reader.seekBytesRead).toBe(bytes.length - 16);
+		expect(ticks).toEqual([0, 1, 2]);
+	}
+});
 
 test('repeated seeks reuse cached source bytes', async () => {
 	const src = source();

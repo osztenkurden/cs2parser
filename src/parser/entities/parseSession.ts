@@ -63,6 +63,8 @@ const DERIVED_EVENTS: readonly [event: string, sources: readonly number[]][] = [
 // Only outer-frame availability can request a refill. Payload decoder errors are terminal.
 const NEED_MORE_INPUT = Symbol('Need more demo input');
 
+const EMPTY_FRAME = new Uint8Array(0);
+
 export class ParseSession {
 	private static readonly CARRY_INITIAL_SIZE = 1 * 1024 * 1024; // 1 MB
 	private packetBuffer = new Uint8Array(0);
@@ -335,16 +337,22 @@ export class ParseSession {
 	}
 
 	/** Internal seekable driver supplies complete commands and owns tick boundaries. */
-	private externalTicks = false;
-	readCommand(bytes: Uint8Array, offset: number): void {
-		this.externalTicks = true;
+	readCommand(
+		bytes: Uint8Array,
+		offset: number,
+		commandBase: number,
+		headerSize: number,
+		bufferOffset = 0,
+		length = bytes.length
+	): void {
 		this._frameBuf = bytes;
-		this._frameOffset = this._frameMarked = 0;
-		this._frameLimit = bytes.length;
-		this._inputOffset = offset;
-		this.readFrame();
+		this._frameOffset = bufferOffset + headerSize;
+		this._frameMarked = bufferOffset;
+		this._frameLimit = bufferOffset + length;
+		this._inputOffset = offset - bufferOffset;
+		this.handleCommand(commandBase, length - headerSize);
 		this.flush();
-		this._frameBuf = new Uint8Array(0);
+		this._frameBuf = EMPTY_FRAME;
 	}
 
 	startTick(tick: number): void {
@@ -497,7 +505,7 @@ export class ParseSession {
 
 	/** Flush remaining events to the consumer. */
 	flush(): void {
-		this.emitMainQueue(this.eventQueue);
+		if (this.eventQueue.length > 0) this.emitMainQueue(this.eventQueue);
 	}
 
 	// === Buffer management ===
@@ -609,7 +617,7 @@ export class ParseSession {
 		}
 		this.ensureRemaining(size);
 
-		if (!this.externalTicks && this.currentTick !== tick) {
+		if (this.currentTick !== tick) {
 			if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
 			this.currentTick = tick;
 			this.enqueueEvent('tickstart', this.currentTick);
@@ -618,6 +626,10 @@ export class ParseSession {
 			if (this.parser.hasEnded) return false;
 		}
 
+		return this.handleCommand(commandBase, size);
+	}
+
+	private handleCommand(commandBase: number, size: number): boolean {
 		const commandType = commandBase & ~EDemoCommands.DEM_IsCompressed;
 		if (commandType === EDemoCommands.DEM_Stop) {
 			this._frameSkip(size);

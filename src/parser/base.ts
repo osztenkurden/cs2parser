@@ -177,9 +177,9 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 			await Promise.resolve();
 			let lastYield = performance.now();
 			while (!this._hasEnded) {
-				await this._pauseBoundary();
+				if (this._pauseRequest) await this._pauseBoundary();
 				if (this._hasEnded) break;
-				await session.advanceTick();
+				await session.advance(() => this._pauseRequest !== undefined);
 				if (performance.now() - lastYield >= 16) {
 					this.emit('progress', session.position);
 					await new Promise<void>(resolve => setTimeout(resolve, 0));
@@ -633,6 +633,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 		if (this._endResult !== undefined) return;
 		this._endResult = result;
 		this._hasEnded = true;
+		this._seekSession?.dispose();
 		this._paused = false;
 		this._wake?.();
 		this._parsing = false;
