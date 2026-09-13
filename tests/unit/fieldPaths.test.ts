@@ -2,6 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { BitBuffer } from '../../src/parser/ubitreader.js';
 import { parsePaths } from '../../src/parser/entities/fieldPaths.js';
 import { doOp, type FieldPath } from '../../src/parser/entities/fieldPathOps.js';
+import { EntityWasm } from '../../src/parser/entities/entityWasm.js';
+import type { FieldPlan } from '../../src/parser/entities/entityParser.js';
+import { Decoders } from '../../src/parser/entities/constructorFields.js';
+import type { CSVCMsg_PacketEntities } from '../../src/ts-proto/netmessages.js';
 
 // Frozen LSB-first codes from the original 17-bit table, indexed by opcode.
 const codes: [number, number][] = [
@@ -66,6 +70,63 @@ const initialPath = (): FieldPath => ({ path: [-1, 0, 0, 0, 0, 0, 0], last: 0 })
 const serializer = { name: 'Test', fields: [] };
 
 describe('field-path Huffman decoding', () => {
+	test('packet WASM matches every original opcode against the JS operation reference', () => {
+		const classes: (FieldPlan | null)[][] = [];
+		const wasm = new EntityWasm(id => classes[id]!);
+		for (let opcode = 0; opcode < codes.length; opcode++) {
+			const first = initialPath();
+			doOp(20, new BitBuffer(new BitWriter().write(1, 5).write(2, 5).write(3, 5).buffer()), first);
+			const next: FieldPath = { path: [...first.path], last: first.last };
+			const operands = new BitBuffer(new Uint8Array(128));
+			doOp(opcode, operands, next);
+			const expected = opcode === 39 ? [first] : [first, next];
+			const roots: (FieldPlan | null)[] = [];
+			for (const [id, fp] of expected.entries()) {
+				let children = roots;
+				for (let depth = 0; depth <= fp.last; depth++) {
+					const slot = fp.path[depth]!;
+					const node: FieldPlan =
+						children[slot] ??
+						(children[slot] = {
+							meta: undefined,
+							propId: -1,
+							decoder: Decoders.UnsignedDecoder,
+							isResize: false,
+							indexDepth: -1,
+							children: [],
+							element: null,
+							pathError: 'path'
+						});
+					if (depth === fp.last) {
+						node.meta = { name: `value${id}` };
+						node.propId = id;
+					}
+					children = node.children!;
+				}
+			}
+			classes.push(roots);
+			wasm.setEntity(0, opcode);
+			const writer = new BitWriter()
+				.write(0, 8)
+				.write(...codes[20]!)
+				.write(1, 5)
+				.write(2, 5)
+				.write(3, 5)
+				.write(...codes[opcode]!);
+			for (let i = 0; i < 1024 - operands.RemainingBits; i++) writer.write(0, 1);
+			if (opcode !== 39) writer.write(...codes[39]!);
+			writer.write(17, 8);
+			if (opcode !== 39) writer.write(29, 8);
+			const consumed = writer.bits.length;
+			const data = writer.write(0xabcdef12, 32).buffer();
+			expect(wasm.decode({ entity_data: data, updated_entries: 1 } as CSVCMsg_PacketEntities)).toBe(
+				expected.length
+			);
+			expect(wasm.value(0)).toBe(17);
+			if (opcode !== 39) expect(wasm.value(1)).toBe(29);
+			expect(wasm.consumedBits).toBe(consumed);
+		}
+	});
 	test.each(codes.map((_, opcode) => opcode))('original opcode %i at all 32 bit offsets', opcode => {
 		const initial = initialPath();
 		const initialPayload = new BitWriter().write(1, 5).write(2, 5).write(3, 5).buffer();

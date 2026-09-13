@@ -14,6 +14,7 @@ import {
 import { generateEnum, type GetEnumType } from './brandedEnum.js';
 import type { FieldPath } from './fieldPathOps.js';
 import { parsePaths } from './fieldPaths.js';
+import { EntityWasm } from './entityWasm.js';
 import { type emit } from './types.js';
 
 const NSERIALBITS = 17;
@@ -48,7 +49,7 @@ const getEntityType = (name: string) => {
 	return EntityTypeEnum.Normal;
 };
 
-type FieldPlan = {
+export type FieldPlan = {
 	meta: PropInfo | undefined;
 	decoder: Decoder;
 	propId: number;
@@ -204,6 +205,7 @@ export class EntityParser {
 	private plans = new WeakMap<SerializerN, (FieldPlan | null)[]>();
 	private planSerializer: SerializerN | null = null;
 	private planRoots: (FieldPlan | null)[] = [];
+	private wasm: EntityWasm | null | undefined;
 	/** Scratch path; resolved plans and full-width indices are saved before reading any values. */
 	public fieldPath: FieldPath = { path: [-1, 0, 0, 0, 0, 0, 0], last: 0 };
 	private entities: { [EntityId: number]: number }; // Record<number, Entity>;
@@ -321,13 +323,7 @@ export class EntityParser {
 	writeFp(fp_src: FieldPath, idx: number, serializer: SerializerN) {
 		if (idx >= 8192) throw new Error('Too many entity field paths');
 		if (this.planSerializer !== serializer) {
-			let roots = this.plans.get(serializer);
-			if (!roots) {
-				roots = serializer.fields.map(field =>
-					field ? planField(field, 0, -1, this.classInfo.propInfoById) : null
-				);
-				this.plans.set(serializer, roots);
-			}
+			const roots = this.getPlans(serializer);
 			this.planSerializer = serializer;
 			this.planRoots = roots;
 		}
@@ -341,6 +337,17 @@ export class EntityParser {
 		}
 		this.updates[idx] = plan;
 		this.arrayIndices[idx] = plan.indexDepth === -1 ? -1 : fp_src.path[plan.indexDepth]!;
+	}
+
+	private getPlans(serializer: SerializerN) {
+		let roots = this.plans.get(serializer);
+		if (!roots) {
+			roots = serializer.fields.map(field =>
+				field ? planField(field, 0, -1, this.classInfo.propInfoById) : null
+			);
+			this.plans.set(serializer, roots);
+		}
+		return roots;
 	}
 
 	createEntity = (reader: BitBuffer, entityId: number, baselines: Uint8Array[]) => {
@@ -360,6 +367,7 @@ export class EntityParser {
 		}
 
 		this.entities[entityId] = classId;
+		this.wasm?.setEntity(entityId, classId);
 
 		// For direct-write mode, also populate the DemoReader's entity immediately
 		if (this.directEntities && (!this.onlyGameRules || entityType === EntityTypeEnum.Rules)) {
@@ -390,6 +398,27 @@ export class EntityParser {
 	};
 
 	parseEntityPacket = (msg: CSVCMsg_PacketEntities, baseline: Uint8Array[], validateSnapshot = false) => {
+		if (!validateSnapshot && this.directEntities && this.directPropInfoById === this.classInfo.propInfoById) {
+			if (this.wasm === undefined) {
+				try {
+					this.wasm = new EntityWasm(classId => this.getPlans(this.classInfo.classes[classId]!.serializer));
+					for (const [id, classId] of Object.entries(this.entities))
+						if (classId !== undefined) this.wasm.setEntity(Number(id), classId);
+				} catch {
+					this.wasm = null;
+				}
+			}
+			if (this.wasm && !this.wasm.enabled) this.wasm = null;
+			const count = this.wasm?.decode(msg) ?? -1;
+			if (count >= 0) {
+				this.applyWasmUpdates(this.wasm!, count);
+				const bits = this.wasm!.consumedBits;
+				this.cachedBitBuffer2.setTo(msg.entity_data!);
+				this.cachedBitBuffer2.skipBytesBetter(Math.floor(bits / 8));
+				this.cachedBitBuffer2.consumePeeked(bits & 7);
+				return msg.legacy_is_delta !== true && (msg.updated_entries ?? 0) > 0;
+			}
+		}
 		let independent = msg.legacy_is_delta !== true && (msg.updated_entries ?? 0) > 0;
 		const reader = this.cachedBitBuffer2.setTo(msg.entity_data!);
 		const hasPvsVisBits = msg.has_pvs_vis_bits_deprecated ?? 0;
@@ -406,6 +435,7 @@ export class EntityParser {
 			if ((updateType & 0b01) !== 0) {
 				if (updateType === 0b11) {
 					this.entities[entityId] = undefined as any;
+					this.wasm?.deleteEntity(entityId);
 					if (this.directEntities) {
 						this.directEntities[entityId] = undefined as any;
 					}
@@ -426,4 +456,45 @@ export class EntityParser {
 		}
 		return independent;
 	};
+
+	private applyWasmUpdates(wasm: EntityWasm, count: number) {
+		let entityId = -1;
+		let props: Record<string, unknown> | undefined;
+		let containerKey: string | undefined;
+		let container: unknown[] | TypedArray | undefined;
+		for (let i = 0; i < count; i++) {
+			const id = wasm.records[i * 14 + 1]!;
+			if (id !== entityId) {
+				entityId = id;
+				props = this.directEntities![id]?.properties;
+				containerKey = undefined;
+				container = undefined;
+			}
+			if (!props) continue;
+			const info = wasm.plans[wasm.records[i * 14]!]!;
+			const meta = info.meta;
+			if (!meta) continue;
+			const index = wasm.values[i * 7 + 1]!;
+			const result = wasm.value(i);
+			if (meta.containerKey !== undefined && index !== -1 && !info.isResize) {
+				if (
+					containerKey !== meta.containerKey ||
+					container === undefined ||
+					(meta.elementCtor && meta.fixedLength === undefined && index >= container.length)
+				) {
+					container = writeToContainer(props, meta, index, result);
+					containerKey = meta.containerKey;
+				} else if (meta.subKey !== undefined) {
+					const elements = container as Record<string, unknown>[];
+					let element = elements[index];
+					if (!element) elements[index] = element = {};
+					element[meta.subKey] = result;
+				} else (container as unknown[])[index] = result;
+			} else {
+				containerKey = undefined;
+				if (info.isResize) resizeContainer(props, meta, result as number);
+				else props[meta.name] = result;
+			}
+		}
+	}
 }
