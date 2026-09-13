@@ -21,14 +21,11 @@ For cross-runtime/build comparisons, pass `--cases path/to/cases.json`. The file
 [{ "name": "Bun ALL", "runtime": "bun", "entry": "cs2parser", "method": "path-stream", "mode": "ALL", "subscriptions": "death" }]
 ```
 
-Node cases require a version capable of running the TypeScript benchmark worker. Use equivalent builds when comparing revisions. Historical optimization measurements and tradeoffs are retained in [PR #43](https://github.com/osztenkurden/cs2parser/pull/43) and [its recorded audit](https://github.com/osztenkurden/cs2parser/blob/289240f/PERFORMANCE.md), rather than duplicated benchmark snapshots in the current tree.
+Node cases require a version capable of running the TypeScript benchmark worker. Use equivalent builds when comparing revisions. Historical optimization measurements and tradeoffs are retained in [PR #43](https://github.com/osztenkurden/cs2parser/pull/43), rather than duplicated benchmark snapshots in the current tree.
 
 `scripts/benchmark-snappy.mjs` remains available for isolated codec comparisons; it verifies decompressed output against native Snappy before timing.
 
-## Optimization audit
-
-The [September 2026 audit](performance-audit.md) records end-to-end results,
-memory tradeoffs, rejected experiments, and correctness checks against master.
+## Worker benchmarks
 
 An experimental Bun-only Web Workers benchmark compares verified aggregate
 analysis across FullPacket-aligned ranges. It does not change `parseDemo()` or
