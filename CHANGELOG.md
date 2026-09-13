@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.0](https://github.com/osztenkurden/cs2parser/compare/v2.3.0...v2.4.0) (2026-09-13)
+
+
+### Features
+
+* add transferable seek indexes and full packet events ([e7d050f](https://github.com/osztenkurden/cs2parser/commit/e7d050f2b6404c770b90935f7af73cb84738cfbf))
+* improve demo parsing throughput ([#54](https://github.com/osztenkurden/cs2parser/issues/54)) ([5e034d9](https://github.com/osztenkurden/cs2parser/commit/5e034d941166eb1e7352f020944c153b76055b1b))
+
+
+### Performance Improvements
+
+* improve demo parsing throughput ([59a75fa](https://github.com/osztenkurden/cs2parser/commit/59a75faed2f0c687f182460086076e267784de31))
+
 ## [2.3.0](https://github.com/osztenkurden/cs2parser/compare/v2.2.0...v2.3.0) (2026-09-13)
 
 
