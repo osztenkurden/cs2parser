@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 const [demoPath, method, mode] = process.argv.slice(2);
 if (process.argv.length !== 5 || !demoPath?.trim()) throw new Error('Expected DEMO METHOD MODE');
-if (!['path-stream', 'path-sync', 'buffer', 'stream', 'web-stream'].includes(method ?? '')) {
+if (!['path-stream', 'path-sync', 'buffer', 'stream', 'stream-large', 'web-stream'].includes(method ?? '')) {
 	throw new Error(`Unknown parse method: ${method}`);
 }
 if (!mode || !['NONE', 'ONLY_GAME_RULES', 'ALL'].includes(mode)) throw new Error(`Unknown entity mode: ${mode}`);
@@ -36,7 +36,7 @@ switch (method) {
 		await p.parseDemo(demoPath, { entities: entityMode });
 		break;
 	case 'path-sync':
-		// This selects larger streamed reads, not synchronous parsing.
+		// Legacy benchmark spelling; stream:false is now ignored by the path parser.
 		await p.parseDemo(demoPath, { entities: entityMode, stream: false });
 		break;
 	case 'buffer':
@@ -44,6 +44,9 @@ switch (method) {
 		break;
 	case 'stream':
 		await p.parseDemo(fs.createReadStream(demoPath), { entities: entityMode });
+		break;
+	case 'stream-large':
+		await p.parseDemo(fs.createReadStream(demoPath, { highWaterMark: 4 * 1024 * 1024 }), { entities: entityMode });
 		break;
 	case 'web-stream': {
 		const source = fs.createReadStream(demoPath);

@@ -61,6 +61,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	private _failure: { cause: unknown } | undefined;
 	private _cleanupBroadcast: (() => void) | undefined;
 	private _seekSession: SeekSession | undefined;
+	private _seekFinal: Pick<SeekSession, 'fullPackets' | 'bytesRead' | 'memoryBytes'> | undefined;
 	private readonly _internalEvents = new TypedEventEmitter<any>();
 	/** @internal Suppress application notifications while preserving decoder effects. */
 	_silent = false;
@@ -68,6 +69,11 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	/** @internal Register state effects separately from application observers. */
 	_onInternal<K extends keyof OutputEvents>(event: K, listener: (data: OutputEvents[K]) => void) {
 		this._internalEvents.on(event, listener);
+	}
+
+	/** @internal Detach a driver's state effect when its parse ends. */
+	_offInternal<K extends keyof OutputEvents>(event: K, listener: (data: OutputEvents[K]) => void) {
+		this._internalEvents.off(event, listener);
 	}
 
 	override emit<K extends keyof ReaderEvents>(event: K, ...args: ReaderEvents[K]): boolean {
@@ -209,13 +215,13 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	}
 	/** Only discovered FullPacket locations; no round index or per-tick snapshots. */
 	get fullPackets(): readonly { readonly tick: number; readonly offset: number }[] {
-		return this._seekSession?.fullPackets ?? [];
+		return this._seekSession?.fullPackets ?? this._seekFinal?.fullPackets ?? [];
 	}
 	get seekBytesRead(): number {
-		return this._seekSession?.bytesRead ?? 0;
+		return this._seekSession?.bytesRead ?? this._seekFinal?.bytesRead ?? 0;
 	}
 	get seekMemoryBytes(): number {
-		return this._seekSession?.memoryBytes ?? 0;
+		return this._seekSession?.memoryBytes ?? this._seekFinal?.memoryBytes ?? 0;
 	}
 
 	/** @internal Reuse the reader and its subscriptions, discard the old world. */
@@ -633,7 +639,16 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 		if (this._endResult !== undefined) return;
 		this._endResult = result;
 		this._hasEnded = true;
-		this._seekSession?.dispose();
+		if (this._seekSession) {
+			// Keep public diagnostics, not the decoder, hydration metadata or input source.
+			this._seekFinal = {
+				fullPackets: this._seekSession.fullPackets,
+				bytesRead: this._seekSession.bytesRead,
+				memoryBytes: this._seekSession.memoryBytes
+			};
+			this._seekSession.dispose();
+			this._seekSession = undefined;
+		}
 		this._paused = false;
 		this._wake?.();
 		this._parsing = false;

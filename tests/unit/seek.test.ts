@@ -64,11 +64,12 @@ test('a speculative read failure rejects parsing when its bytes are needed', asy
 	expect(reader.hasEnded).toBe(true);
 });
 
-test('sequential reads use 64 KiB windows without rereading split headers or payloads', async () => {
-	for (const padding of [65530, 65531, 65532, 2 * 65536 + 37]) {
+test('sequential reads use 256 KiB windows without rereading split headers or payloads', async () => {
+	const window = 256 * 1024;
+	for (const padding of [65530, 65531, 65532, window - 6, window - 5, window - 4, 2 * window + 37]) {
 		const bytes = demoFile(
 			demoFrame(10, new Uint8Array(padding), 0),
-			demoFrame(10, new Uint8Array(65536 + 13), 1),
+			demoFrame(10, new Uint8Array(window + 13), 1),
 			demoFrame(0, undefined, 2)
 		);
 		const reader = new DemoReader();
@@ -81,7 +82,7 @@ test('sequential reads use 64 KiB windows without rereading split headers or pay
 				size: bytes.length,
 				async read(offset, length) {
 					expect(offset).toBe(end);
-					if (reads++ === 0) expect(length).toBe(64 * 1024);
+					if (reads++ === 0) expect(length).toBe(window);
 					end = offset + length;
 					return bytes.subarray(offset, end);
 				}

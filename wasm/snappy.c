@@ -24,6 +24,15 @@ static void copy_wide(u8 *dst, const u8 *src, u32 length) {
     for (; i < length; i++) dst[i] = src[i];
 }
 
+/* Both words are loaded separately: an eight-byte backref may overlap. */
+static void copy_16(u8 *dst, const u8 *src) {
+    u64 word;
+    __builtin_memcpy(&word, src, 8);
+    __builtin_memcpy(dst, &word, 8);
+    __builtin_memcpy(&word, src + 8, 8);
+    __builtin_memcpy(dst + 8, &word, 8);
+}
+
 int snappy_uncompress(const u8 *src, u32 src_len, u8 *dst, u32 dst_len) {
     u32 ip = 0, op = 0, expected = 0;
     for (u32 shift = 0; ; shift += 7) {
@@ -48,8 +57,14 @@ int snappy_uncompress(const u8 *src, u32 src_len, u8 *dst, u32 dst_len) {
             /* Check len-1 before adding 1, which could overflow uint32. */
             if (length >= dst_len - op || length >= src_len - ip) return -1;
             length++;
-            /* Short literals avoid the runtime overhead of a bulk memory.copy. */
-            if (length >= 64) __builtin_memcpy(dst + op, src + ip, length);
+            /* Short literals may overwrite later output, never the output boundary.
+             * The following tags replace those bytes before they become history. */
+            if (length <= 16 && src_len - ip >= 16 && dst_len - op >= 16) copy_16(dst + op, src + ip);
+            else if (length <= 32 && src_len - ip >= 32 && dst_len - op >= 32) {
+                copy_16(dst + op, src + ip);
+                copy_16(dst + op + 16, src + ip + 16);
+            }
+            else if (length >= 64) __builtin_memcpy(dst + op, src + ip, length);
             else copy_wide(dst + op, src + ip, length);
             op += length;
             ip += length;
@@ -69,7 +84,15 @@ int snappy_uncompress(const u8 *src, u32 src_len, u8 *dst, u32 dst_len) {
         }
         if (!offset || offset > op || length > dst_len - op) return -1;
         if (offset >= 8) {
-            copy_wide(dst + op, dst + op - offset, length);
+            /* Copy tags produce at most 64 bytes. Round up within the output
+             * range to avoid a byte tail for every short backref. */
+            if (dst_len - op >= 64) {
+                copy_16(dst + op, dst + op - offset);
+                if (length > 16) copy_16(dst + op + 16, dst + op - offset + 16);
+                if (length > 32) copy_16(dst + op + 32, dst + op - offset + 32);
+                if (length > 48) copy_16(dst + op + 48, dst + op - offset + 48);
+            }
+            else copy_wide(dst + op, dst + op - offset, length);
         } else {
             /* Forward copying is intentional, not memmove's original bytes. */
             for (u32 i = 0; i < length; i++) dst[op + i] = dst[op + i - offset];

@@ -30,19 +30,23 @@ interface Location {
 	readonly offset: number;
 }
 class TruncatedDemo extends Error {}
+const READ_AHEAD_BYTES = 256 * 1024;
 
 /** Internal random-access command reader with bounded read-ahead. */
 class Commands {
 	private cache: Uint8Array = new Uint8Array(0);
+	private carry: Uint8Array = new Uint8Array(0);
 	private cacheOffset = 0;
 	private pending?: { offset: number; promise: Promise<Uint8Array>; abort: AbortController };
 	private readonly size: number;
+	private source?: DemoByteSource;
 	bytesRead = 0;
-	readAhead = 64 * 1024;
+	readAhead = READ_AHEAD_BYTES;
 	constructor(
-		private source: DemoByteSource,
+		source: DemoByteSource,
 		private maxFrameBytes: number
 	) {
+		this.source = source;
 		this.size = source.size;
 	}
 	bytes(offset: number, length: number, signal?: AbortSignal): Uint8Array | Promise<Uint8Array> {
@@ -56,8 +60,16 @@ class Commands {
 		this.pending?.abort.abort();
 		this.pending = undefined;
 	}
+	dispose() {
+		this.stopReadAhead();
+		this.cache = new Uint8Array(0);
+		this.carry = new Uint8Array(0);
+		this.source = undefined;
+	}
 	private async read(offset: number, length: number, signal?: AbortSignal) {
-		const bytes = await this.source.read(offset, length, signal);
+		const source = this.source;
+		if (!source) throw new Error('Seek session is disposed');
+		const bytes = await source.read(offset, length, signal);
 		signal?.throwIfAborted();
 		if (bytes.length !== length) throw new Error('Truncated byte source read');
 		this.bytesRead += bytes.length;
@@ -79,17 +91,21 @@ class Commands {
 			}
 			signal?.throwIfAborted();
 			if (available) {
-				const joined = new Uint8Array(available + bytes.length);
+				// Command decoding borrows its window only until it returns, just as
+				// stream parsing does. Compact into reusable storage across refills.
+				const size = available + bytes.length;
+				if (this.carry.length < size) this.carry = new Uint8Array(Math.max(size, this.carry.length * 2));
+				const joined = this.carry;
 				joined.set(this.cache.subarray(offset - this.cacheOffset));
 				joined.set(bytes, available);
-				this.cache = joined;
+				this.cache = joined.subarray(0, size);
 			} else {
 				this.cache = bytes;
 			}
 			this.cacheOffset = offset;
 		} while (this.cache.length < length);
 		const end = this.cacheOffset + this.cache.length;
-		if (this.readAhead === 64 * 1024 && end < this.size) {
+		if (this.readAhead === READ_AHEAD_BYTES && end < this.size) {
 			const abort = new AbortController();
 			const promise = this.read(
 				end,
@@ -115,9 +131,10 @@ class Commands {
 			);
 			return;
 		}
-		return this.refill(frame.offset, frame.end - frame.offset, signal).then(bytes =>
-			session.readCommand(bytes, frame.offset, frame.commandBase, frame.headerSize)
-		);
+		return this.refill(frame.offset, frame.end - frame.offset, signal).then(bytes => {
+			signal?.throwIfAborted();
+			session.readCommand(bytes, frame.offset, frame.commandBase, frame.headerSize);
+		});
 	}
 	frame(offset: number, signal?: AbortSignal): Frame | Promise<Frame> {
 		signal?.throwIfAborted();
@@ -169,6 +186,7 @@ export class SeekSession {
 	private headerValidated = false;
 	private readingTrailer = false;
 	private readonly abort = new AbortController();
+	private readonly onCancel = () => this.abort.abort();
 	private readonly locations: Location[] = [];
 	private readonly bad = new Set<number>();
 	private seed: DecoderCheckpoint | undefined;
@@ -177,11 +195,13 @@ export class SeekSession {
 	private scannedToEnd = false;
 	private lastTick = -1;
 	private lastYield = 0;
-	private async cooperate(signal?: AbortSignal) {
+	private cooperate(signal?: AbortSignal): void | Promise<void> {
 		if (performance.now() - this.lastYield > 16) {
-			await new Promise<void>(resolve => setTimeout(resolve, 0));
-			this.lastYield = performance.now();
-			this.parser._reportSeekProgress(this.bytesRead);
+			return new Promise<void>(resolve => setTimeout(resolve, 0)).then(() => {
+				this.lastYield = performance.now();
+				this.parser._reportSeekProgress(this.bytesRead);
+				signal?.throwIfAborted();
+			});
 		}
 		signal?.throwIfAborted();
 	}
@@ -216,8 +236,8 @@ export class SeekSession {
 		] as const)
 			if (!Number.isSafeInteger(value) || value < 1) throw new RangeError(`Invalid ${name}`);
 		this.commands = new Commands(source, options.maxFrameBytes ?? 64 * 1024 * 1024);
-		this.parser._onInternal('cancel', () => this.abort.abort());
 		this.session = this.makeSession(this.parser, this.options.entities ?? EntityMode.NONE);
+		this.parser._onInternal('cancel', this.onCancel);
 	}
 	private makeSession(reader: BaseDemoReader, entities: EntityMode, restore?: DecoderCheckpoint) {
 		return new ParseSession(
@@ -317,7 +337,10 @@ export class SeekSession {
 	}
 	dispose() {
 		this.abort.abort();
-		this.commands.stopReadAhead();
+		this.parser._offInternal('cancel', this.onCancel);
+		this.commands.dispose();
+		this.seed = undefined;
+		this.bad.clear();
 	}
 	seekTo(tick: number, options: SeekOptions = {}): Promise<SeekOutcome> {
 		if (!Number.isSafeInteger(tick) || tick < 0)
@@ -343,31 +366,38 @@ export class SeekSession {
 				this.headerValidated = true;
 			}
 			await this.discover(target, options.signal);
+			options.signal?.throwIfAborted();
 			if (this.scannedToEnd && target > this.lastTick) return { status: 'incomplete' };
 			const candidates = this.locations.filter(c => c.tick < target && !this.bad.has(c.offset)).reverse();
 			for (const candidate of [...candidates, undefined]) {
 				const checkpoint = candidate ? await this.metadataAt(candidate, options.signal) : undefined;
+				options.signal?.throwIfAborted();
 				if (candidate && !checkpoint) continue;
 				this.parser._resetForSeek();
 				this.session = this.makeSession(this.parser, this.options.entities ?? EntityMode.NONE, checkpoint);
 				this.offset = checkpoint?.offset ?? 16;
 				try {
 					let activeTick = checkpoint?.previousTick ?? -1;
-					let frame = await this.commands.frame(this.offset, options.signal);
+					let frame = this.commands.frame(this.offset, options.signal);
+					if (frame instanceof Promise) frame = await frame;
 					while (frame.tick < target && frame.command !== 0) {
-						await this.cooperate(options.signal);
+						const yielding = this.cooperate(options.signal);
+						if (yielding) await yielding;
 						if (frame.tick !== activeTick) {
 							this.session.endTick();
 							this.session.startTick(frame.tick);
 							activeTick = frame.tick;
 						}
-						await this.commands.decode(this.session, frame, options.signal);
+						const decoded = this.commands.decode(this.session, frame, options.signal);
+						if (decoded) await decoded;
 						this.offset = frame.end;
-						frame = await this.commands.frame(this.offset, options.signal);
+						frame = this.commands.frame(this.offset, options.signal);
+						if (frame instanceof Promise) frame = await frame;
 					}
 					this.session.endTick();
 					if (frame.command === 0) return { status: 'incomplete' };
 					this.parser._reportSeekProgress(this.bytesRead);
+					options.signal?.throwIfAborted();
 					this.ready = true;
 					this.readingTrailer = false;
 					return { status: 'complete', tick: frame.tick };
@@ -385,7 +415,7 @@ export class SeekSession {
 			if (error instanceof TruncatedDemo) return { status: 'incomplete' };
 			throw error;
 		} finally {
-			this.commands.readAhead = 64 * 1024;
+			this.commands.readAhead = READ_AHEAD_BYTES;
 			this.parser._silent = false;
 			this.isSeeking = false;
 		}
@@ -393,8 +423,10 @@ export class SeekSession {
 	/** Header-only scan: FullPacket bodies are decoded later for accumulated metadata. */
 	private async discover(target: number, signal?: AbortSignal) {
 		while (!this.scannedToEnd) {
-			await this.cooperate(signal);
-			const frame = await this.commands.frame(this.scanOffset, signal);
+			const yielding = this.cooperate(signal);
+			if (yielding) await yielding;
+			let frame = this.commands.frame(this.scanOffset, signal);
+			if (frame instanceof Promise) frame = await frame;
 			if (frame.command === 0) {
 				this.scannedToEnd = true;
 				break;
@@ -414,8 +446,10 @@ export class SeekSession {
 		let offset = this.seed?.offset ?? 16;
 		try {
 			while (offset <= location.offset) {
-				await this.cooperate(signal);
-				const frame = await this.commands.frame(offset, signal);
+				const yielding = this.cooperate(signal);
+				if (yielding) await yielding;
+				let frame = this.commands.frame(offset, signal);
+				if (frame instanceof Promise) frame = await frame;
 				if (frame.command === 13 && !this.seed) {
 					this.seed = session.captureCheckpoint(frame.offset);
 					this.seedBytes = estimateCheckpointBytes(this.seed);
@@ -427,7 +461,8 @@ export class SeekSession {
 				}
 				if (offset === location.offset) return session.captureCheckpoint(frame.offset);
 				if ((!this.seed && [1, 4, 5, 7, 8].includes(frame.command)) || frame.command === 13) {
-					await this.commands.decode(session, frame, signal);
+					const decoded = this.commands.decode(session, frame, signal);
+					if (decoded) await decoded;
 				}
 				offset = this.seed
 					? (this.locations.find(c => c.offset > frame.offset)?.offset ?? location.offset + 1)
