@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1](https://github.com/osztenkurden/cs2parser/compare/v2.4.0...v2.4.1) (2026-09-13)
+
+
+### Performance Improvements
+
+* accelerate delta and entity decoding ([#56](https://github.com/osztenkurden/cs2parser/issues/56)) ([7053da2](https://github.com/osztenkurden/cs2parser/commit/7053da2943d90fbf489000be26889eee6b3f6f6d))
+
 ## [2.4.0](https://github.com/osztenkurden/cs2parser/compare/v2.3.0...v2.4.0) (2026-09-13)
 
 
