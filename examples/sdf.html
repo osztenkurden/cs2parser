@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sdf.ts — browser benchmark</title>
+  <style>
+    body { max-width: 850px; margin: 40px auto; padding: 0 20px; font: 16px/1.5 system-ui, sans-serif; }
+    label { display: block; margin: 12px 0; }
+    input, button { font: inherit; }
+    button { padding: 5px 14px; margin-right: 8px; }
+    pre { padding: 16px; background: #f1f3f5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ccc; }
+    small { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>sdf.ts — browser benchmark</h1>
+  <p>Choose the same raw <code>.dem</code> used in Bun/Node. Both readers use
+    <code>EntityMode.NONE</code>, on the browser's main thread, without an imported seek index.
+    The selected File is passed directly to the parser.</p>
+  <form id="benchmark">
+    <label>Demo file <input id="file" type="file" accept=".dem" required></label>
+    <label>Seek tick <input id="tick" type="number" min="0" step="1" value="180481" required></label>
+    <label><input id="separate" type="checkbox"> Wait for the first parser to finish before starting the second</label>
+    <p><small>Unchecked matches sdf.ts: FINITO measures pause → seek → resume, then the second full parse
+      runs while the first finishes. Checked separates the two runs; the first reader's remaining parse
+      is still excluded from FINITO. Repeated runs may benefit from the operating system's file cache.</small></p>
+    <button id="run" disabled>Run benchmark</button>
+    <button id="cancel" type="button" disabled>Cancel</button>
+  </form>
+  <p id="status" role="status">Loading parser…</p>
+  <table>
+    <thead><tr><th>Measurement</th><th>Time</th><th>Bytes fetched</th><th>Index entries</th></tr></thead>
+    <tbody id="results"></tbody>
+  </table>
+  <details>
+    <summary>First reader's DEM_FullPacket ticks</summary>
+    <p>Also logged to the developer console, as in sdf.ts. Seeking suppresses these events;
+      ticks appear after resume. The second reader has no FullPacket listener.</p>
+    <pre id="ticks">No run yet.</pre>
+  </details>
+  <details>
+    <summary>Core code being measured</summary>
+    <pre>const reader = new DemoReader();
+reader.on('DEM_FullPacket', () =&gt; console.log(reader.currentTick));
+const now = performance.now();
+const parsing = reader.parseDemo(file, { entities: EntityMode.NONE });
+await reader.pause();
+await reader.seekTo(targetTick);
+reader.resume();
+console.log('FINITO', performance.now() - now);
+
+// Optional checkbox: await parsing;
+const reader2 = new DemoReader();
+const now2 = performance.now();
+await reader2.parseDemo(file, { entities: EntityMode.NONE });
+console.log('FINITO2', performance.now() - now2);
+
+await parsing; // Clean up before allowing another benchmark.</pre>
+  </details>
+  <p><small>From the repository root: <code>bun build src/browser.ts --target browser --outfile dist/replay-browser.js</code>, then
+    <code>python3 -m http.server 8000 --bind 127.0.0.1</code>.
+    Open <code>http://127.0.0.1:8000/examples/sdf.html</code>.</small></p>
+  <script type="module">
+    const form = document.querySelector('#benchmark');
+    const run = document.querySelector('#run');
+    const cancel = document.querySelector('#cancel');
+    const status = document.querySelector('#status');
+    const results = document.querySelector('#results');
+    const ticks = document.querySelector('#ticks');
+    const inputs = [...form.querySelectorAll('input')];
+    let DemoReader, EntityMode;
+    let cancelled = false;
+    const readers = [];
+    const pending = [];
+
+    function stopReaders() {
+      for (const reader of readers) if (!reader.hasEnded) reader.cancel();
+    }
+    cancel.onclick = () => {
+      cancelled = true;
+      status.textContent = 'Cancelling…';
+      stopReaders();
+    };
+    function measure(label, elapsed, reader) {
+      const row = document.createElement('tr');
+      for (const value of [label, `${elapsed.toFixed(1)} ms`,
+        `${(reader.seekBytesRead / 1024 ** 2).toFixed(2)} MiB`, Object.keys(reader.getSeekIndex()).length]) {
+        const cell = document.createElement('td');
+        cell.textContent = String(value);
+        row.append(cell);
+      }
+      results.append(row);
+      console.log(label, elapsed);
+    }
+    function track(reader, file) {
+      const parsing = reader.parseDemo(file, { entities: EntityMode.NONE });
+      pending.push(parsing);
+      void parsing.catch(() => {});
+      return parsing;
+    }
+    form.onsubmit = async event => {
+      event.preventDefault();
+      const file = document.querySelector('#file').files[0];
+      const targetTick = document.querySelector('#tick').valueAsNumber;
+      const separate = document.querySelector('#separate').checked;
+      if (!file || !Number.isSafeInteger(targetTick) || targetTick < 0) return;
+      run.disabled = true;
+      cancel.disabled = false;
+      inputs.forEach(input => input.disabled = true);
+      results.replaceChildren();
+      ticks.textContent = '';
+      cancelled = false;
+      const fullPacketTicks = [];
+      try {
+        status.textContent = `Seeking to tick ${targetTick}…`;
+        const reader = new DemoReader();
+        readers.push(reader);
+        reader.on('DEM_FullPacket', () => {
+          fullPacketTicks.push(reader.currentTick);
+          console.log(reader.currentTick);
+        });
+        const now = performance.now();
+        const parsing = track(reader, file);
+        await reader.pause();
+        const sought = await reader.seekTo(targetTick);
+        if (cancelled) return;
+        if (sought.status !== 'complete') throw Error(`Seek ${sought.status}; try an earlier tick.`);
+        reader.resume();
+        measure('FINITO — seek + resume', performance.now() - now, reader);
+        if (separate) {
+          status.textContent = 'Waiting for the first parser to finish…';
+          const outcome = await parsing;
+          if (cancelled) return;
+          if (outcome.status !== 'complete') throw Error(`First parse ${outcome.status}`);
+        }
+        status.textContent = separate ? 'Parsing the entire file with reader2…' : 'Parsing with both readers…';
+        const reader2 = new DemoReader();
+        readers.push(reader2);
+        const now2 = performance.now();
+        const outcome2 = await track(reader2, file);
+        if (cancelled) return;
+        if (outcome2.status !== 'complete') throw Error(`Second parse ${outcome2.status}`);
+        measure('FINITO2 — entire demo', performance.now() - now2, reader2);
+        status.textContent = 'Waiting for the first parser to finish…';
+        const outcome = await parsing;
+        if (cancelled) return;
+        if (outcome.status !== 'complete') throw Error(`First parse ${outcome.status}`);
+        status.textContent = `Done. Seek resolved at tick ${sought.tick}. Both parsers finished.`;
+      } catch (error) {
+        status.textContent = `Error: ${error.message ?? error}`;
+        console.error(error);
+      } finally {
+        stopReaders();
+        await Promise.allSettled(pending);
+        readers.length = pending.length = 0;
+        ticks.textContent = fullPacketTicks.join('\n') || 'No FullPacket events after resume.';
+        if (cancelled) status.textContent = 'Cancelled.';
+        inputs.forEach(input => input.disabled = false);
+        run.disabled = false;
+        cancel.disabled = true;
+      }
+    };
+    try {
+      ({ DemoReader, EntityMode } = await import('../dist/replay-browser.js'));
+      run.disabled = false;
+      status.textContent = 'Ready. Select a raw demo file.';
+    } catch (error) {
+      status.textContent = `Could not load the parser. Build dist/replay-browser.js using the command above and serve the repository over HTTP. ${error.message}`;
+    }
+  </script>
+</body>
+</html>

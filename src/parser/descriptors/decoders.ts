@@ -75,6 +75,7 @@ export const decoders = {
 		decode: CDemoUserCmd.decode
 	},
 	[EDemoCommands.DEM_FullPacket]: {
+		name: 'DEM_FullPacket',
 		type: EDemoCommands.DEM_FullPacket,
 		decode: CDemoFullPacket.decode
 	},

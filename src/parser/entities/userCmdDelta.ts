@@ -26,9 +26,8 @@ import {
  * Feeding these bytes to a stock protobuf decoder throws on roughly half of them
  * and silently produces wrong buttons and view angles on the rest.
  *
- * The approach here is to normalise first and decode second: rewrite the delta
- * into valid protobuf (expanding wire-7 resets, lifting out the replacement
- * lists), then hand the result to the generated `CSGOUserCmdPB.decode` so field
+ * Validate first, rewriting only spans with wire-7 resets or replacement lists,
+ * then hand the result to the generated `CSGOUserCmdPB.decode` so field
  * types come from the real schema rather than a parallel implementation. The
  * field layout comes from `userCmdDeltaSchema`, generated from the `.proto`
  * files, so a protocol change updates it rather than silently invalidating it.
@@ -56,15 +55,16 @@ const childMessage = (name: string): DeltaMessageName => {
 // --- byte-level helpers ------------------------------------------------------
 
 /**
- * Growable byte sink.
- *
- * Backed by a Uint8Array rather than a number[]: sanitising runs once per delta
- * command, several times over for nested messages, and boxing every byte through
- * an array push dominated the cost.
+ * Growable scratch byte sink. Unchanged messages never write to it.
  */
 class ByteWriter {
 	private buffer = new Uint8Array(256);
 	private offset = 0;
+
+	reset(): void {
+		this.offset = 0;
+		if (this.buffer.length > 65536) this.buffer = new Uint8Array(256);
+	}
 
 	private reserve(extra: number): void {
 		const needed = this.offset + extra;
@@ -86,11 +86,6 @@ class ByteWriter {
 		this.buffer[this.offset++] = v;
 	}
 
-	push(value: number): void {
-		this.reserve(1);
-		this.buffer[this.offset++] = value;
-	}
-
 	pushMany(values: ArrayLike<number>): void {
 		this.reserve(values.length);
 		this.buffer.set(values as Uint8Array, this.offset);
@@ -98,6 +93,7 @@ class ByteWriter {
 	}
 
 	pushRange(source: Uint8Array, start: number, count: number): void {
+		if (count === 0) return;
 		this.reserve(count);
 		this.buffer.set(source.subarray(start, start + count), this.offset);
 		this.offset += count;
@@ -129,13 +125,12 @@ class ByteReader {
 		throw new DeltaFormatError('varint too long');
 	}
 
-	/** Copy a varint through to `out` without interpreting it, preserving 64-bit values. */
-	copyVarint(out: ByteWriter): void {
+	/** Validate a scalar varint without truncating its possible 64-bit value. */
+	skipVarint(): void {
 		for (let i = 0; i < 10; i++) {
 			if (this.offset >= this.bytes.length) throw new DeltaFormatError('truncated varint');
 			const byte = this.bytes[this.offset++]!;
 			if (i === 9 && byte > 1) throw new DeltaFormatError('uint64 varint overflow');
-			out.push(byte);
 			if ((byte & 0x80) === 0) return;
 		}
 		throw new DeltaFormatError('varint too long');
@@ -148,10 +143,8 @@ class ByteReader {
 		return slice;
 	}
 
-	/** Copy `count` bytes straight into `out`, skipping the intermediate view. */
-	copyInto(out: ByteWriter, count: number): void {
+	skip(count: number): void {
 		if (count < 0 || this.offset + count > this.bytes.length) throw new DeltaFormatError('truncated field');
-		out.pushRange(this.bytes, this.offset, count);
 		this.offset += count;
 	}
 }
@@ -195,25 +188,42 @@ const writeDefault = (out: ByteWriter, field: number, spec: DeltaFieldSpec): voi
 
 // --- sanitising --------------------------------------------------------------
 
-type ListUpdates = Map<string, Uint8Array[]>;
+type ListUpdates = Record<string, Uint8Array[]>;
 const RESET_LIST = Uint8Array.of(7); // replacement-list opcode: resize to zero
 
 const appendList = (lists: ListUpdates | undefined, path: string, bytes: Uint8Array): void => {
 	if (!lists) throw new DeltaFormatError('nested replacement lists are unsupported');
-	let updates = lists.get(path);
-	if (!updates) lists.set(path, (updates = []));
+	let updates = lists[path];
+	if (!updates) lists[path] = updates = [];
 	updates.push(bytes);
+};
+
+const resetListPathsCache = new Map<DeltaMessageName, string[]>();
+
+const resetListPaths = (message: DeltaMessageName): string[] => {
+	const cached = resetListPathsCache.get(message);
+	if (cached) return cached;
+	const paths: string[] = [];
+	resetListPathsCache.set(message, paths);
+	for (const [field, spec] of Object.entries(userCmdDeltaSchema[message].fields)) {
+		const child = spec as DeltaFieldSpec;
+		if (child.repeated) paths.push(field);
+		else if (child.child) {
+			for (const nested of resetListPaths(childMessage(child.child))) paths.push(`${field}.${nested}`);
+		}
+	}
+	return paths;
 };
 
 /** A parent reset also clears every repeated field below it. */
 const resetLists = (message: DeltaMessageName, path: string, lists: ListUpdates | undefined): void => {
-	for (const [field, spec] of Object.entries(userCmdDeltaSchema[message].fields)) {
-		const child = spec as DeltaFieldSpec;
-		const fieldPath = path ? `${path}.${field}` : field;
-		if (child.repeated) appendList(lists, fieldPath, RESET_LIST);
-		else if (child.child) resetLists(childMessage(child.child), fieldPath, lists);
-	}
+	for (const nested of resetListPaths(message)) appendList(lists, path ? `${path}.${nested}` : nested, RESET_LIST);
 };
+
+// Sanitising is synchronous and never calls user code. Each depth needs its own
+// writer until its parent has copied the rewritten child. No returned command
+// may retain these buffers (see the byte copy in mergeInto).
+const scratchWriters: ByteWriter[] = [];
 
 /**
  * Rewrite one delta message into valid protobuf.
@@ -221,13 +231,17 @@ const resetLists = (message: DeltaMessageName, path: string, lists: ListUpdates 
  * Wire-7 fields expand to their defaults; nested delta messages are rewritten
  * recursively; repeated message fields are lifted out into `lists` (keyed by
  * dotted field path) because their replacement-list encoding has no protobuf
- * equivalent.
+ * equivalent. Unchanged messages return their original view, after validation.
  */
-const sanitize = (bytes: Uint8Array, message: DeltaMessageName, path: string, lists?: ListUpdates) => {
+const sanitize = (bytes: Uint8Array, message: DeltaMessageName, path: string, lists?: ListUpdates, depth = 0) => {
 	const reader = new ByteReader(bytes);
-	const out = new ByteWriter();
+	const out = scratchWriters[depth] ?? (scratchWriters[depth] = new ByteWriter());
+	out.reset();
+	// Original spans stay in the input until a reset/list actually changes bytes.
+	let copied = 0;
 
 	while (!reader.done) {
+		const start = reader.offset;
 		const key = reader.varint();
 		const field = key >>> 3;
 		const wire = key & 0x07;
@@ -237,6 +251,8 @@ const sanitize = (bytes: Uint8Array, message: DeltaMessageName, path: string, li
 
 		if (wire === 7) {
 			if (!spec) throw new DeltaFormatError(`reset of unknown field ${message}.${field}`);
+			out.pushRange(bytes, copied, start - copied);
+			copied = reader.offset;
 			if (spec.repeated) {
 				appendList(lists, path ? `${path}.${field}` : String(field), RESET_LIST);
 				continue;
@@ -249,16 +265,13 @@ const sanitize = (bytes: Uint8Array, message: DeltaMessageName, path: string, li
 
 		switch (wire) {
 			case 0:
-				out.varint(key);
-				reader.copyVarint(out);
+				reader.skipVarint();
 				break;
 			case 1:
-				out.varint(key);
-				out.pushMany(reader.take(8));
+				reader.skip(8);
 				break;
 			case 5:
-				out.varint(key);
-				out.pushMany(reader.take(4));
+				reader.skip(4);
 				break;
 			case 2: {
 				const length = reader.varint();
@@ -266,24 +279,29 @@ const sanitize = (bytes: Uint8Array, message: DeltaMessageName, path: string, li
 					// Replacement list — collected, not emitted.
 					const fieldPath = path ? `${path}.${field}` : String(field);
 					appendList(lists, fieldPath, reader.take(length));
+					out.pushRange(bytes, copied, start - copied);
+					copied = reader.offset;
 					break;
 				}
 				if (!spec?.child) {
-					// Opaque bytes: copy straight through without materialising a view.
-					out.varint(key);
-					out.varint(length);
-					reader.copyInto(out, length);
+					reader.skip(length);
 					break;
 				}
+				const body = reader.take(length);
 				const rewritten = sanitize(
-					reader.take(length),
+					body,
 					childMessage(spec.child),
 					path ? `${path}.${field}` : String(field),
-					lists
+					lists,
+					depth + 1
 				);
-				out.varint(key);
-				out.varint(rewritten.length);
-				out.pushMany(rewritten);
+				if (rewritten !== body) {
+					out.pushRange(bytes, copied, start - copied);
+					out.varint(key);
+					out.varint(rewritten.length);
+					out.pushMany(rewritten);
+					copied = reader.offset;
+				}
 				break;
 			}
 			default:
@@ -291,6 +309,8 @@ const sanitize = (bytes: Uint8Array, message: DeltaMessageName, path: string, li
 		}
 	}
 
+	if (copied === 0) return bytes;
+	out.pushRange(bytes, copied, bytes.length - copied);
 	return out.toBytes();
 };
 
@@ -388,7 +408,8 @@ const mergeInto = (baseline: unknown, delta: Record<string, unknown>): Record<st
 		if (isPlainObject(value)) {
 			result[key] = mergeInto(result[key], value);
 		} else {
-			result[key] = value;
+			// Both unchanged input views and rewritten scratch views are borrowed.
+			result[key] = value instanceof Uint8Array ? new Uint8Array(value) : value;
 		}
 	}
 
@@ -410,13 +431,13 @@ const SUBTICK_MOVES_PATH = '1.18';
  */
 export const applyUserCmdDelta = (baseline: CSGOUserCmdPB, deltaData: Uint8Array): CSGOUserCmdPB | null => {
 	try {
-		const lists = new Map<string, Uint8Array[]>();
+		const lists: ListUpdates = {};
 		const sanitized = sanitize(deltaData, DELTA_ROOT_MESSAGE, '', lists);
 		const delta = decodePayload(CSGOUserCmdPB.decode, sanitized);
 
 		const merged = mergeInto(baseline, delta as unknown as Record<string, unknown>) as unknown as CSGOUserCmdPB;
 
-		const inputHistory = lists.get(INPUT_HISTORY_PATH);
+		const inputHistory = lists[INPUT_HISTORY_PATH];
 		if (inputHistory) {
 			merged.input_history = decodeReplacementList(
 				inputHistory,
@@ -428,7 +449,7 @@ export const applyUserCmdDelta = (baseline: CSGOUserCmdPB, deltaData: Uint8Array
 			merged.input_history = baseline.input_history ?? [];
 		}
 
-		const subtickMoves = lists.get(SUBTICK_MOVES_PATH);
+		const subtickMoves = lists[SUBTICK_MOVES_PATH];
 		if (subtickMoves) {
 			if (!merged.base) merged.base = {} as NonNullable<CSGOUserCmdPB['base']>;
 			merged.base.subtick_moves = decodeReplacementList(

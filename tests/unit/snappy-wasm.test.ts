@@ -114,6 +114,35 @@ describe('standalone WASM Snappy', () => {
 				expect(memory[output - 1]).toBe(99);
 			}
 		}
+		// Padding exercises speculative wide stores, not just the exact-copy tail.
+		for (const offset of [1, 7, 8, 9, 15, 16, 17, 31, 32, 63]) {
+			const prefix = literal(Uint8Array.from({ length: offset }, (_, i) => (i * 19 + 7) & 255));
+			for (let length = 1; length <= 64; length++) {
+				for (const padding of [1, 15, 16, 31, 32, 63, 64, 65]) {
+					const outputLength = offset + length + padding;
+					const block = Uint8Array.from([
+						...varint(outputLength),
+						...prefix,
+						((length - 1) << 2) | 2,
+						offset,
+						0,
+						...literal(new Uint8Array(padding).fill(201))
+					]);
+					for (const inputAtEnd of [false, true]) {
+						const input = inputAtEnd ? memory.length - block.length : heap;
+						const output = inputAtEnd ? heap : memory.length - outputLength;
+						memory.fill(99);
+						memory.set(block, input);
+						expect(wasm.snappy_uncompress(input, block.length, output, outputLength)).toBe(0);
+						expect(memory.subarray(output, output + outputLength)).toEqual(
+							Uint8Array.from(snappy.uncompressSync(block) as Buffer)
+						);
+						expect(memory[output - 1]).toBe(99);
+						if (inputAtEnd) expect(memory[output + outputLength]).toBe(99);
+					}
+				}
+			}
+		}
 	});
 
 	test('writes to caller-owned slices and preserves surrounding bytes', () => {

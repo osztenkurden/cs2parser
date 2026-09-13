@@ -1,11 +1,11 @@
 import { openAsBlob } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import fs, { stat, type FileHandle } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { BaseDemoReader, type DemoInput, type ParseOptions } from './base.js';
 import { SnappyDecoder } from '../compression/wasm.js';
 import { parseHeaderAsync, parseServerInfoAsync, parseFileInfoAsync, type MetadataInput } from './metadata.js';
 import { parseMetadataSync } from './metadataSync.js';
-import { fileDemoSource } from '../replay/node.js';
+import { fileHandleDemoSource } from '../replay/node.js';
 
 const metadataSource = async (source: string | MetadataInput) => {
 	if (typeof source !== 'string') return source;
@@ -49,7 +49,25 @@ export class DemoReader extends BaseDemoReader {
 
 	override async parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {
 		this.assertCanParse(opts);
-		if (typeof source === 'string') return this.parseSeekable(() => fileDemoSource(source), opts);
+		if (typeof source === 'string') {
+			let file: FileHandle | undefined;
+			try {
+				return await this.parseSeekable(async () => {
+					// Reject special files before open, which could otherwise block on a FIFO.
+					if (!(await stat(source)).isFile()) throw new Error('Expected a regular demo file');
+					file = await fs.open(source, 'r');
+					return fileHandleDemoSource(file);
+				}, opts);
+			} finally {
+				try {
+					// FileHandle.close waits for outstanding reads, including unused read-ahead.
+					await file?.close();
+				} catch (error) {
+					this._throwFailure();
+					throw error;
+				}
+			}
+		}
 		if (source instanceof Readable) {
 			const stream = source;
 			return this.parseSource(() => {

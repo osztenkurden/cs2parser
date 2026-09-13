@@ -119,7 +119,8 @@ export class ParseSession {
 	private _stringTables: (StringTableObject['table'] | null)[] = [];
 
 	// Subscription state, refreshed once per packet. See refreshSubscriptions().
-	private readonly _enabledCache = new Map<string, boolean>();
+	// Registry IDs are bounded; 0 = unresolved, 1 = disabled, 2 = enabled.
+	private readonly _enabledCache = new Uint8Array(messageById.length);
 	private readonly _derivedSources = new Set<number>();
 	/** Running CSGOUserCmdPB per player slot — what delta commands are applied to. */
 	private readonly _userCmdBaselines: (CSGOUserCmdPB | null)[] = [];
@@ -626,6 +627,8 @@ export class ParseSession {
 			if (this.parser.hasEnded) return false;
 		}
 
+		if ((commandBase & ~EDemoCommands.DEM_IsCompressed) === EDemoCommands.DEM_FullPacket)
+			this.parser._recordFullPacket(tick, this._inputOffset + this._frameMarked);
 		return this.handleCommand(commandBase, size);
 	}
 
@@ -752,7 +755,12 @@ export class ParseSession {
 				this.parsePacket(this.baseParse(decoders[EDemoCommands.DEM_Packet].decode, size, isCompressed));
 				break;
 			case EDemoCommands.DEM_FullPacket: {
-				const fullPacket = this.baseParse(decoder.decode, size, isCompressed);
+				const subscribed = this.parser.listenerCount('DEM_FullPacket') > 0;
+
+				const fullPacket = subscribed
+					? decoder.decode(this.decompressIfNeeded(size, isCompressed, true))
+					: this.baseParse(decoder.decode, size, isCompressed);
+
 				if (fullPacket.string_table) {
 					for (const snapshot of fullPacket.string_table.tables) {
 						const result = applyStringTableSnapshot(snapshot, this.baselines);
@@ -777,6 +785,8 @@ export class ParseSession {
 					}
 				}
 				if (fullPacket.packet?.data) this.parsePacket(fullPacket.packet);
+				if (subscribed) this.enqueueEvent('DEM_FullPacket', fullPacket);
+
 				break;
 			}
 			default: {
@@ -866,7 +876,7 @@ export class ParseSession {
 		const epoch = this.parser?._listenerEpoch ?? 0;
 		if (epoch === this._enabledEpoch) return;
 		this._enabledEpoch = epoch;
-		this._enabledCache.clear();
+		this._enabledCache.fill(0);
 		this.rawListener = (this.parser?.listenerCount('anymessage') ?? 0) > 0;
 		const userCommandsEnabled =
 			(this.parser?.listenerCount('usercommand') ?? 0) > 0 && this.settings?.svc_UserCmds !== false;
@@ -903,14 +913,14 @@ export class ParseSession {
 	 * consumer handles elsewhere.
 	 */
 	private isMessageEnabled(name: string, id: number): boolean {
-		const cached = this._enabledCache.get(name);
-		if (cached !== undefined) return cached;
+		const cached = this._enabledCache[id];
+		if (cached) return cached === 2;
 
 		const explicit = (this.settings as Record<string, boolean | undefined> | undefined)?.[name];
 		const enabled =
 			explicit === true ||
 			(explicit !== false && ((this.parser?.listenerCount(name) ?? 0) > 0 || this._derivedSources.has(id)));
-		this._enabledCache.set(name, enabled);
+		this._enabledCache[id] = enabled ? 2 : 1;
 		return enabled;
 	}
 
