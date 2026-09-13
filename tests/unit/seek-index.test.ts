@@ -139,3 +139,24 @@ test('setting an index while running is rejected and preloaded offsets are check
 	invalid.setSeekIndex({ 10: bytes.length });
 	await expect(invalid.parseDemo(bytes)).rejects.toThrow('outside the demo');
 });
+
+test('terminal cleanup preserves the exported index during end notifications and afterwards', async () => {
+	const bytes = checkpointDemo();
+	const index = await collect(bytes);
+	for (const cancelled of [false, true]) {
+		const { reader, parsing } = await pausedParser(bytes);
+		reader.setSeekIndex(index);
+		await reader.seekTo(41);
+		let atEnd: Record<number, number> | undefined;
+		reader.once('end', () => {
+			atEnd = reader.getSeekIndex();
+		});
+		if (cancelled) reader.cancel();
+		else reader.resume();
+		await parsing;
+		expect(atEnd).toEqual(index);
+		expect(reader.getSeekIndex()).toEqual(index);
+		delete atEnd![40];
+		expect(reader.getSeekIndex()).toEqual(index);
+	}
+});

@@ -31,7 +31,7 @@ if (new Set(paths).size !== paths.length) throw new Error('Demo, cases, JSON and
 const modes = ['NONE', 'ONLY_GAME_RULES', 'ALL'];
 const defaults = [
 	...modes.map(mode => [mode, 'path-stream']),
-	...['path-sync', 'buffer', 'stream'].map(m => ['ALL', m])
+	...['buffer', 'stream', 'stream-large', 'web-stream'].map(m => ['ALL', m])
 ];
 const config = options.has('--cases')
 	? JSON.parse(readFileSync(options.get('--cases'), 'utf8'))
@@ -57,7 +57,7 @@ const cases = input.map((c, i) => {
 		);
 	}
 	const { name, runtime, entry, method, mode, subscriptions = 'death' } = c;
-	if (!['path-stream', 'path-sync', 'buffer', 'stream', 'web-stream'].includes(method))
+	if (!['path-stream', 'path-sync', 'buffer', 'stream', 'stream-large', 'web-stream'].includes(method))
 		throw new Error(`${name}: invalid method`);
 	if (!modes.includes(mode)) throw new Error(`${name}: invalid mode (use NONE, ONLY_GAME_RULES or ALL)`);
 	if (!['none', 'death', 'all'].includes(subscriptions)) throw new Error(`${name}: invalid subscriptions`);
@@ -156,7 +156,8 @@ const markdown = [
 	'Times include input I/O, exclude imports/setup; OS cache is not reset. Sequential shuffled runs, seed 0x5eed.',
 	'Throughput: mean / **median**, higher is better; 1 MB = 1,000,000 bytes. Other columns show medians; full mean/min/max statistics are available with `--json`.',
 	'Memory is process-wide; peak RSS includes imports/setup.',
-	'`path-sync` uses `stream: false` (larger 4 MiB reads), not synchronous parsing.',
+	'`path-stream` uses the seekable file driver; `stream-large` uses a Node stream with 4 MiB chunks.',
+	'Legacy `path-sync` passes `stream: false`, which current parsers ignore; it is not a separate I/O strategy.',
 	'',
 	'| Case | Throughput (MB/s) | Time (ms) | RSS (MiB) | Peak RSS (MiB) | Heap (MiB) | Entities |',
 	'| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
