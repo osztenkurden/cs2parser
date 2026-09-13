@@ -531,5 +531,50 @@
 				"sha256": "602a294ab624eaed4510ce76b8b72ee7efd5daa4b7b083b0a67886b231449ef9"
 			}
 		}
+	},
+	"tickBoundaryCorrections": {
+		"reason": "Flush tickend/tickstart before decoding the next tick. Derived from the pre-seeking parser with only the boundary flush added; entity decoding is unchanged. All 60 synthetic round events retain their payloads and move forward by one tick.",
+		"sourceCommit": "d042991c4088ef27f01ca7ac1f31e0ec7ac0ac2c",
+		"sourceFile": "src/parser/entities/parseSession.ts",
+		"sourceChange": "In readFrame(), add this.flush() immediately after enqueueEvent('tickstart', this.currentTick).",
+		"snapshots": [
+			{
+				"tick": 1,
+				"entitiesSha256": "932475f8cc8810dab43f412b0812b33e2631ae47689f2801a95028c40f9fa87b"
+			},
+			{
+				"tick": 1024,
+				"entitiesSha256": "38709e66f3096e646ce437ca3544b5eacbfb88bad243368f143dffbe063dd669"
+			},
+			{
+				"tick": 16384,
+				"entitiesSha256": "d14c33e92089b5ad257e64fff9c6b97fff09612707d00db18bed60f7044c0719"
+			},
+			{
+				"tick": 32768,
+				"entitiesSha256": "c77b24df9d9093822c6b0693937c9019aa2530b30db48c3e622e7443d8462903"
+			},
+			{
+				"tick": 65536,
+				"entitiesSha256": "a90698f05cb7e506a05d31466f155a4e0dfb30bbd592e28f768f0acee436c0bf"
+			},
+			{
+				"tick": 98304,
+				"entitiesSha256": "39c8ebe8f44ed10f3b73f5219f10d11dd3d94f4d689ec5a6d17a5a1f6b74ae5b"
+			},
+			{
+				"tick": 131072,
+				"entitiesSha256": "4767395ce1b58af8a3bb65998441d9fd36570c8d7f599ece9dcbb56ddb56a56c"
+			},
+			{
+				"tick": 163840,
+				"entitiesSha256": "19878942cd78b3fde8d71784dfa1cb2c7f38a31ce5b434c533976980a554f69b"
+			},
+			{
+				"tick": 180000,
+				"entitiesSha256": "3401b219264b22e4b8d9baba2e17f5b403d598e9d7a2a84ff54c87101accccc9"
+			}
+		],
+		"syntheticRoundEventsSha256": "a9cf0a987f618eb115192de7295161d2844ec1f70b861a455585431c8413440c"
 	}
 }

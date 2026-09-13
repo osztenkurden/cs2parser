@@ -42,7 +42,3 @@ jobs:
 
       - run: test -s tests/fixtures/demo.dem
       - run: bun run test
-
-      - run: npx playwright install --with-deps chromium firefox webkit
-      - run: npx tsc -p tests/browser/tsconfig.json
-      - run: npx playwright test

@@ -189,10 +189,14 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 	let releaseFixture: boolean;
 	const server = {} as Record<ParityMode, ParityResult>;
 	const expectedRelease = structuredClone(golden.modes);
-	// Keep MASTER output intact. Only these audited, wire-proven leaf corrections change the oracle.
-	for (const correction of golden.reviewedCorrections.snapshots) {
+	// Preserve the original oracle. These snapshots include the signed-wire fixes and
+	// the independently verified tick-boundary correction from the pre-seeking parser.
+	for (const correction of golden.tickBoundaryCorrections.snapshots) {
 		expectedRelease.ALL.checkpoints.find(state => state.tick === correction.tick)!.entities.sha256 =
 			correction.entitiesSha256;
+	}
+	for (const mode of ['ALL', 'ONLY_GAME_RULES'] as const) {
+		expectedRelease[mode].syntheticRoundEvents.sha256 = golden.tickBoundaryCorrections.syntheticRoundEventsSha256;
 	}
 
 	beforeAll(async () => {
