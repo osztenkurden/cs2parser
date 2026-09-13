@@ -108,6 +108,8 @@ export interface OutputEvents extends OnDemandEvents, DemoFrameEvents {
 	usercommand: UserCommand;
 	chat: ChatMessage;
 	progress: number;
+	/** Parsing stopped after a complete tick; seeking and resuming are now allowed. */
+	paused: never;
 	end: ParseEnd;
 	error: { error: unknown };
 	tickstart: number;

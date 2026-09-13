@@ -28,6 +28,8 @@ import {
 	type OnDemandMessageName
 } from './descriptors/index.js';
 import { HttpBroadcastReader, type HttpBroadcastOptions } from '../broadcast/httpReader.js';
+import { SeekSession, type SeekOptions, type SeekLimits, type SeekOutcome } from './seek.js';
+import { blobDemoSource, type DemoByteSource } from '../replay/source.js';
 
 /** Lower 32 bits of a SteamID64 — i.e. the trailing number in SteamID3 form. */
 const steamIdToAccountId = (steamId: bigint | number): number => {
@@ -35,20 +37,20 @@ const steamIdToAccountId = (steamId: bigint | number): number => {
 	return Number(big & 0xffffffffn);
 };
 
-export type DemoInput = Uint8Array | ReadableStream<Uint8Array>;
-export type ParseOptions = { entities?: EntityMode } & ParseSessionOptions;
+export type DemoInput = Uint8Array | Blob | DemoByteSource | ReadableStream<Uint8Array>;
+export type ParseOptions = { entities?: EntityMode } & ParseSessionOptions & SeekLimits;
 interface DemoStreamReader {
 	read(): Promise<{ done?: boolean; value?: Uint8Array }>;
 	cancel(reason?: unknown): Promise<unknown>;
 	releaseLock?(): void;
 }
 
+type ReaderEvents = {
+	[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
+} & EmitterMetaEvents;
+
 /** Runtime-independent parsing, entities, events, and broadcast support. */
-export abstract class BaseDemoReader extends TypedEventEmitter<
-	{
-		[K in keyof OutputEvents]: OutputEvents[K] extends never ? [] : [OutputEvents[K]];
-	} & EmitterMetaEvents
-> {
+export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	_parseStartTime = 0;
 	header: CDemoFileHeader | null = null;
 	private _hasEnded = false;
@@ -58,6 +60,183 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 	private _cancelBroadcast: (() => void) | undefined;
 	private _failure: { cause: unknown } | undefined;
 	private _cleanupBroadcast: (() => void) | undefined;
+	private _seekSession: SeekSession | undefined;
+	private readonly _internalEvents = new TypedEventEmitter<any>();
+	/** @internal Suppress application notifications while preserving decoder effects. */
+	_silent = false;
+
+	/** @internal Register state effects separately from application observers. */
+	_onInternal<K extends keyof OutputEvents>(event: K, listener: (data: OutputEvents[K]) => void) {
+		this._internalEvents.on(event, listener);
+	}
+
+	override emit<K extends keyof ReaderEvents>(event: K, ...args: ReaderEvents[K]): boolean {
+		if (this._internalEvents?.listenerCount(event)) this._internalEvents.emit(event, ...args);
+		return this._silent && event !== 'newListener' && event !== 'removeListener'
+			? false
+			: super.emit(event, ...args);
+	}
+
+	override listenerCount(event: string | symbol): number {
+		return super.listenerCount(event) + (this._internalEvents?.listenerCount(event) ?? 0);
+	}
+
+	private _canPause = false;
+	private _paused = false;
+	private _pauseRequest?: { promise: Promise<void>; resolve: () => void; reject: (error: unknown) => void };
+	private _wake?: () => void;
+
+	/** Stop at the next complete tick boundary. Resolves after the paused notification. */
+	pause(): Promise<void> {
+		if (!this._canPause || this._hasEnded)
+			return Promise.reject(new Error('Pause requires an active seekable demo parse'));
+		if (this._paused) return Promise.resolve();
+		if (!this._pauseRequest) {
+			let resolve!: () => void, reject!: (error: unknown) => void;
+			const promise = new Promise<void>((yes, no) => {
+				resolve = yes;
+				reject = no;
+			});
+			this._pauseRequest = { promise, resolve, reject };
+		}
+		return this._pauseRequest.promise;
+	}
+
+	/** Continue the original parseDemo() operation from its current position. */
+	resume(): void {
+		if (!this._paused) throw new Error('Parser is not paused');
+		if (this.isSeeking) throw new Error('Await seekTo() before resuming');
+		if (!this._seekSession?.canRead) throw new Error('Seek did not complete; seek successfully before resuming');
+		this._paused = false;
+		this._wake?.();
+	}
+
+	get isPaused(): boolean {
+		return this._paused;
+	}
+
+	/** Reconstruct silently, remaining paused immediately before the target tickstart. */
+	seekTo(tick: number, options: SeekOptions = {}): Promise<SeekOutcome> {
+		if (!this._paused || !this._seekSession || this._hasEnded)
+			return Promise.reject(new Error('Await pause() before seeking'));
+		return this._seekSession.seekTo(tick, options);
+	}
+
+	private async _pauseBoundary(): Promise<void> {
+		if (!this._pauseRequest || this._hasEnded) return;
+		const request = this._pauseRequest;
+		this._pauseRequest = undefined;
+		this._paused = true;
+		const resumed = new Promise<void>(resolve => {
+			this._wake = resolve;
+		});
+		try {
+			this.emit('paused');
+			request.resolve();
+			await resumed;
+		} catch (error) {
+			request.reject(error);
+			throw error;
+		} finally {
+			this._wake = undefined;
+		}
+	}
+
+	/** Internal source setup and continuous tick driver, shared with the Node path adapter. */
+	protected parseSeekable(
+		source: DemoByteSource | (() => Promise<DemoByteSource>),
+		options: ParseOptions
+	): Promise<ParseOutcome> {
+		this.assertCanParse(options);
+		this._parsing = this._canPause = true;
+		this._parseStartTime = performance.now();
+		return this._runSeekable(source, options);
+	}
+
+	private async _runSeekable(
+		source: DemoByteSource | (() => Promise<DemoByteSource>),
+		options: ParseOptions
+	): Promise<ParseOutcome> {
+		try {
+			const bytes = typeof source === 'function' ? await source() : source;
+			if (this._hasEnded) return this._endResult as ParseOutcome;
+			if (bytes.size < 16) {
+				this._end({ status: 'incomplete' });
+				return { status: 'incomplete' };
+			}
+			const session = new SeekSession(
+				this,
+				bytes,
+				options,
+				() => new (this.constructor as new () => BaseDemoReader)()
+			);
+			this._seekSession = session;
+			this._directWriteMode = true;
+			this.gameEvents.entityMode = options.entities ?? EntityMode.NONE;
+			// Let an immediate pause() request register before the first tick.
+			await Promise.resolve();
+			let lastYield = performance.now();
+			while (!this._hasEnded) {
+				await this._pauseBoundary();
+				if (this._hasEnded) break;
+				await session.advanceTick();
+				if (performance.now() - lastYield >= 16) {
+					this.emit('progress', session.position);
+					await new Promise<void>(resolve => setTimeout(resolve, 0));
+					lastYield = performance.now();
+				}
+			}
+		} catch (error) {
+			if (!this._hasEnded || this._endResult?.status !== 'cancelled') this._fail(error);
+		} finally {
+			this._canPause = this._parsing = this._directWriteMode = false;
+			this._paused = false;
+			this._wake?.();
+			this._pauseRequest?.reject(new Error('Parsing ended before it could pause'));
+			this._pauseRequest = undefined;
+		}
+		this._throwFailure();
+		return this._endResult as ParseOutcome;
+	}
+
+	/** @internal Progress remains observable during silent reconstruction. */
+	_reportSeekProgress(bytes: number) {
+		super.emit('progress', bytes);
+	}
+
+	get isSeeking(): boolean {
+		return this._seekSession?.isSeeking ?? false;
+	}
+	/** Only discovered FullPacket locations; no round index or per-tick snapshots. */
+	get fullPackets(): readonly { readonly tick: number; readonly offset: number }[] {
+		return this._seekSession?.fullPackets ?? [];
+	}
+	get seekBytesRead(): number {
+		return this._seekSession?.bytesRead ?? 0;
+	}
+	get seekMemoryBytes(): number {
+		return this._seekSession?.memoryBytes ?? 0;
+	}
+
+	/** @internal Reuse the reader and its subscriptions, discard the old world. */
+	_resetForSeek() {
+		this.entities = [];
+		this._playerCache.clear();
+		this._teamCache.clear();
+		this._pawnCache.clear();
+		this._smokeCache.clear();
+		this._gameRulesCache = null;
+		this._gameRulesEntityId = null;
+		this._accountIdToEntityId.clear();
+		this.header = null;
+		this.tickInterval = NaN;
+		this.currentTick = -1;
+		this._playerInfoMap = [];
+		this.propIdToName = {};
+		this.propIdToDecoder = {};
+		this.propIdToInfo = {};
+		this.gameEvents._restoreReplayState({ descriptors: {}, queue: [], startCount: undefined, endCount: undefined });
+	}
 
 	entities: AnyEntity[];
 	private _directWriteMode = false;
@@ -321,10 +500,10 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		this.entities = [];
 		this.gameEvents.listen(this);
 
-		this.on('tickstart', tick => {
+		this._onInternal('tickstart', tick => {
 			this.currentTick = tick;
 		});
-		this.on('createstringtable', table => {
+		this._onInternal('createstringtable', table => {
 			if (!table) return;
 
 			for (const player of table.players) {
@@ -332,18 +511,18 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 				this._playerInfoMap[player.userid & 255] = player;
 			}
 		});
-		this.on('updatestringtable', update => {
+		this._onInternal('updatestringtable', update => {
 			if (!update) return;
 			for (const player of update.players) {
 				if (player.userid === undefined || player.userid < 0 || (player.userid & 255) === 255) continue;
 				this._playerInfoMap[player.userid & 255] = player;
 			}
 		});
-		this.on('clearallstringtables', () => {
+		this._onInternal('clearallstringtables', () => {
 			this._playerInfoMap.length = 0;
 		});
 
-		this.on('entitycreated', ([entityId, classId, entityType, className]) => {
+		this._onInternal('entitycreated', ([entityId, classId, entityType, className]) => {
 			this._playerCache.delete(entityId);
 			this._teamCache.delete(entityId);
 			this._pawnCache.delete(entityId);
@@ -373,7 +552,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 			};
 		});
 
-		this.on('entityupdated', info => {
+		this._onInternal('entityupdated', info => {
 			if (this._directWriteMode) return;
 			const ent = this.entities[info.entityId];
 			if (!ent) return;
@@ -388,7 +567,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 			);
 		});
 
-		this.on('entitydeleted', entityId => {
+		this._onInternal('entitydeleted', entityId => {
 			if (entityId === this._gameRulesEntityId) {
 				this._gameRulesEntityId = null;
 				this._gameRulesCache = null;
@@ -400,14 +579,34 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 			if (this._directWriteMode) return;
 			this.entities[entityId] = undefined as any;
 		});
-		this.once('header', header => {
-			this.header = header;
+		this._onInternal('header', header => {
+			this.header ??= header;
 		});
-		this.once('serverinfo', serverInfo => {
-			if (serverInfo.tick_interval !== undefined) {
+		this._onInternal('serverinfo', serverInfo => {
+			if (Number.isNaN(this.tickInterval) && serverInfo.tick_interval !== undefined) {
 				this.tickInterval = serverInfo.tick_interval;
 			}
 		});
+	}
+
+	/** @internal Snapshot only metadata; FullPacket recreates entities and helper caches. */
+	_captureReplayState() {
+		return {
+			header: this.header,
+			tickInterval: this.tickInterval,
+			currentTick: this.currentTick,
+			players: this._playerInfoMap.slice(),
+			gameEvents: this.gameEvents._captureReplayState()
+		};
+	}
+
+	/** @internal Restore metadata after the previous entity world has been cleared. */
+	_restoreReplayState(state: ReturnType<BaseDemoReader['_captureReplayState']>) {
+		this.header = structuredClone(state.header);
+		this.tickInterval = state.tickInterval;
+		this.currentTick = state.currentTick;
+		this._playerInfoMap = structuredClone(state.players);
+		this.gameEvents._restoreReplayState(state.gameEvents);
 	}
 
 	propIdToName: Record<number, string> = {};
@@ -434,6 +633,8 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		if (this._endResult !== undefined) return;
 		this._endResult = result;
 		this._hasEnded = true;
+		this._paused = false;
+		this._wake?.();
 		this._parsing = false;
 		this._directWriteMode = false;
 		this._cancelBroadcast = undefined;
@@ -491,13 +692,25 @@ export abstract class BaseDemoReader extends TypedEventEmitter<
 		ParseSession.validateOptions(opts?.entities ?? EntityMode.NONE, opts);
 	}
 
-	/** Parse bytes or a Web Stream. The parser takes ownership of the stream. */
+	/** Parse a raw demo or sequential stream to completion, unless paused or cancelled. */
 	async parseDemo(source: DemoInput, opts: ParseOptions = {}): Promise<ParseOutcome> {
 		this.assertCanParse(opts);
-		if (!(source instanceof Uint8Array) && (source == null || typeof source.getReader !== 'function')) {
-			throw new TypeError('Expected a Uint8Array or ReadableStream<Uint8Array>');
-		}
-		return this.parseSource(source instanceof Uint8Array ? source : () => source.getReader(), opts);
+		if (source instanceof Blob) return this.parseSeekable(blobDemoSource(source), opts);
+		if (source instanceof Uint8Array)
+			return this.parseSeekable(
+				{
+					size: source.length,
+					async read(offset, length, signal) {
+						signal?.throwIfAborted();
+						return source.slice(offset, offset + length);
+					}
+				},
+				opts
+			);
+		if (source && 'read' in source && typeof source.read === 'function') return this.parseSeekable(source, opts);
+		if (!source || !('getReader' in source) || typeof source.getReader !== 'function')
+			throw new TypeError('Expected demo bytes, Blob, DemoByteSource or ReadableStream<Uint8Array>');
+		return this.parseSource(() => source.getReader(), opts);
 	}
 
 	/** Runtime adapters supply a reader directly, without an extra Web Stream queue. */

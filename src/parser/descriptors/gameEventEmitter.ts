@@ -12,6 +12,9 @@ import { TypedEventEmitter } from './typedEmitter.js';
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
 export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
+	override emit<K extends keyof GameEventsArguments>(event: K, ...args: GameEventsArguments[K]): boolean {
+		return this._demoReader?._silent ? false : super.emit(event, ...args);
+	}
 	_eventDescriptors: Record<number, CMsgSource1LegacyGameEventList_descriptor_t> = {};
 	private _demoReader!: DemoReader;
 
@@ -21,6 +24,25 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 	private _lastRoundStartCount: number | undefined = undefined;
 	private _lastRoundEndCount: number | undefined = undefined;
 
+	/** @internal Owned event metadata, including events waiting for tickend. */
+	_captureReplayState() {
+		return {
+			descriptors: this._eventDescriptors,
+			queue: structuredClone(this.eventQueue),
+			startCount: this._lastRoundStartCount,
+			endCount: this._lastRoundEndCount
+		};
+	}
+
+	/** @internal Replace event state during silent reconstruction. */
+	_restoreReplayState(state: ReturnType<GameEvents['_captureReplayState']>) {
+		const owned = structuredClone(state);
+		this._eventDescriptors = owned.descriptors;
+		this.eventQueue = owned.queue;
+		this._lastRoundStartCount = owned.startCount;
+		this._lastRoundEndCount = owned.endCount;
+	}
+
 	set entityMode(value: EntityMode) {
 		this._entityMode = value;
 	}
@@ -28,7 +50,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 	listen = (demoReader: DemoReader) => {
 		this._demoReader = demoReader;
 
-		demoReader.on('gameeventlist', data => {
+		demoReader._onInternal('gameeventlist', data => {
 			const descriptors = data.descriptors.reduce(
 				(acc, descriptor) => {
 					if (descriptor.eventid) acc[descriptor.eventid] = descriptor;
@@ -39,7 +61,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 			this._eventDescriptors = descriptors;
 		});
 
-		demoReader.on('gameevent', gameEvent => {
+		demoReader._onInternal('gameevent', gameEvent => {
 			const descriptor = this._eventDescriptors[gameEvent.eventid ?? -1];
 			if (!descriptor?.name) return;
 
@@ -66,7 +88,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 			this.eventQueue.push(gameEventData);
 		});
 
-		demoReader.on('tickend', () => {
+		demoReader._onInternal('tickend', () => {
 			for (const event of this.eventQueue) {
 				annotateGameEvent(this._demoReader, event.event_name, event);
 				this.emit(event.event_name as keyof GameEventsArguments, event);

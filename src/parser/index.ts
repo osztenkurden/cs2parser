@@ -1,10 +1,11 @@
-import { createReadStream, openAsBlob } from 'node:fs';
+import { openAsBlob } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { BaseDemoReader, type DemoInput, type ParseOptions } from './base.js';
 import { SnappyDecoder } from '../compression/wasm.js';
 import { parseHeaderAsync, parseServerInfoAsync, parseFileInfoAsync, type MetadataInput } from './metadata.js';
 import { parseMetadataSync } from './metadataSync.js';
+import { fileDemoSource } from '../replay/node.js';
 
 const metadataSource = async (source: string | MetadataInput) => {
 	if (typeof source !== 'string') return source;
@@ -48,10 +49,7 @@ export class DemoReader extends BaseDemoReader {
 
 	override async parseDemo(source: string | DemoInput | Readable, opts: ParseOptions & { stream?: boolean } = {}) {
 		this.assertCanParse(opts);
-		if (typeof source === 'string') {
-			// Keep the chunked path option while sharing the same parsing loop.
-			source = createReadStream(source, { highWaterMark: opts.stream === false ? 4 * 1024 * 1024 : 64 * 1024 });
-		}
+		if (typeof source === 'string') return this.parseSeekable(() => fileDemoSource(source), opts);
 		if (source instanceof Readable) {
 			const stream = source;
 			return this.parseSource(() => {

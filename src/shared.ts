@@ -54,3 +54,7 @@ export type {
 } from './broadcast/index.js';
 
 export { SmokeDensitySimulation, type SmokeDensitySnapshot } from './helpers/smokeDensity.js';
+
+export type { SeekOptions, SeekLimits, SeekOutcome } from './parser/seek.js';
+export { blobDemoSource, httpDemoSource } from './replay/source.js';
+export type { DemoByteSource } from './replay/source.js';

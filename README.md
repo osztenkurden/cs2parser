@@ -74,6 +74,7 @@ Uses the same events as demo parsing. See [Live HTTP broadcasts](docs/http-broad
 | Guide | Topics |
 | --- | --- |
 | [Parsing demos](docs/parsing.md) | Inputs, entity modes, settings, reader state, and cancellation |
+| [Pausing and seeking](docs/replay.md) | Tick-boundary playback controls, FullPackets, and seekable sources |
 | [Reading metadata](docs/metadata.md) | Header, server info, and file info without a full parse |
 | [Browser usage](docs/browser.md) | Files, web streams, metadata, and WASM Snappy |
 | [Live HTTP broadcasts](docs/http-broadcast.md) | GOTV relays, options, descriptors, and wire format |

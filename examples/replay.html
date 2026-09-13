@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CS2 pause and seek</title>
+<label>Raw demo <input id="file" type="file" accept=".dem"></label>
+<label>Target tick <input id="tick" type="number" min="0" value="10000"></label>
+<button id="seek" disabled>Seek and replay 128 ticks</button>
+<button id="cancel">Pause</button>
+<p>The parser runs continuously. Pause finishes tickend; seek reconstructs silently; resume starts at the target.</p>
+<pre id="output"></pre>
+<script type="module">
+import { DemoReader, EntityMode } from '../dist/replay-browser.js';
+const output = document.querySelector('#output');
+const button = document.querySelector('#seek');
+let parser, parsing, abort, endTick = Infinity, active = Promise.resolve(), generation = 0;
+function start(work) {
+  const token = ++generation;
+  abort?.abort();
+  if (parser && !parser.hasEnded && !parser.isPaused) void parser.pause().catch(() => {});
+  active = active.catch(() => {}).then(async () => {
+    if (token !== generation) return;
+    abort = new AbortController();
+    output.textContent = ''; // release previous display data
+    try { await work(abort.signal); }
+    catch (error) { output.textContent = String(error); }
+  });
+}
+document.querySelector('#file').onchange = event => {
+  const file = event.target.files[0];
+  button.disabled = true;
+  start(async () => {
+    if (parser && !parser.hasEnded) parser.cancel();
+    await parsing?.catch(() => {});
+    parser = undefined;
+    if (!file) return;
+    parser = new DemoReader();
+    parser.on('tickend', tick => {
+      output.textContent = `Tick ${tick}\n` + parser.playerControllers.map(p =>
+        `${p.name} (${p.steamId}) team ${p.teamNumber}: ${p.health} HP @ ${JSON.stringify(p.position)}`
+      ).join('\n');
+      if (tick >= endTick) void parser.pause().catch(() => {});
+    });
+    parsing = parser.parseDemo(file, { entities: EntityMode.ALL });
+    void parsing.catch(error => { output.textContent = String(error); });
+    await parser.pause();
+    button.disabled = false;
+    output.textContent = 'Ready. No full-match indexing pass required.';
+  });
+};
+button.onclick = () => {
+  const tick = Number(document.querySelector('#tick').value);
+  start(async signal => {
+    await parser.pause();
+    const before = parser.seekBytesRead;
+    const sought = await parser.seekTo(tick, { signal });
+    if (sought.status !== 'complete') { output.textContent = sought.status; return; }
+    endTick = sought.tick + 127;
+    let onPaused;
+    const paused = new Promise(resolve => { onPaused = () => resolve({ status: 'paused' }); parser.once('paused', onPaused); });
+    parser.resume(); // the original parseDemo() keeps running; no tick loop
+    const result = await Promise.race([paused, parsing]);
+    parser.off('paused', onPaused);
+    output.textContent = `${result.status}\n${output.textContent}\n${parser.fullPackets.length} FullPacket locations; ` +
+      `${((parser.seekBytesRead - before) / 1048576).toFixed(1)} MiB fetched; ` +
+      `${(parser.seekMemoryBytes / 1048576).toFixed(1)} MiB retained metadata estimate`;
+  });
+};
+document.querySelector('#cancel').onclick = () => {
+  abort?.abort();
+  if (parser && !parser.hasEnded) void parser.pause().catch(() => {});
+};
+</script>

@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import { DemoReader } from 'cs2parser';
+import { DemoReader, EntityMode, fileDemoSource } from 'cs2parser';
 import { DemoReader as BrowserReader, SnappyDecoder } from 'cs2parser/browser';
 
 const directory = await mkdtemp(join(tmpdir(), 'cs2parser-package-'));
@@ -26,6 +26,11 @@ try {
 	demo.writeUInt32LE(demo.length - trailer.length, 8);
 	const path = join(directory, 'fixture.dem');
 	await writeFile(path, demo);
+	const seekReader = new DemoReader();
+	const seekParsing = seekReader.parseDemo(await fileDemoSource(path), { entities: EntityMode.NONE });
+	await seekReader.pause();
+	assert.deepEqual(await seekReader.seekTo(0), { status: 'incomplete' });
+
 	for (const source of [path, Uint8Array.from(demo), Readable.from([demo])]) {
 		const reader = new DemoReader();
 		assert(reader._snappy instanceof SnappyDecoder);
@@ -95,6 +100,8 @@ try {
 	const output = new Uint8Array(9);
 	assert.equal(new SnappyDecoder().uncompress(header, output), output);
 	assert.deepEqual(output, Uint8Array.of(42, 7, ...Buffer.from('de_nuke')));
+	seekReader.cancel();
+	assert.deepEqual(await seekParsing, { status: 'cancelled' });
 	console.log('Published server and browser exports pass Node smoke checks.');
 } finally {
 	await rm(directory, { recursive: true, force: true });

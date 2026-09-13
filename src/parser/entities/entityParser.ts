@@ -389,7 +389,8 @@ export class EntityParser {
 		this.decodeEntityUpdate(reader, entityId, nUpdates);
 	};
 
-	parseEntityPacket = (msg: CSVCMsg_PacketEntities, baseline: Uint8Array[]) => {
+	parseEntityPacket = (msg: CSVCMsg_PacketEntities, baseline: Uint8Array[], validateSnapshot = false) => {
+		let independent = msg.legacy_is_delta !== true && (msg.updated_entries ?? 0) > 0;
 		const reader = this.cachedBitBuffer2.setTo(msg.entity_data!);
 		const hasPvsVisBits = msg.has_pvs_vis_bits_deprecated ?? 0;
 
@@ -400,6 +401,7 @@ export class EntityParser {
 			entityId += 1 + reader.readUbitVar();
 
 			const updateType = reader.ReadUBits(2);
+			if (validateSnapshot && updateType !== 0b10) independent = false;
 
 			if ((updateType & 0b01) !== 0) {
 				if (updateType === 0b11) {
@@ -422,5 +424,6 @@ export class EntityParser {
 				this.updateEntity(reader, entityId);
 			}
 		}
+		return independent;
 	};
 }

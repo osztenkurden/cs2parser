@@ -4,14 +4,14 @@
 
 ## parseDemo
 
-A single method accepts the inputs below. File paths stream by default on the server.
+A single method accepts the inputs below. File paths and Blobs are read on demand.
 
 ```ts
-// File path (streams by default )
+// File path (server export)
 await parser.parseDemo('demo.dem', { entities: EntityMode.ALL });
 
-// File path with larger chunks (4 MiB, through the shared async stream loop)
-await parser.parseDemo('demo.dem', { entities: EntityMode.ALL, stream: false });
+// Browser File or Blob (both exports)
+await parser.parseDemo(file, { entities: EntityMode.ALL });
 
 // Node Readable stream (server export)
 await parser.parseDemo(createReadStream('demo.dem'), { entities: EntityMode.ALL });
@@ -67,10 +67,14 @@ Listeners are synchronous notifications. Returned promises from `async` listener
 | Input                          | Returns                    | Memory |
 | ------------------------------ | -------------------------- | ------ |
 | `string` path                  | `Promise<ParseOutcome>` | low    |
-| `string` path + `stream: false` | `Promise<ParseOutcome>` | low    |
+| `File` / `Blob` / `DemoByteSource` | `Promise<ParseOutcome>` | low    |
 | `Readable` stream              | `Promise<ParseOutcome>` | low    |
 | `Uint8Array` / `Buffer`        | `Promise<ParseOutcome>` | high   |
 | `ReadableStream<Uint8Array>`   | `Promise<ParseOutcome>` | low    |
+
+File paths always read on demand; the accepted `stream` option does not select a
+separate parsing mode. File paths, bytes, Blobs and `DemoByteSource` inputs support
+[pause, seek and resume](replay.md). Streams and broadcasts remain sequential.
 
 ### Parse Settings
 

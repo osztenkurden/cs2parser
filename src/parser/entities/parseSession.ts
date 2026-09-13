@@ -26,7 +26,8 @@ import {
 	type StringTableObject
 } from '../stringtables.js';
 import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
-import { parseClassInfo } from './classInfo.js';
+import { parseClassInfo, type ClassInfo } from './classInfo.js';
+import { UnusableCheckpointError, type DecoderCheckpoint } from '../replayState.js';
 import { EntityParser } from './entityParser.js';
 import type { BaseDemoReader as DemoReader } from '../base.js';
 import { BinaryReaderEditable } from '../../binary-encoding/index.js';
@@ -83,6 +84,10 @@ export class ParseSession {
 
 	// Parse state
 	private entityParser: EntityParser | null = null;
+	private classInfo: ClassInfo | null = null;
+	private restoringFullPacket = false;
+	private fullPacketIndependent = false;
+	private fullPacketEntitySeen = false;
 	private sendTables: CDemoSendTables | null = null;
 	private readonly baselines: Uint8Array[] = [];
 	private currentTick = -1;
@@ -150,7 +155,8 @@ export class ParseSession {
 		entityMode: EntityMode,
 		emitMainQueue: EmitQueue,
 		parser: DemoReader,
-		settings?: ParseSessionOptions
+		settings?: ParseSessionOptions,
+		restored?: DecoderCheckpoint
 	) {
 		ParseSession.validateOptions(entityMode, settings);
 		this._frameBuf = buffer;
@@ -160,6 +166,24 @@ export class ParseSession {
 		this.parser = parser;
 		this.emitMainQueue = emitMainQueue;
 		this.settings = settings;
+		if (restored) {
+			this.restoringFullPacket = entityMode !== EntityMode.NONE;
+			this._frameOffset = 0;
+			this._inputOffset = restored.offset;
+			this.currentTick = restored.previousTick;
+			this.classInfo = restored.classInfo;
+			this.entityParser = new EntityParser(restored.classInfo, this.enqueueEvent);
+			this.entityParser.onlyGameRules = entityMode === EntityMode.ONLY_GAME_RULES;
+			this.entityParser.directEntities = parser.entities;
+			this.entityParser.directPropInfoById = restored.classInfo.propInfoById;
+			parser.propIdToName = restored.classInfo.propIdToName;
+			parser.propIdToDecoder = restored.classInfo.propIdToDecoder;
+			parser.propIdToInfo = restored.classInfo.propIdToInfo;
+			parser._restoreReplayState(restored.reader);
+			this.baselines.push(...structuredClone(restored.baselines));
+			this._stringTables = structuredClone(restored.stringTables);
+		}
+
 		if (settings?.decryptionKey !== undefined) {
 			this.decryptionKey = Uint8Array.from(settings.decryptionKey);
 		}
@@ -308,6 +332,42 @@ export class ParseSession {
 			this.parser.off('cancel', onCancel);
 		}
 		this.flush();
+	}
+
+	/** Internal seekable driver supplies complete commands and owns tick boundaries. */
+	private externalTicks = false;
+	readCommand(bytes: Uint8Array, offset: number): void {
+		this.externalTicks = true;
+		this._frameBuf = bytes;
+		this._frameOffset = this._frameMarked = 0;
+		this._frameLimit = bytes.length;
+		this._inputOffset = offset;
+		this.readFrame();
+		this.flush();
+		this._frameBuf = new Uint8Array(0);
+	}
+
+	startTick(tick: number): void {
+		this.currentTick = tick;
+		this.enqueueEvent('tickstart', tick);
+		this.flush();
+	}
+
+	endTick(): void {
+		if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
+		this.flush();
+	}
+
+	captureCheckpoint(offset: number): DecoderCheckpoint | undefined {
+		if (!this.classInfo) return undefined;
+		return {
+			offset,
+			previousTick: this.currentTick,
+			classInfo: this.classInfo,
+			baselines: this.baselines.slice(),
+			stringTables: this._stringTables.map(table => (table ? { ...table, data: [] } : null)),
+			reader: this.parser._captureReplayState()
+		};
 	}
 
 	private getProgress(): number {
@@ -549,10 +609,13 @@ export class ParseSession {
 		}
 		this.ensureRemaining(size);
 
-		if (this.currentTick !== tick) {
+		if (!this.externalTicks && this.currentTick !== tick) {
 			if (this.currentTick !== -1) this.enqueueEvent('tickend', this.currentTick);
 			this.currentTick = tick;
 			this.enqueueEvent('tickstart', this.currentTick);
+			// Tick observers must run before the next command mutates direct entity state.
+			this.flush();
+			if (this.parser.hasEnded) return false;
 		}
 
 		const commandType = commandBase & ~EDemoCommands.DEM_IsCompressed;
@@ -572,7 +635,23 @@ export class ParseSession {
 		}
 
 		const isCompressed = (commandBase & EDemoCommands.DEM_IsCompressed) !== 0;
-		this.handleFrame(decoder, size, isCompressed);
+		if (!this.restoringFullPacket) {
+			this.handleFrame(decoder, size, isCompressed);
+			return true;
+		}
+		if (commandType !== EDemoCommands.DEM_FullPacket)
+			throw new UnusableCheckpointError('Checkpoint is not a FullPacket');
+		this.fullPacketIndependent = true;
+		this.fullPacketEntitySeen = false;
+		try {
+			this.handleFrame(decoder, size, isCompressed);
+			if (!this.fullPacketIndependent || !this.fullPacketEntitySeen)
+				throw new UnusableCheckpointError('FullPacket cannot reconstruct entities independently');
+		} catch (error) {
+			throw new UnusableCheckpointError('FullPacket restoration failed', { cause: error });
+		} finally {
+			this.restoringFullPacket = false;
+		}
 		return true;
 	}
 
@@ -640,6 +719,7 @@ export class ParseSession {
 				if (!data || !this.sendTables) break;
 
 				const classInfo = parseClassInfo(this.sendTables, data);
+				this.classInfo = classInfo;
 				this.sendTables = null;
 				this.entityParser = new EntityParser(classInfo, this.enqueueEvent);
 				this.entityParser.onlyGameRules = this.entityMode === EntityMode.ONLY_GAME_RULES;
@@ -1012,7 +1092,15 @@ export class ParseSession {
 			}
 
 			for (const queueElement of packetEntitiesQueue) {
-				this.entityParser?.parseEntityPacket(queueElement, this.baselines);
+				const independent = this.entityParser?.parseEntityPacket(
+					queueElement,
+					this.baselines,
+					this.restoringFullPacket
+				);
+				if (this.restoringFullPacket) {
+					this.fullPacketEntitySeen = true;
+					this.fullPacketIndependent &&= independent === true;
+				}
 			}
 			for (const event of gameEventQueue) {
 				this.enqueueEvent('gameevent', event);
