@@ -33,6 +33,8 @@ its synchronous callbacks:
 
 ```sh
 bun scripts/benchmark-workers.mjs path/to/demo.dem 2 static shared
+# Prepare boundary metadata once; reuse the same pool for three verified rounds:
+bun scripts/benchmark-workers.mjs path/to/demo.dem 2 static shared prepared 3
 ```
 
 Scheduling can be `static` (byte-balanced coarse ranges), `batched` (eight
@@ -42,3 +44,27 @@ exhaust memory. `CS2_PARSER_ENTRY` selects a different built parser for either
 benchmark. Worker timings include startup/staging/reconstruction but exclude
 file loading and header indexing; they are not the same workload as the normal
 path benchmarks.
+
+The fifth argument selects setup: `index` (default) hands the public seek index
+to each worker, `prepared` also hydrates boundary metadata once and sends each
+worker one schema, and `discover` lets each worker discover its own boundaries.
+Prepared checkpoint handoff is internal to this experiment, not a public replay
+serialization API. The sixth argument is the number of rounds (default 1).
+Every round is checked against the sequential reference; `samples[0]` includes
+cold preparation and startup, and later samples reuse the pool. The reported
+`ms` is the mean round duration, including that first cold round.
+
+## Decoder internals
+
+User-command delta readers are generated directly from the protocol schema with
+`bun run generate:delta-schema`. They preserve reset/list ordering and owned byte
+values without a normalize/decode/merge pipeline. Generated protobuf readers
+remain the differential test oracle.
+
+Entity parsing uses a packet-batched WASM fast path for ordinary updates, with
+JS retaining property storage and callbacks. Lifecycle/snapshot packets,
+unsupported schemas, capacity limits, and malformed packets use the original JS
+path before any fast-path updates are applied. `NONE` does not initialize this
+decoder. Regenerate its embedded artifact with `bun run build:entities` after
+changing the C implementation or its reference wire semantics; normal builds
+check the source hash. Clang and wasm-ld are required only for regeneration.

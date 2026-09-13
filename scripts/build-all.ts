@@ -12,7 +12,9 @@ const usage = 'Usage: bun scripts/build-all.ts <demo.dem>';
 const args = process.argv.slice(2);
 if (args.length === 1 && (args[0] === '--help' || args[0] === '-h')) {
 	console.log(usage);
-	console.log('Regenerates protos, message/delta schemas, entity/event types, broadcast descriptors, and Snappy WASM.');
+	console.log(
+		'Regenerates protos, message/delta decoders, entity/event types, broadcast descriptors, and Snappy/entity WASM.'
+	);
 	console.log('Requires Bun, protoc, Clang, wasm-ld, development dependencies, and internet access.');
 	process.exit(0);
 }
@@ -29,7 +31,10 @@ function main() {
 			label: 'Generate message registry and user-command delta schema',
 			commands: [['scripts/generate-message-registry.ts'], ['scripts/generate-usercmd-delta-schema.ts']]
 		},
-		{ label: 'Generate entity types and snapshot', commands: [['scripts/generate-entity-types.ts', '--demo', demo]] },
+		{
+			label: 'Generate entity types and snapshot',
+			commands: [['scripts/generate-entity-types.ts', '--demo', demo]]
+		},
 		{ label: 'Generate game-event types', commands: [['scripts/generate-event-types.ts', demo]] },
 		{
 			label: 'Extract and embed broadcast event descriptors',
@@ -38,7 +43,10 @@ function main() {
 				['scripts/generate-broadcast-descriptors.ts']
 			]
 		},
-		{ label: 'Build embedded Snappy WASM', commands: [['scripts/build-snappy-wasm.ts']] }
+		{
+			label: 'Build embedded WASM decoders',
+			commands: [['scripts/build-snappy-wasm.ts'], ['scripts/build-entities-wasm.ts']]
+		}
 	];
 
 	for (const [index, step] of steps.entries()) {
@@ -47,7 +55,9 @@ function main() {
 			const result = spawnSync(process.execPath, command, { cwd: root, stdio: 'inherit' });
 			if (result.error) throw result.error;
 			if (result.status !== 0) {
-				throw new Error(`${command[0]} failed (${result.signal ?? `exit ${result.status}`}). Regeneration stopped.`);
+				throw new Error(
+					`${command[0]} failed (${result.signal ?? `exit ${result.status}`}). Regeneration stopped.`
+				);
 			}
 		}
 	}

@@ -95,6 +95,24 @@ function buildLUT(node: TreeNode, code: number, depth: number) {
 }
 buildLUT(huffmanTree, 0, 0);
 
+/** @internal Use the same Huffman tree for packet-batched decoding. */
+export function fillHuffmanTables(primary: Uint16Array, long: Uint16Array): void {
+	primary.set(huffmanCodes);
+	const fill = (node: TreeNode, code: number, depth: number) => {
+		if (node.leaf) {
+			for (let i = 0; i < 1 << (17 - depth); i++) long[code | (i << depth)] = (depth << 6) | node.value;
+			return;
+		}
+		if (depth === 17) throw new Error('Unsupported Huffman code width');
+		fill(node.left!, code, depth + 1);
+		fill(node.right!, code | (1 << depth), depth + 1);
+	};
+	for (let prefix = 0; prefix < LUT_SIZE; prefix++) {
+		const node = huffmanLongRoots[prefix];
+		if (node) fill(node, prefix, HUFFMAN_PREFIX_BITS);
+	}
+}
+
 export const parsePaths = (
 	reader: BitBuffer,
 	entityParser: Pick<EntityParser, 'fieldPath' | 'writeFp'>,

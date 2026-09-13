@@ -1,6 +1,6 @@
 /**
  * Generates `src/parser/descriptors/generated/userCmdDeltaSchema.ts` — the field
- * layout the `codegen_delta_encoder` decoder needs.
+ * layout and static direct readers the `codegen_delta_encoder` decoder needs.
  *
  * `CMsgServerUserCmd.delta_data` is not plain protobuf: a field may arrive with
  * wire type 7, meaning "reset to the declared default", and rebuilding that
@@ -14,10 +14,12 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { format, resolveConfig } from 'prettier';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PROTO_DIR = path.join(ROOT, 'src', 'proto');
 const OUT_FILE = path.join(ROOT, 'src', 'parser', 'descriptors', 'generated', 'userCmdDeltaSchema.ts');
+const DECODER_FILE = path.join(path.dirname(OUT_FILE), 'userCmdDeltaDecoders.ts');
 
 /** Message the delta decoder starts from. */
 const ROOT_MESSAGE = 'CSGOUserCmdPB';
@@ -29,7 +31,7 @@ type ProtoField = {
 	number: number;
 	default?: string;
 };
-type ProtoMessage = { name: string; deltaEncoded: boolean; fields: ProtoField[] };
+type ProtoMessage = { name: string; deltaEncoded: boolean; fields: ProtoField[]; unsupported: string[] };
 
 // Only types with implemented default encodings belong here. New types must
 // fail generation until their reset semantics are supported.
@@ -60,7 +62,7 @@ for (const file of fs.readdirSync(PROTO_DIR).filter(f => f.endsWith('.proto'))) 
 		if (!current) {
 			const start = MESSAGE_RE.exec(line);
 			if (start) {
-				current = { name: start[1]!, deltaEncoded: false, fields: [] };
+				current = { name: start[1]!, deltaEncoded: false, fields: [], unsupported: [] };
 				depth = 1;
 			}
 			continue;
@@ -69,6 +71,8 @@ for (const file of fs.readdirSync(PROTO_DIR).filter(f => f.endsWith('.proto'))) 
 		if (/codegen_delta_encoder\s*\)\s*=\s*true/.test(line)) current.deltaEncoded = true;
 
 		const field = FIELD_RE.exec(line);
+		if (depth === 1 && !field && /^\s*(optional|repeated|required|map|oneof|extensions)\b/.test(line))
+			current.unsupported.push(line.trim());
 		// Only take fields at the message's own brace depth — nested messages and
 		// enums declare their own and would otherwise be folded into the parent.
 		if (field && depth === 1) {
@@ -147,6 +151,7 @@ const visit = (name: string) => {
 		problems.push(`message ${name} is referenced by the delta schema but lacks codegen_delta_encoder`);
 		return;
 	}
+	for (const declaration of message.unsupported) problems.push(`${name}: unsupported declaration "${declaration}"`);
 
 	const out: OutMessage = { name, fields: [] };
 	emitted.set(name, out); // insert before recursing so cycles terminate
@@ -182,6 +187,16 @@ const visit = (name: string) => {
 };
 
 visit(ROOT_MESSAGE);
+
+const checkCycles = (name: string, path: Set<string>) => {
+	if (path.has(name)) {
+		problems.push(`${name}: recursive delta reset semantics are unsupported`);
+		return;
+	}
+	const next = new Set(path).add(name);
+	for (const [, field] of emitted.get(name)?.fields ?? []) if (field.child) checkCycles(field.child, next);
+};
+checkCycles(ROOT_MESSAGE, new Set());
 
 if (problems.length) {
 	console.error('Delta schema could not be derived:\n  ' + problems.join('\n  '));
@@ -239,8 +254,123 @@ export const DELTA_ROOT_MESSAGE = '${ROOT_MESSAGE}' satisfies DeltaMessageName;
 
 const existing = fs.existsSync(OUT_FILE) ? fs.readFileSync(OUT_FILE, 'utf8') : null;
 
+// Static readers preserve ts-proto's last-singular-message-wins behavior while
+// accumulating replacement-list operations from every occurrence independently.
+const hasLists = (name: string, seen = new Set<string>()): boolean => {
+	if (seen.has(name)) return false;
+	seen.add(name);
+	return emitted.get(name)!.fields.some(([, spec]) => spec.repeated || (spec.child && hasLists(spec.child, seen)));
+};
+const listPath = (field: number) => `path ? path + '.${field}' : '${field}'`;
+const defaultValue = (field: ProtoField): string => {
+	const raw = field.default ?? '0';
+	switch (field.type) {
+		case 'bool':
+			return raw === 'true' ? 'true' : 'false';
+		case 'int32':
+			return String(Number(BigInt.asIntN(32, BigInt(raw))));
+		case 'uint32':
+			return String(Number(BigInt.asUintN(32, BigInt(raw))));
+		case 'int64':
+			return JSON.stringify(String(BigInt.asIntN(64, BigInt(raw))));
+		case 'uint64':
+			return JSON.stringify(String(BigInt.asUintN(64, BigInt(raw))));
+		case 'float': {
+			const value = Math.fround(Number(raw));
+			return Object.is(value, -0) ? '-0' : String(value);
+		}
+		case 'string':
+			return "''";
+		case 'bytes':
+			return 'new Uint8Array(0)';
+		default:
+			throw new Error(`Unsupported scalar ${field.type}`);
+	}
+};
+const functions = [...emitted.values()]
+	.map(message => {
+		const fields = messages.get(message.name)!.fields;
+		const fresh = `{ ${fields.map(field => `${field.name}: ${field.label === 'repeated' ? '[]' : 'undefined'}`).join(', ')} }`;
+		const locals = fields
+			.filter(
+				field =>
+					emitted.get(message.name)!.fields.find(([id]) => id === field.number)?.[1].child &&
+					field.label !== 'repeated'
+			)
+			.map(field => `const original${field.number} = result.${field.name};`)
+			.join('\n');
+		const repeated = fields
+			.filter(field => field.label === 'repeated')
+			.map(field => `result.${field.name} ??= [];`)
+			.join('\n');
+		const resets = fields
+			.map(field => {
+				const spec = message.fields.find(([id]) => id === field.number)![1];
+				if (spec.repeated) return `appendList(lists, ${listPath(field.number)}, RESET_LIST);`;
+				const value = spec.child
+					? `reset${spec.child}(result.${field.name}, lists, ${hasLists(spec.child) ? listPath(field.number) : "''"})`
+					: defaultValue(field);
+				return `result.${field.name} = ${value};`;
+			})
+			.join('\n');
+		const cases = fields
+			.map(field => {
+				const spec = message.fields.find(([id]) => id === field.number)![1];
+				if (spec.repeated)
+					return `case ${field.number}: {
+			if ((tag & 7) === 7) appendList(lists, ${listPath(field.number)}, RESET_LIST);
+			else { reader.wire(tag, 2); appendList(lists, ${listPath(field.number)}, reader.bytes(end)); }
+			break;
+		}`;
+				const childPath = spec.child && hasLists(spec.child) ? listPath(field.number) : "''";
+				const reset = spec.child
+					? `reset${spec.child}(original${field.number}, lists, ${childPath})`
+					: defaultValue(field);
+				const read = spec.child
+					? `decode${spec.child}(reader, reader.messageEnd(end), original${field.number}, lists, ${childPath}, fresh)`
+					: field.type === 'bytes'
+						? 'new Uint8Array(reader.bytes(end))'
+						: `reader.${field.type}(end)`;
+				return `case ${field.number}: {
+			if ((tag & 7) === 7) result.${field.name} = ${reset};
+			else { reader.wire(tag, ${spec.wire}); result.${field.name} = ${read}; }
+			break;
+		}`;
+			})
+			.join('\n');
+		return `function reset${message.name}(baseline?: unknown, lists?: ListUpdates, path = ''): DeltaObject {
+		const result = cloneMessage(baseline);
+		${resets}
+		${repeated}
+		return result;
+	}
+	export function decode${message.name}(reader: DeltaReader, end: number, baseline?: unknown, lists?: ListUpdates, path = '', fresh = false): DeltaObject {
+		const result: DeltaObject = fresh ? ${fresh} : cloneMessage(baseline);
+		${locals}
+		while (reader.pos < end) {
+			const tag = reader.key(end);
+			switch (tag >>> 3) {
+				${cases}
+				default: reader.skip(tag, end);
+			}
+		}
+		${repeated}
+		return result;
+	}`;
+	})
+	.join('\n\n');
+const decoderOut = await format(
+	`// Code generated by scripts/generate-usercmd-delta-schema.ts. DO NOT EDIT.
+// Direct delta readers derive field names, scalar types and defaults from the .proto files.
+import { DeltaReader, cloneMessage, appendList, RESET_LIST, type DeltaObject, type ListUpdates } from '../../entities/userCmdDeltaReader.js';
+${functions}
+`,
+	{ ...(await resolveConfig(OUT_FILE)), parser: 'typescript' }
+);
+const existingDecoder = fs.existsSync(DECODER_FILE) ? fs.readFileSync(DECODER_FILE, 'utf8') : null;
+
 if (process.argv.includes('--check')) {
-	if (existing !== out) {
+	if (existing !== out || existingDecoder !== decoderOut) {
 		console.error(`${path.relative(ROOT, OUT_FILE)} is out of date — run: bun run generate:delta-schema`);
 		process.exit(1);
 	}
@@ -248,6 +378,7 @@ if (process.argv.includes('--check')) {
 } else {
 	fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
 	fs.writeFileSync(OUT_FILE, out);
+	fs.writeFileSync(DECODER_FILE, decoderOut);
 	console.log(
 		`Wrote ${path.relative(ROOT, OUT_FILE)} — ${emitted.size} delta-encoded messages, ` +
 			`${[...emitted.values()].reduce((n, m) => n + m.fields.length, 0)} fields.`
