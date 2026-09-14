@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.5.0](https://github.com/osztenkurden/cs2parser/compare/v2.4.1...v2.5.0) (2026-09-14)
+
+
+### Features
+
+* move to self-hosted event emitter ([4e7b762](https://github.com/osztenkurden/cs2parser/commit/4e7b7620da8a9efcbc6849de78d147d03ead5532))
+
+
+### Bug Fixes
+
+* make off throw on non-functions ([69a0566](https://github.com/osztenkurden/cs2parser/commit/69a0566bb923b3ee51ec96a83c140b7eb543ad8c))
+
 ## [2.4.1](https://github.com/osztenkurden/cs2parser/compare/v2.4.0...v2.4.1) (2026-09-13)
 
 
