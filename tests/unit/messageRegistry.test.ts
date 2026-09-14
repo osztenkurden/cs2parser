@@ -148,7 +148,6 @@ describe('listener epoch', () => {
 		expect(removed.filter(name => name === 'debug')).toHaveLength(2);
 		reader.off('debug', listener);
 		expect(reader.listenerCount('debug')).toBe(0);
-		expect(reader.setMaxListeners(20).getMaxListeners()).toBe(20);
 	});
 
 	test('bumps when listeners are added and removed', () => {

@@ -11,8 +11,7 @@
 	},
 	"homepage": "https://github.com/osztenkurden/cs2parser#readme",
 	"dependencies": {
-		"@bufbuild/protobuf": "^2.15.0",
-		"events": "^3.3.0"
+		"@bufbuild/protobuf": "^2.15.0"
 	},
 	"license": "GPL-3.0",
 	"engines": {
