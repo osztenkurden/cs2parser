@@ -150,6 +150,18 @@ describe('listener epoch', () => {
 		expect(reader.listenerCount('debug')).toBe(0);
 	});
 
+	test('rejects non-function listeners like Node', () => {
+		const reader = new BrowserReader();
+		const message = 'The listener must be a function';
+		expect(() => reader.on('debug', undefined as never)).toThrow(new TypeError(message));
+		expect(() => reader.removeListener('debug', undefined as never)).toThrow(new TypeError(message));
+		expect(() => reader.off('debug', 'nope' as never)).toThrow(new TypeError(message));
+		// Clearing an event without naming a listener stays available through removeAllListeners.
+		reader.on('debug', () => {}).on('debug', () => {});
+		reader.removeAllListeners('debug');
+		expect(reader.listenerCount('debug')).toBe(0);
+	});
+
 	test('bumps when listeners are added and removed', () => {
 		const reader = new DemoReader();
 		const before = reader._listenerEpoch;

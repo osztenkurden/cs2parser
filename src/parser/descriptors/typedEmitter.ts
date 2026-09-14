@@ -200,6 +200,8 @@ export class TypedEventEmitter<T extends EventMap<T>> {
 	 * listeners, as when `emit` consumes one.
 	 */
 	private _removeListener(event: PropertyKey, fn: Listener, once: boolean): void {
+		// Node throws here too; eventemitter3 instead clears the event. Use removeAllListeners for that.
+		if (typeof fn !== 'function') throw new TypeError('The listener must be a function');
 		const stored = this._events[event];
 		if (!stored) return;
 
