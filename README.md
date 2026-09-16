@@ -162,6 +162,11 @@ Metadata helpers read only the relevant parts of the demo. The browser export ac
 
 Upgrading from 1.x? See the [migration guide](MIGRATION.md).
 
+## Used by
+
+- [liga.dust2.dk](https://liga.dust2.dk/)
+- [radar.dust2.org](https://radar.dust2.org/)
+
 ## Development
 
 With Node.js and Bun installed:
