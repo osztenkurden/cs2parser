@@ -86,9 +86,11 @@ const planField = (field: Field, depth: number, indexDepth: number, propInfo: (P
 			const value = (field as Field<typeof FieldTypeEnum.Array | typeof FieldTypeEnum.Vector>).value;
 			// Nested containers retain the existing outermost-element indexing behavior.
 			plan.element = planField(value.field_enum, depth + 1, indexDepth === -1 ? depth + 1 : indexDepth, propInfo);
-			if (field.type === FieldTypeEnum.Vector && value.field_enum.type === FieldTypeEnum.Value) {
-				plan.propId = plan.element.propId;
-				plan.isResize = true;
+			if (field.type === FieldTypeEnum.Vector) {
+				const vector = (field as Field<typeof FieldTypeEnum.Vector>).value;
+				plan.propId =
+					vector.prop_id ?? (value.field_enum.type === FieldTypeEnum.Value ? plan.element.propId : -1);
+				plan.isResize = plan.propId !== -1;
 			}
 			break;
 		}

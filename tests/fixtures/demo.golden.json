@@ -576,5 +576,52 @@
 			}
 		],
 		"syntheticRoundEventsSha256": "a9cf0a987f618eb115192de7295161d2844ec1f70b861a455585431c8413440c"
+	},
+	"serializerVectorCorrections": {
+		"reason": "Apply serializer-vector length updates previously ignored by master. Compared all nine checkpoints and final state with serializer-vector resizing disabled: differences are confined to absent vectors becoming empty arrays and stale trailing elements being truncated; retained elements match. Disabling resizing exactly reproduces the prior corrected golden.",
+		"sourceCommit": "a47dcd2c7c79bdecaa507b0ee0a35d451fbc46cc",
+		"mode": "ALL",
+		"snapshots": [
+			{
+				"tick": 1,
+				"entitiesSha256": "3513c7c2a1d2c0e9e1be21e9ba381f285333d25c7ab1a72922ec41fd9c828400"
+			},
+			{
+				"tick": 1024,
+				"entitiesSha256": "9ce76d02146edd88403d06128751d0fd57658fd3620f038191d9275dfdb5cae9"
+			},
+			{
+				"tick": 16384,
+				"entitiesSha256": "d05495b1b5d651c0a1dcd97b668ab431f307999a1de2757a3901ab02d837c22b"
+			},
+			{
+				"tick": 32768,
+				"entitiesSha256": "8a9334de8de80b0c890eb563ff3a3339d7973413b28915df6836633fd60e0304"
+			},
+			{
+				"tick": 65536,
+				"entitiesSha256": "1c907d868364e85330604565161605afb80a5a921d76fd9eeab4827e08d10731"
+			},
+			{
+				"tick": 98304,
+				"entitiesSha256": "f5986f580d25404a28f0482f9bd668cfc1762af3e06f010ec0a862f53ba08b21"
+			},
+			{
+				"tick": 131072,
+				"entitiesSha256": "8f865409eecd3fbd2ecc3b288cd96af97efec94f078c27a9917fa597c01f05e9"
+			},
+			{
+				"tick": 163840,
+				"entitiesSha256": "874b3f5c31e4cc3b42d59dfb7122b29e8f072ec844b665257691e8b161182e77"
+			},
+			{
+				"tick": 180000,
+				"entitiesSha256": "a788f11c2b15a3d9f72cfc613d231bd90ae37ce0e575c8d6fbca68a55a016535"
+			}
+		],
+		"final": {
+			"tick": 185922,
+			"entitiesSha256": "af64e49b1be70471cd99c0b3454307b251df99afdd41beffec61a81aa3562896"
+		}
 	}
 }

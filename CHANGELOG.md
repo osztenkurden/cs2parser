@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/osztenkurden/cs2parser/compare/v2.5.0...v2.5.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* apply serializer vector length updates ([#59](https://github.com/osztenkurden/cs2parser/issues/59)) ([03a74ac](https://github.com/osztenkurden/cs2parser/commit/03a74acacdb08cc615e24f4321ddb30b9c5e8100))
+
 ## [2.5.0](https://github.com/osztenkurden/cs2parser/compare/v2.4.1...v2.5.0) (2026-09-14)
 
 
