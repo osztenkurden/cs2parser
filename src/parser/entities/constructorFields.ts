@@ -262,6 +262,8 @@ type ArrayField = {
 type VectorField = {
 	field_enum: Field;
 	decoder: Decoder;
+	/** Container property used by serializer-vector length updates. */
+	prop_id?: number;
 	varName?: string;
 	elementBaseType?: string;
 };
@@ -837,6 +839,15 @@ export const constructorFieldHelper = {
 					const containerName = `${serializerName}.${value.varName ?? getNameExt(value.field_enum)}`;
 					const elementCtor = getTypedArrayCtor(value.elementBaseType);
 					const nextContainer = container ?? { key: containerName };
+					if (value.field_enum.type === FieldTypeEnum.Serializer && !container) {
+						// Serializer vectors need their own property for length updates.
+						// Nested containers retain outermost-only storage; their lengths
+						// must not resize the outer vector.
+						value.prop_id = currentEntityId.id;
+						emitInfo(currentEntityId.id++, containerName, value.decoder, {
+							containerOverride: containerName
+						});
+					}
 
 					switch (value.field_enum.type) {
 						case FieldTypeEnum.Serializer: {

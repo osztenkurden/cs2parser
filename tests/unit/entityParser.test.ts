@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'bun:test';
-import { EntityParser } from '../../src/parser/entities/entityParser.js';
+import { describe, expect, spyOn, test } from 'bun:test';
+import { applyPropUpdate, EntityParser } from '../../src/parser/entities/entityParser.js';
+import { EntityWasm } from '../../src/parser/entities/entityWasm.js';
 import {
 	constructorFieldHelper,
 	Decoders,
@@ -168,9 +169,102 @@ describe('EntityParser value consumers', () => {
 				['entityupdated', { entityId: 7, propId: 0, value: 3, arrayIndex: undefined, isResize: true }],
 				['entityupdated', { entityId: 7, propId: 0, value: 'a', arrayIndex: 1, isResize: undefined }],
 				['entityupdated', { entityId: 7, propId: 1, value: 5n, arrayIndex: 0, isResize: undefined }],
-				['entityupdated', { entityId: 7, propId: 2, value: 'b', arrayIndex: 0, isResize: undefined }]
+				['entityupdated', { entityId: 7, propId: 3, value: 'b', arrayIndex: 0, isResize: undefined }]
 			]);
 		}
+	});
+});
+
+describe('serializer vector lengths', () => {
+	test.each(['direct', 'events', 'wasm'])('shrinks, clears and regrows object vectors (%s)', mode => {
+		const { parser, classInfo, create, write, events } = setup(
+			[
+				new Field(FieldTypeEnum.Vector, {
+					varName: 'attributes',
+					decoder: Decoders.UnsignedDecoder,
+					field_enum: new Field(FieldTypeEnum.Serializer, {
+						serializer: { name: 'Attribute', fields: [valueField('id', Decoders.UnsignedDecoder)] }
+					})
+				})
+			],
+			mode !== 'events'
+		);
+		create();
+		const props = parser.directEntities?.[7]?.properties ?? {};
+		const flush = () => {
+			for (const [name, data] of events.splice(0)) {
+				if (name !== 'entityupdated') continue;
+				const update = data as { propId: number; value: unknown; arrayIndex?: number; isResize?: boolean };
+				applyPropUpdate(
+					props,
+					classInfo.propInfoById[update.propId]!,
+					update.value,
+					update.arrayIndex ?? -1,
+					!!update.isResize
+				);
+			}
+		};
+		const element = (index: number, id: number) => {
+			write(path(0, index, 0), 0);
+			parser.decodeEntityUpdate(new BitBuffer(Uint8Array.of(id)), 7, 1);
+			flush();
+		};
+		const resize = (length: number) => {
+			if (mode === 'wasm') {
+				const decode = spyOn(EntityWasm.prototype, 'decode');
+				try {
+					// Entity 7, delta update, PlusOne + Finish, unsigned vector length.
+					parser.parseEntityPacket(
+						{
+							entity_data: bits([7, 6], [0, 2], [2, 3], [length, 8]),
+							updated_entries: 1,
+							alternate_baselines: [],
+							cmd_recv_status: []
+						},
+						[]
+					);
+					expect(decode.mock.results[0]?.value).toBe(1);
+				} finally {
+					decode.mockRestore();
+				}
+			} else {
+				write(path(0), 0);
+				parser.decodeEntityUpdate(new BitBuffer(Uint8Array.of(length)), 7, 1);
+			}
+			flush();
+		};
+		resize(3);
+		expect(props['CWeaponTest.attributes']).toHaveLength(3);
+		element(0, 10);
+		element(1, 20);
+		element(2, 30);
+		const original = props['CWeaponTest.attributes'];
+		resize(1);
+		expect(props['CWeaponTest.attributes']).toBe(original);
+		expect(props['CWeaponTest.attributes']).toEqual([{ id: 10 }]);
+		resize(3);
+		expect(props['CWeaponTest.attributes']).toEqual([{ id: 10 }, , ,]);
+		element(2, 40);
+		expect(props['CWeaponTest.attributes']).toEqual([{ id: 10 }, , { id: 40 }]);
+		resize(0);
+		expect(props['CWeaponTest.attributes']).toEqual([]);
+	});
+
+	test('resizes vectors of empty serializers', () => {
+		const { parser, create, write } = setup(
+			[
+				new Field(FieldTypeEnum.Vector, {
+					varName: 'objects',
+					decoder: Decoders.UnsignedDecoder,
+					field_enum: new Field(FieldTypeEnum.Serializer, { serializer: { name: 'Empty', fields: [] } })
+				})
+			],
+			true
+		);
+		create();
+		write(path(0), 0);
+		parser.decodeEntityUpdate(new BitBuffer(Uint8Array.of(2)), 7, 1);
+		expect(parser.directEntities![7]!.properties['CWeaponTest.objects']).toHaveLength(2);
 	});
 });
 
