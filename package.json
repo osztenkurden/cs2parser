@@ -1,6 +1,13 @@
 {
 	"version": "2.5.0",
 	"name": "cs2parser",
+	"description": "A fully typed Counter-Strike 2 demo and live GOTV broadcast parser for Node.js, Bun, and browsers.",
+	"author": {
+		"name": "Hubert Walczak",
+		"email": "hubertwalczak8@gmail.com",
+		"url": "https://hwalczak.com"
+	},
+	"sideEffects": false,
 	"type": "module",
 	"repository": {
 		"type": "git",
