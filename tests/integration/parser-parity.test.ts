@@ -198,6 +198,12 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 	for (const mode of ['ALL', 'ONLY_GAME_RULES'] as const) {
 		expectedRelease[mode].syntheticRoundEvents.sha256 = golden.tickBoundaryCorrections.syntheticRoundEventsSha256;
 	}
+	// Serializer-vector lengths now initialize empty arrays and discard stale tails.
+	for (const correction of golden.serializerVectorCorrections.snapshots) {
+		expectedRelease.ALL.checkpoints.find(state => state.tick === correction.tick)!.entities.sha256 =
+			correction.entitiesSha256;
+	}
+	expectedRelease.ALL.final.entities.sha256 = golden.serializerVectorCorrections.final.entitiesSha256;
 
 	beforeAll(async () => {
 		bytes = readFileSync(demoPath);
