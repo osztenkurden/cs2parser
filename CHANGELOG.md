@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.5.3](https://github.com/osztenkurden/cs2parser/compare/v2.5.2...v2.5.3) (2026-09-18)
+
+
+### Bug Fixes
+
+* docs ([dfcb606](https://github.com/osztenkurden/cs2parser/commit/dfcb606b5a7dffc68e65bfe701c2c7211d555c58))
+* update docs ([480e380](https://github.com/osztenkurden/cs2parser/commit/480e38017c67768b700d49f4e81d60c68a5400a3))
+* update license ([0001250](https://github.com/osztenkurden/cs2parser/commit/000125018a7d8f0b7eca07515d57ff3466ce2b2d))
+
 ## [2.5.2](https://github.com/osztenkurden/cs2parser/compare/v2.5.1...v2.5.2) (2026-09-17)
 
 
