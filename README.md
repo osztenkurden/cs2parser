@@ -192,4 +192,4 @@ Huge thanks to all of them for their help over the years.
 
 ## License
 
-[GPL-3.0](LICENSE)
+[Mozilla Public License 2.0](LICENSE)
