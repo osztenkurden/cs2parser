@@ -1,5 +1,5 @@
 {
-	"version": "2.5.2",
+	"version": "2.5.3",
 	"name": "cs2parser",
 	"description": "A fully typed Counter-Strike 2 demo and live GOTV broadcast parser for Node.js, Bun, and browsers.",
 	"author": {
