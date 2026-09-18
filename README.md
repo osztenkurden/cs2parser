@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/cs2parser?color=cb6b26)](https://www.npmjs.com/package/cs2parser)
 [![CI](https://github.com/osztenkurden/cs2parser/actions/workflows/ci.yml/badge.svg)](https://github.com/osztenkurden/cs2parser/actions/workflows/ci.yml)
 [![Downloads](https://img.shields.io/npm/dm/cs2parser)](https://www.npmjs.com/package/cs2parser)
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
 
 [Quick start](#quick-start) · [Browser](#browser) · [Documentation](#documentation) · [Changelog](CHANGELOG.md)
 
