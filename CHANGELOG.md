@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/osztenkurden/cs2parser/compare/v2.5.3...v2.6.0) (2026-09-21)
+
+
+### Features
+
+* improve event & equipment handling ([#63](https://github.com/osztenkurden/cs2parser/issues/63)) ([5a67d92](https://github.com/osztenkurden/cs2parser/commit/5a67d92f94d9bbde36ae9484b3a26455219471ac))
+
 ## [2.5.3](https://github.com/osztenkurden/cs2parser/compare/v2.5.2...v2.5.3) (2026-09-18)
 
 
