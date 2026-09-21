@@ -31,6 +31,91 @@ parser.gameEvents.on('gameEvent', (name, event) => {
 
 `round_start` and `round_end` are emitted as **synthetic** events derived from `CCSGameRules.m_nRoundStartCount` / `m_nRoundEndCount` whenever `EntityMode.ALL` or `EntityMode.ONLY_GAME_RULES` is active — the raw network versions are suppressed in those modes to avoid duplicates. With `EntityMode.NONE`, only the raw events fire.
 
+`bomb_pickup` uses `userid_pawn` rather than `userid`. Its `player` annotation resolves that reference through the pawn/controller helpers, including signed wire values.
+
+## Equipment lifecycles
+
+With `EntityMode.ALL`, equipment is reconciled after all updates for the tick and before public `tickend` listeners. Native pickup/equip/remove notifications are preserved and enriched; missing net changes are reconstructed under the same event names. `source` distinguishes `'native'` from `'reconstructed'`. Raw fields, including an occasionally zero native `defindex`, are left intact.
+
+```ts
+parser.gameEvents.on('inventory_snapshot', ({ player, inventory }) => {
+  // First complete inventory for a pawn; replace this player's starting state.
+  // inventory.items: readonly InventoryItem[]
+  // inventory.activeItem: InventoryItem | null
+});
+
+parser.gameEvents.on('item_pickup', event => {
+  if (!event.weapon || !event.quantity) return;
+  // Add event.quantity units, or set this stack to event.remainingQuantity.
+  console.log(event.player?.name, event.itemId, event.weapon.name, event.quantity);
+});
+
+parser.gameEvents.on('item_remove', event => {
+  // quantity is units removed; remainingQuantity is the stack size afterward.
+  // physicalDrop === true confirms a surviving, unowned world entity.
+  // false means "not confirmed", NOT "consumed" or "destroyed".
+});
+
+parser.gameEvents.on('item_equip', event => {
+  if (event.itemId === undefined) return; // Native event could not be resolved.
+  // itemId/weapon === null explicitly means no active inventory weapon.
+  // Otherwise weapon contains the resolved item and its current stack quantity.
+});
+
+parser.gameEvents.on('round_freeze_end', () => {
+  for (const player of parser.playerControllers) {
+    const inventory = player.inventory;
+    // Owned snapshot of the last complete tick state; null if not available yet.
+  }
+});
+```
+
+Every resolved event carries these fields alongside the raw native payload.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `source` | `'native' \| 'reconstructed'` | Whether the demo sent this event or the reader derived it |
+| `weapon` | `InventoryItem \| null` | Resolved item; `null` means no active weapon, absent means unresolved |
+| `itemId` | `string \| null` | Shorthand for `weapon.itemId` |
+| `quantity` | `number` | Units added or removed; stack size for `item_equip` |
+| `previousQuantity` / `remainingQuantity` | `number` | Stack size before and after |
+| `physicalDrop` | `boolean` | `item_remove` only; see below |
+
+An `InventoryItem` identifies a network entity, not an individual grenade:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `itemId` | `string` | Stable identity; survives ownership transfers |
+| `handle` | `number` | Full serial-bearing handle |
+| `entityId` | `number` | Entity index |
+| `className` | `string` | e.g. `CAK47`, `CKnife` |
+| `defindex` / `name` | `number` / `string` | Resolved definition index and weapon name |
+| `quantity` | `number` | Stack size |
+
+IDs differ when an entity index is reused with another serial. A grenade handle identifies a **stack**, not an individual grenade within it: ammunition counts supply its quantity. Stacks can merge or split into different entities; there is no faithful per-grenade identity across those operations. Projectile IDs identify a separate entity and are not asserted to be inventory IDs.
+
+`player.inventory` returns an owned copy of the complete `InventorySnapshot` (`items`, `activeItem`, and `pawnHandle`), not just an item array, and is cheap to read. To obtain all inventories, iterate `parser.playerControllers` and read each player's getter.
+
+`item_remove` means removal from inventory, including ammo decrements, death cleanup, transfers, and entity destruction. It does not infer a purchase, consumption, or death reason. `physicalDrop` is confirmed only when the handle leaves the inventory and that same entity survives with an explicit invalid owner and belongs to no other inventory; `false` means "not confirmed", never "consumed" or "destroyed". An ammo decrement alone is not a drop. Later evidence in a different tick does not retroactively change the event.
+
+For pickups/removals, `quantity` is the net delta, while `weapon.quantity` describes the resolved stack (before removal or after pickup). Multiple native notifications for the same net change are retained, but only one receives a positive delta; extra resolved notifications have `quantity: 0`. Initial snapshots seed state without fabricating pickups. Missing entity/ammo data postpones reconciliation until a relevant update arrives, rather than treating unavailable state as an empty inventory.
+
+Native events describing an intermediate weapon superseded within the tick can remain unresolved. Non-weapon pickups such as armor and defusers also keep their native payloads without invented weapon handles. Optional enrichment fields distinguish these cases. Synthetic equips use neutral defaults for legacy cosmetic/capability fields; use the resolved `weapon` data rather than interpreting those defaults as observed capabilities.
+
+## Grenade lifecycles
+
+| Event | Meaning |
+| --- | --- |
+| `grenade_thrown` | Native throw, or first observation of a newly created supported projectile entity. Includes `projectileId`, `projectileHandle`, `entityid`, resolved thrower, and weapon name when reconstructable. |
+| `grenade_flight_end` | A positively observed detonation/effect signal for that projectile. `signal` names the native event or network effect field that established it. Emitted at most once per projectile. |
+| `grenade_deleted` | The projectile entity was deleted/replaced. This is distinct from flight ending and does **not** assert detonation. |
+
+Supported projectile classes cover flashbangs, HE, smoke, decoy, and Molotov/incendiary grenades (`m_bIsIncGrenade` distinguishes the last two). Inventory `CIncendiaryGrenade` entities are not projectiles. Native detonation events remain available unchanged. Repeated creation records for the same serial-bearing entity do not produce another throw.
+
+Flight-end evidence is a native `hegrenade_detonate`, `flashbang_detonate`, `smokegrenade_detonate`, `decoy_started`, or `molotov_detonate` event with an entity ID, or a positive `m_nExplodeEffectTickBegin` / `m_nSmokeEffectTickBegin`. Some demos have no attributable flight-end evidence for Molotov/incendiary projectiles; they can produce a throw and deletion without a flight-end event. Infernos are not linked back to the projectile that started them. Joining a broadcast mid-flight likewise establishes only the first observed creation, not the original throw time.
+
+All lifecycle events reach `gameEvent` as well as their named listeners. Seeking rebuilds equipment state without re-emitting the events it replays; `player.inventory` can seed a consumer again after seeking. No bullet impacts, bounces, purchase reasons, or extinguish causes are inferred.
+
 ## Low-level Events
 
 `DemoReader` is an `EventEmitter`. These events let you hook into the parse pipeline itself — tick boundaries, header/server info, entity lifecycle, and raw network messages.
@@ -55,7 +140,7 @@ parser.on('updatestringtable', update => {});
 parser.on('clearallstringtables', () => {});
 
 // Entity lifecycle (requires EntityMode.ALL / ONLY_GAME_RULES)
-parser.on('entitycreated', ([entityId, classId, entityType, className]) => {});
+parser.on('entitycreated', ([entityId, classId, entityType, className, serial]) => {});
 parser.on('entityupdated', ({ entityId, propId, value }) => {});
 parser.on('entitydeleted', entityId => {});
 

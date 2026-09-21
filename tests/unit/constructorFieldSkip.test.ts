@@ -183,6 +183,7 @@ for (const bitcount of [1, 8, 16, 31, 32]) {
 let packetDecoder: EntityWasm | undefined;
 const packetPlans = (classId: number): FieldPlan[] => [
 	{
+		lifecycle: false,
 		meta: classId < cases.length ? { name: 'value' } : undefined,
 		decoder:
 			classId < cases.length

@@ -178,6 +178,7 @@ export class ParseSession {
 			this.entityParser = new EntityParser(restored.classInfo, this.enqueueEvent);
 			this.entityParser.onlyGameRules = entityMode === EntityMode.ONLY_GAME_RULES;
 			this.entityParser.directEntities = parser.entities;
+			this.entityParser.onLifecycleUpdate = id => parser._equipment.changed(id);
 			this.entityParser.directPropInfoById = restored.classInfo.propInfoById;
 			parser.propIdToName = restored.classInfo.propIdToName;
 			parser.propIdToDecoder = restored.classInfo.propIdToDecoder;
@@ -743,6 +744,7 @@ export class ParseSession {
 					this.parser.propIdToDecoder = classInfo.propIdToDecoder;
 					this.parser.propIdToInfo = classInfo.propIdToInfo;
 					this.entityParser.directEntities = this.parser.entities;
+					this.entityParser.onLifecycleUpdate = id => this.parser._equipment.changed(id);
 					this.entityParser.directPropInfoById = classInfo.propInfoById;
 				}
 				break;

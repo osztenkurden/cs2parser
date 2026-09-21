@@ -11,6 +11,24 @@ import { TypedEventEmitter } from './typedEmitter.js';
 
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
+/**
+ * Events the equipment reconciler reads out of the queue. Under `EntityMode.ALL` they
+ * are decoded even with no listeners, because reconstruction of one event name
+ * depends on native events of another. Other modes never run the reconciler, so
+ * they fall back to the normal "no listener, no work" rule.
+ */
+const EQUIPMENT_INPUT_EVENTS = new Set([
+	'item_pickup',
+	'item_remove',
+	'item_equip',
+	'grenade_thrown',
+	'hegrenade_detonate',
+	'flashbang_detonate',
+	'smokegrenade_detonate',
+	'decoy_started',
+	'molotov_detonate'
+]);
+
 export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 	override emit<K extends keyof GameEventsArguments>(event: K, ...args: GameEventsArguments[K]): boolean {
 		return this._demoReader?._silent ? false : super.emit(event, ...args);
@@ -70,7 +88,8 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 
 			if (
 				this.listenerCount(descriptor.name as keyof _GameEventsArguments) === 0 &&
-				this.listenerCount('gameEvent') === 0
+				this.listenerCount('gameEvent') === 0 &&
+				!(this._entityMode === EntityMode.ALL && EQUIPMENT_INPUT_EVENTS.has(descriptor.name))
 			) {
 				return;
 			}
@@ -89,12 +108,18 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 		});
 
 		demoReader._onInternal('tickend', () => {
+			for (const event of this.eventQueue) annotateGameEvent(this._demoReader, event.event_name, event);
+			const reconstructed =
+				this._entityMode === EntityMode.ALL ? demoReader._equipment.process(this.eventQueue) : [];
 			for (const event of this.eventQueue) {
-				annotateGameEvent(this._demoReader, event.event_name, event);
 				this.emit(event.event_name as keyof GameEventsArguments, event);
 				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event);
 			}
 			this.eventQueue.length = 0;
+			for (const event of reconstructed) {
+				this.emit(event.event_name as keyof GameEventsArguments, event as any);
+				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event as any);
+			}
 
 			if (this._entityMode !== EntityMode.NONE) {
 				this._checkSyntheticRoundEvents();

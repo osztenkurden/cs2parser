@@ -24,6 +24,7 @@ const bits = (...parts: [number, number][]): Uint8Array => {
 const packet = (data: Uint8Array, entries = 1) =>
 	({ entity_data: data, updated_entries: entries }) as CSVCMsg_PacketEntities;
 const leaf = (decoder: Decoder): FieldPlan => ({
+	lifecycle: false,
 	meta: { name: 'value' },
 	decoder,
 	propId: 0,

@@ -78,6 +78,11 @@ export class Player extends EntityHelper<'CCSPlayerController'> {
 		return this._parser.getPawn(id);
 	}
 
+	/** Owned equipment snapshot from the last complete tick, or null until available. */
+	get inventory() {
+		return this._parser._equipment.getInventory(this);
+	}
+
 	// --- Alive State ---
 
 	get isAlive(): boolean {

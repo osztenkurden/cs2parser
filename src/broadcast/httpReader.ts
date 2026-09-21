@@ -14,11 +14,42 @@ export interface FragmentErrorContext {
 	phase: 'signup' | 'full' | 'delta';
 }
 
+/**
+ * Time source for the delta throttle.
+ *
+ * @internal Test seam. The throttle is scheduling arithmetic, so tests
+ * substitute a virtual clock instead of measuring the OS scheduler.
+ */
+export interface BroadcastClock {
+	now(): number;
+	/** Resolves `true` when the delay elapses, `false` if `signal` aborts first. */
+	sleep(ms: number, signal: AbortSignal): Promise<boolean>;
+}
+
+const realClock: BroadcastClock = {
+	now: () => Date.now(),
+	sleep: (ms, signal) =>
+		new Promise<boolean>(resolve => {
+			if (signal.aborted) return resolve(false);
+			const t = setTimeout(() => {
+				signal.removeEventListener('abort', onAbort);
+				resolve(true);
+			}, ms);
+			const onAbort = () => {
+				clearTimeout(t);
+				resolve(false);
+			};
+			signal.addEventListener('abort', onAbort, { once: true });
+		})
+};
+
 export interface HttpBroadcastOptions extends ParseSessionOptions {
 	/** Entity parsing mode (default: EntityMode.NONE). */
 	entities?: EntityMode;
 	/** Custom fetcher; defaults to one built around `globalThis.fetch`. */
 	fetcher?: BroadcastFetcher;
+	/** @internal Overrides the time source behind the delta throttle. */
+	clock?: BroadcastClock;
 	/** Milliseconds to wait between retries on `/full` and `/delta` 404/405. Default 1000. */
 	deltaRetryInterval?: number;
 	/**
@@ -80,6 +111,7 @@ const DEFAULTS = {
 export class HttpBroadcastReader {
 	private readonly parser: DemoReader;
 	private readonly fetcher: BroadcastFetcher;
+	private readonly clock: BroadcastClock;
 	private readonly opts: HttpBroadcastOptions;
 	private readonly abortController = new AbortController();
 	private session: ParseSession | null = null;
@@ -106,6 +138,7 @@ export class HttpBroadcastReader {
 	constructor(parser: DemoReader, baseUrl: string, opts: HttpBroadcastOptions = {}) {
 		this.parser = parser;
 		this.fetcher = opts.fetcher ?? createDefaultFetcher(baseUrl);
+		this.clock = opts.clock ?? realClock;
 		this.opts = opts;
 	}
 
@@ -308,11 +341,11 @@ export class HttpBroadcastReader {
 				// Anchoring on completion would add fetch+parse latency on top of the
 				// throttle every cycle, compounding into real-time drift on slow links.
 				const throttle = this.opts.deltaThrottle ?? DEFAULTS.deltaThrottle;
-				const wait = throttle - (Date.now() - this._lastDeltaStartedAt);
+				const wait = throttle - (this.clock.now() - this._lastDeltaStartedAt);
 				if (wait > 0) {
 					if (!(await this._sleep(wait))) return this._terminate('cancelled');
 				}
-				this._lastDeltaStartedAt = Date.now();
+				this._lastDeltaStartedAt = this.clock.now();
 
 				this._fragment = fragment;
 				const bytes = await this._fetchWithRetry(
@@ -455,17 +488,6 @@ export class HttpBroadcastReader {
 	}
 
 	private _sleep(ms: number): Promise<boolean> {
-		return new Promise<boolean>(resolve => {
-			if (this.abortController.signal.aborted) return resolve(false);
-			const t = setTimeout(() => {
-				this.abortController.signal.removeEventListener('abort', onAbort);
-				resolve(true);
-			}, ms);
-			const onAbort = () => {
-				clearTimeout(t);
-				resolve(false);
-			};
-			this.abortController.signal.addEventListener('abort', onAbort, { once: true });
-		});
+		return this.clock.sleep(ms, this.abortController.signal);
 	}
 }

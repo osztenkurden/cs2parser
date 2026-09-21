@@ -14,6 +14,10 @@ export function annotateGameEvent(
 	if ('userid' in event && eventName !== 'player_connect') {
 		event.player = resolvePlayer(parser, event.userid);
 	}
+	if (!event.player && Number.isInteger(event.userid_pawn)) {
+		const id = event.userid_pawn & 0x7ff;
+		event.player = id === 0x7ff ? null : (parser.getPawn(id)?.controller ?? null);
+	}
 
 	if ('attacker' in event) {
 		event.attackerPlayer = resolvePlayer(parser, event.attacker);

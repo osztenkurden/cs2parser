@@ -50,6 +50,7 @@ const getEntityType = (name: string) => {
 };
 
 export type FieldPlan = {
+	lifecycle: boolean;
 	meta: PropInfo | undefined;
 	decoder: Decoder;
 	propId: number;
@@ -64,6 +65,7 @@ export type FieldPlan = {
 // or generated snapshots. Plans belong to one EntityParser and hold no entity storage.
 const planField = (field: Field, depth: number, indexDepth: number, propInfo: (PropInfo | undefined)[]): FieldPlan => {
 	const plan: FieldPlan = {
+		lifecycle: false,
 		meta: undefined,
 		decoder: Decoders.UnsignedDecoder,
 		propId: -1,
@@ -107,6 +109,10 @@ const planField = (field: Field, depth: number, indexDepth: number, propInfo: (P
 		}
 	}
 	plan.meta = plan.propId === -1 ? undefined : propInfo[plan.propId];
+	plan.lifecycle =
+		/m_hMyWeapons|m_hActiveWeapon|m_iAmmo|m_iItemDefinitionIndex|m_hOwnerEntity|m_hThrower|m_bIsIncGrenade|m_nExplodeEffectTickBegin|m_nSmokeEffectTickBegin/.test(
+			plan.meta?.name ?? ''
+		);
 	return plan;
 };
 
@@ -214,6 +220,7 @@ export class EntityParser {
 	private cachedBitBuffer = new BitBuffer(new Uint8Array(0));
 	private cachedBitBuffer2 = new BitBuffer(new Uint8Array(0));
 	public tick = 0;
+	public onLifecycleUpdate?: (entityId: number) => void;
 	public directEntities:
 		{ className: string; classId: number; entityType: number; properties: Record<string, unknown> }[] | null = null;
 	/** Property metadata indexed by prop id for direct entity updates. */
@@ -265,6 +272,7 @@ export class EntityParser {
 				const arrayIndex = this.arrayIndices[i]!;
 				const meta = cachedMetadata ? info.meta : info.propId !== -1 ? propInfoById![info.propId] : undefined;
 				if (meta !== undefined) {
+					if (info.lifecycle) this.onLifecycleUpdate?.(entityId);
 					const result = constructorFieldHelper.decode(reader, info.decoder);
 					if (meta.containerKey !== undefined && arrayIndex !== -1 && !info.isResize) {
 						if (
@@ -355,14 +363,13 @@ export class EntityParser {
 	createEntity = (reader: BitBuffer, entityId: number, baselines: Uint8Array[]) => {
 		const classId = reader.ReadUBits(this.classIdBits);
 
-		//serial
-		reader.ReadUBits(NSERIALBITS);
+		const serial = reader.ReadUBits(NSERIALBITS);
 
 		reader.ReadUVarInt32();
 		const entityType = this.checkEntityType(classId);
 		const cls = this.classInfo.classes[classId]!;
 
-		this.enqueueEvent('entitycreated', [entityId, classId, entityType, cls.name]);
+		this.enqueueEvent('entitycreated', [entityId, classId, entityType, cls.name, serial]);
 
 		if (entityId > 100000) {
 			throw 'Possible OOM';
