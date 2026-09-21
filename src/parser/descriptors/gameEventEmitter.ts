@@ -11,7 +11,12 @@ import { TypedEventEmitter } from './typedEmitter.js';
 
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
-/** Events the equipment reconciler reads out of the queue, so they are decoded even with no listeners. */
+/**
+ * Events the equipment reconciler reads out of the queue. Under `EntityMode.ALL` they
+ * are decoded even with no listeners, because reconstruction of one event name
+ * depends on native events of another. Other modes never run the reconciler, so
+ * they fall back to the normal "no listener, no work" rule.
+ */
 const EQUIPMENT_INPUT_EVENTS = new Set([
 	'item_pickup',
 	'item_remove',
@@ -84,7 +89,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 			if (
 				this.listenerCount(descriptor.name as keyof _GameEventsArguments) === 0 &&
 				this.listenerCount('gameEvent') === 0 &&
-				!EQUIPMENT_INPUT_EVENTS.has(descriptor.name)
+				!(this._entityMode === EntityMode.ALL && EQUIPMENT_INPUT_EVENTS.has(descriptor.name))
 			) {
 				return;
 			}

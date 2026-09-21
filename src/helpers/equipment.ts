@@ -118,6 +118,8 @@ type Track = {
 	announced: boolean;
 	playerSlot?: number;
 };
+/** Shared empty result: most ticks reconcile nothing, and callers only iterate it. */
+const NO_EVENTS = Object.freeze([]) as unknown as Event[];
 const matchesItem = (event: Event, item: InventoryItem) =>
 	event.defindex === item.defindex ||
 	event.item === item.name ||
@@ -269,6 +271,17 @@ export class EquipmentTracker {
 	}
 
 	process(native: Event[]): Event[] {
+		// Most ticks touch no tracked entity and queue no native event. With every
+		// input empty the body below is a no-op, so return before allocating its
+		// per-tick scratch (result array, used/matched sets, publish closure).
+		if (
+			!native.length &&
+			!this.state.dirty.size &&
+			!this.state.projectileDirty.size &&
+			!this.state.deleted.size &&
+			!this.state.retiredProjectiles.length
+		)
+			return NO_EVENTS;
 		const emitted: Event[] = [];
 		const used = new Set<Event>();
 		const publish = (name: string, player: Player | null, item: InventoryItem | null, data: EquipmentEventData) => {
