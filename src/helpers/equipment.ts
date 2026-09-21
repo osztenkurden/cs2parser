@@ -118,6 +118,15 @@ type Track = {
 	announced: boolean;
 	playerSlot?: number;
 };
+const ITEM_EVENTS = new Set(['item_pickup', 'item_remove', 'item_equip']);
+const OWNED_EVENTS = new Set([...ITEM_EVENTS, 'grenade_thrown']);
+const DETONATION_EVENTS = new Set([
+	'hegrenade_detonate',
+	'flashbang_detonate',
+	'smokegrenade_detonate',
+	'decoy_started',
+	'molotov_detonate'
+]);
 /** Shared empty result: most ticks reconcile nothing, and callers only iterate it. */
 const NO_EVENTS = Object.freeze([]) as unknown as Event[];
 const matchesItem = (event: Event, item: InventoryItem) =>
@@ -209,6 +218,14 @@ export class EquipmentTracker {
 		return entity?.properties[`${entity.className}.${suffix}` as keyof typeof entity.properties];
 	}
 	private player(pawn: number) {
+		// `PlayerPawn.controller` rebuilds and scans the whole controller list. A pawn
+		// keeps its controller for its lifetime, so trust the cached mapping once it
+		// still claims this pawn, and fall back to the scan only when it does not.
+		const cached = this.state.controllers.get(pawn);
+		if (cached !== undefined) {
+			const known = this.parser.getPlayer(cached);
+			if (known?.pawnEntityId === pawn) return known;
+		}
 		const player = this.parser.getPawn(pawn)?.controller;
 		if (player) this.state.controllers.set(pawn, player.entityId);
 		return player ?? this.parser.getPlayerBySlot((this.state.controllers.get(pawn) ?? 0) - 1);
@@ -373,9 +390,8 @@ export class EquipmentTracker {
 				publish('item_equip', player, next.activeItem, { quantity: next.activeItem?.quantity ?? 0 });
 		}
 		for (const event of native) {
-			if (['item_pickup', 'item_remove', 'item_equip', 'grenade_thrown'].includes(event.event_name))
-				event.source = 'native';
-			if (!['item_pickup', 'item_remove', 'item_equip'].includes(event.event_name) || used.has(event)) continue;
+			if (OWNED_EVENTS.has(event.event_name)) event.source = 'native';
+			if (!ITEM_EVENTS.has(event.event_name) || used.has(event)) continue;
 			const inventory = this.state.inventories.get(event.player?.pawnEntityId);
 			const item =
 				event.event_name === 'item_equip'
@@ -398,6 +414,12 @@ export class EquipmentTracker {
 	}
 
 	private processProjectiles(native: Event[], emitted: Event[]) {
+		// With nothing tracked, every lookup below misses and only the dirty set is
+		// consumed. Skip building the candidate id set on those ticks.
+		if (!this.state.projectiles.size && !this.state.retiredProjectiles.length) {
+			this.state.projectileDirty.clear();
+			return;
+		}
 		const matched = new Set<Event>();
 		for (const track of this.state.retiredProjectiles) {
 			emitted.push({
@@ -454,16 +476,7 @@ export class EquipmentTracker {
 					});
 				track.announced = true;
 			}
-			const detonation = native.find(
-				event =>
-					[
-						'hegrenade_detonate',
-						'flashbang_detonate',
-						'smokegrenade_detonate',
-						'decoy_started',
-						'molotov_detonate'
-					].includes(event.event_name) && event.entityid === id
-			);
+			const detonation = native.find(event => event.entityid === id && DETONATION_EVENTS.has(event.event_name));
 			const effect =
 				this.prop(id, 'm_nExplodeEffectTickBegin') > 0
 					? 'm_nExplodeEffectTickBegin'
