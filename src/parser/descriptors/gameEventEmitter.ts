@@ -11,6 +11,19 @@ import { TypedEventEmitter } from './typedEmitter.js';
 
 const SYNTHETIC_EVENTS = new Set(['round_start', 'round_end']);
 
+/** Events the equipment reconciler reads out of the queue, so they are decoded even with no listeners. */
+const EQUIPMENT_INPUT_EVENTS = new Set([
+	'item_pickup',
+	'item_remove',
+	'item_equip',
+	'grenade_thrown',
+	'hegrenade_detonate',
+	'flashbang_detonate',
+	'smokegrenade_detonate',
+	'decoy_started',
+	'molotov_detonate'
+]);
+
 export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 	override emit<K extends keyof GameEventsArguments>(event: K, ...args: GameEventsArguments[K]): boolean {
 		return this._demoReader?._silent ? false : super.emit(event, ...args);
@@ -71,17 +84,7 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 			if (
 				this.listenerCount(descriptor.name as keyof _GameEventsArguments) === 0 &&
 				this.listenerCount('gameEvent') === 0 &&
-				![
-					'item_pickup',
-					'item_remove',
-					'item_equip',
-					'grenade_thrown',
-					'hegrenade_detonate',
-					'flashbang_detonate',
-					'smokegrenade_detonate',
-					'decoy_started',
-					'molotov_detonate'
-				].includes(descriptor.name)
+				!EQUIPMENT_INPUT_EVENTS.has(descriptor.name)
 			) {
 				return;
 			}

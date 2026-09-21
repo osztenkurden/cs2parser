@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 import { DemoReader } from '../../../src/index.js';
 import { HttpBroadcastReader } from '../../../src/broadcast/index.js';
+import type { BroadcastClock } from '../../../src/broadcast/httpReader.js';
 import { EDemoCommands } from '../../../src/ts-proto/demo.js';
 import { buildFragment } from '../../unit/broadcast/helpers.js';
 import { MockBroadcastFetcher, type FragmentResponse } from './mock-fetcher.js';
@@ -27,15 +28,31 @@ function ok(data: Uint8Array): FragmentResponse {
 	return { ok: true, data };
 }
 
+/**
+ * The delta loop is a single logical thread (`await sleep` → `await fetch` →
+ * repeat), so sleeping is just an advance and no timer queue is needed. Starts
+ * away from zero so the `_lastDeltaStartedAt` sentinel behaves as it does
+ * against a real epoch.
+ */
+function virtualClock(start = 1_000_000) {
+	let now = start;
+	return {
+		now: () => now,
+		sleep: async (ms: number) => ((now += ms), true),
+		advance: (ms: number) => void (now += ms)
+	} satisfies BroadcastClock & { advance(ms: number): void };
+}
+
 describe('HttpBroadcastReader (throttle timing)', () => {
 	test('deltaThrottle anchors on cycle start so fetch latency does not compound', async () => {
 		const THROTTLE = 60;
 		const FETCH_DELAY = 40;
+		const clock = virtualClock();
 		const fetchStartedAt: number[] = [];
 
 		const slowDelta = (data: Uint8Array) => async (): Promise<FragmentResponse> => {
-			fetchStartedAt.push(Date.now());
-			await new Promise(r => setTimeout(r, FETCH_DELAY));
+			fetchStartedAt.push(clock.now());
+			clock.advance(FETCH_DELAY);
 			return ok(data);
 		};
 
@@ -56,6 +73,7 @@ describe('HttpBroadcastReader (throttle timing)', () => {
 		const parser = new DemoReader();
 		const reader = new HttpBroadcastReader(parser, 'https://example.com/', {
 			fetcher,
+			clock,
 			deltaThrottle: THROTTLE,
 			deltaRetryInterval: 0
 		});
@@ -66,14 +84,12 @@ describe('HttpBroadcastReader (throttle timing)', () => {
 		expect(terminus.status).toBe('complete');
 		expect(fetchStartedAt.length).toBe(5);
 
-		// With the fix, consecutive /delta fetches start ~THROTTLE ms apart.
-		// Pre-fix, the throttle was anchored on the previous fetch's completion,
-		// so gaps would be ~THROTTLE + FETCH_DELAY (= 100 ms) and accumulate
-		// real-time drift on every cycle.
+		// Consecutive /delta fetches start exactly THROTTLE apart: the 40 ms spent
+		// inside each fetch is absorbed by the interval. Pre-fix, the throttle was
+		// anchored on the previous fetch's completion, so every gap would be
+		// THROTTLE + FETCH_DELAY (= 100) and drift would accumulate each cycle.
 		for (let i = 1; i < fetchStartedAt.length; i++) {
-			const gap = fetchStartedAt[i]! - fetchStartedAt[i - 1]!;
-			expect(gap).toBeGreaterThanOrEqual(THROTTLE - 15);
-			expect(gap).toBeLessThan(THROTTLE + FETCH_DELAY - 5);
+			expect(fetchStartedAt[i]! - fetchStartedAt[i - 1]!).toBe(THROTTLE);
 		}
 	});
 });
