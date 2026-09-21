@@ -88,6 +88,7 @@ describe('field-path Huffman decoding', () => {
 					const node: FieldPlan =
 						children[slot] ??
 						(children[slot] = {
+							lifecycle: false,
 							meta: undefined,
 							propId: -1,
 							decoder: Decoders.UnsignedDecoder,
