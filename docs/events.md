@@ -35,7 +35,7 @@ parser.gameEvents.on('gameEvent', (name, event) => {
 
 ## Equipment lifecycles
 
-With `EntityMode.ALL`, equipment is reconciled after all updates for the tick and before public `tickend` listeners. Only changed weapon-service fields and their entity dependencies are processed. Native pickup/equip/remove notifications are preserved and enriched; missing net changes are reconstructed under the same event names. `source` distinguishes `'native'` from `'reconstructed'`. Raw fields, including an occasionally zero native `defindex`, are left intact.
+With `EntityMode.ALL`, equipment is reconciled after all updates for the tick and before public `tickend` listeners. Native pickup/equip/remove notifications are preserved and enriched; missing net changes are reconstructed under the same event names. `source` distinguishes `'native'` from `'reconstructed'`. Raw fields, including an occasionally zero native `defindex`, are left intact.
 
 ```ts
 parser.gameEvents.on('inventory_snapshot', ({ player, inventory }) => {
@@ -70,11 +70,33 @@ parser.gameEvents.on('round_freeze_end', () => {
 });
 ```
 
-An `InventoryItem` contains `itemId`, the full serial-bearing `handle`, `entityId`, `className`, resolved `defindex` and `name`, and `quantity`. IDs survive ownership transfers and differ when an entity index is reused with another serial. A grenade handle identifies a **stack**, not an individual grenade within it: ammunition counts supply its quantity. Stacks can merge or split into different entities; there is no faithful per-grenade identity across those operations. Projectile IDs identify a separate entity and are not asserted to be inventory IDs.
+Every resolved event carries these fields alongside the raw native payload.
 
-`player.inventory` returns the complete `InventorySnapshot` (`items`, `activeItem`, and `pawnHandle`), not just an item array. It reads the reader's cached equipment state and copies that player's snapshot; it does not poll or rebuild inventories. To obtain all inventories, iterate `parser.playerControllers` and read each player's getter.
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `source` | `'native' \| 'reconstructed'` | Whether the demo sent this event or the reader derived it |
+| `weapon` | `InventoryItem \| null` | Resolved item; `null` means no active weapon, absent means unresolved |
+| `itemId` | `string \| null` | Shorthand for `weapon.itemId` |
+| `quantity` | `number` | Units added or removed; stack size for `item_equip` |
+| `previousQuantity` / `remainingQuantity` | `number` | Stack size before and after |
+| `physicalDrop` | `boolean` | `item_remove` only; see below |
 
-`item_remove` means removal from inventory, including ammo decrements, death cleanup, transfers, and entity destruction. It does not infer a purchase, consumption, or death reason. A physical drop is confirmed only when the handle leaves inventory and that same entity survives with an explicit invalid owner and no tracked inventory references. An ammo decrement alone is not a drop. Later evidence in a different tick does not retroactively change the event.
+An `InventoryItem` identifies a network entity, not an individual grenade:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `itemId` | `string` | Stable identity; survives ownership transfers |
+| `handle` | `number` | Full serial-bearing handle |
+| `entityId` | `number` | Entity index |
+| `className` | `string` | e.g. `CAK47`, `CKnife` |
+| `defindex` / `name` | `number` / `string` | Resolved definition index and weapon name |
+| `quantity` | `number` | Stack size |
+
+IDs differ when an entity index is reused with another serial. A grenade handle identifies a **stack**, not an individual grenade within it: ammunition counts supply its quantity. Stacks can merge or split into different entities; there is no faithful per-grenade identity across those operations. Projectile IDs identify a separate entity and are not asserted to be inventory IDs.
+
+`player.inventory` returns an owned copy of the complete `InventorySnapshot` (`items`, `activeItem`, and `pawnHandle`), not just an item array, and is cheap to read. To obtain all inventories, iterate `parser.playerControllers` and read each player's getter.
+
+`item_remove` means removal from inventory, including ammo decrements, death cleanup, transfers, and entity destruction. It does not infer a purchase, consumption, or death reason. `physicalDrop` is confirmed only when the handle leaves the inventory and that same entity survives with an explicit invalid owner and belongs to no other inventory; `false` means "not confirmed", never "consumed" or "destroyed". An ammo decrement alone is not a drop. Later evidence in a different tick does not retroactively change the event.
 
 For pickups/removals, `quantity` is the net delta, while `weapon.quantity` describes the resolved stack (before removal or after pickup). Multiple native notifications for the same net change are retained, but only one receives a positive delta; extra resolved notifications have `quantity: 0`. Initial snapshots seed state without fabricating pickups. Missing entity/ammo data postpones reconciliation until a relevant update arrives, rather than treating unavailable state as an empty inventory.
 
@@ -90,9 +112,9 @@ Native events describing an intermediate weapon superseded within the tick can r
 
 Supported projectile classes cover flashbangs, HE, smoke, decoy, and Molotov/incendiary grenades (`m_bIsIncGrenade` distinguishes the last two). Inventory `CIncendiaryGrenade` entities are not projectiles. Native detonation events remain available unchanged. Repeated creation records for the same serial-bearing entity do not produce another throw.
 
-Flight-end evidence is a native `hegrenade_detonate`, `flashbang_detonate`, `smokegrenade_detonate`, `decoy_started`, or `molotov_detonate` event with an entity ID, or a positive `m_nExplodeEffectTickBegin` / `m_nSmokeEffectTickBegin`. Some demos have no attributable flight-end evidence for Molotov/incendiary projectiles; they can produce a throw and deletion without a flight-end event. Inferno creation is not guessed to belong to a nearby projectile. Joining a broadcast mid-flight likewise establishes only the first observed creation, not the original throw time.
+Flight-end evidence is a native `hegrenade_detonate`, `flashbang_detonate`, `smokegrenade_detonate`, `decoy_started`, or `molotov_detonate` event with an entity ID, or a positive `m_nExplodeEffectTickBegin` / `m_nSmokeEffectTickBegin`. Some demos have no attributable flight-end evidence for Molotov/incendiary projectiles; they can produce a throw and deletion without a flight-end event. Infernos are not linked back to the projectile that started them. Joining a broadcast mid-flight likewise establishes only the first observed creation, not the original throw time.
 
-All lifecycle events reach `gameEvent` as well as their named listeners. Seeking reconstructs tracker state silently; `player.inventory` can seed a consumer again after seeking. No bullet impacts, bounces, purchase reasons, or extinguish causes are inferred.
+All lifecycle events reach `gameEvent` as well as their named listeners. Seeking rebuilds equipment state without re-emitting the events it replays; `player.inventory` can seed a consumer again after seeking. No bullet impacts, bounces, purchase reasons, or extinguish causes are inferred.
 
 ## Low-level Events
 

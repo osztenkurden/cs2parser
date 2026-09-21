@@ -147,6 +147,7 @@ The `Player` class wraps a `CCSPlayerController` entity. It links to the player'
 | `pawnEntityId` | `number \| null`     | Decoded from `m_hPlayerPawn` handle |
 | `pawn`         | `PlayerPawn \| null` | Linked pawn entity                  |
 | `isAlive`      | `boolean`            | Controller (`m_bPawnIsAlive`)       |
+| `inventory`    | `InventorySnapshot \| null` | Owned copy of this pawn's items and active weapon; `null` until resolved. Requires `EntityMode.ALL` — see [equipment lifecycles](events.md#equipment-lifecycles) |
 
 **Pawn shortcuts** (delegate to `pawn`, return a safe default if there's no pawn)
 
