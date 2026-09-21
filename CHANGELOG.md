@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.5.3](https://github.com/osztenkurden/cs2parser/compare/v2.5.2...v2.5.3) (2026-09-18)
+
+
+### Bug Fixes
+
+* docs ([dfcb606](https://github.com/osztenkurden/cs2parser/commit/dfcb606b5a7dffc68e65bfe701c2c7211d555c58))
+* update docs ([480e380](https://github.com/osztenkurden/cs2parser/commit/480e38017c67768b700d49f4e81d60c68a5400a3))
+* update license ([0001250](https://github.com/osztenkurden/cs2parser/commit/000125018a7d8f0b7eca07515d57ff3466ce2b2d))
+
+## [2.5.2](https://github.com/osztenkurden/cs2parser/compare/v2.5.1...v2.5.2) (2026-09-17)
+
+
+### Bug Fixes
+
+* desc ([2bc3d06](https://github.com/osztenkurden/cs2parser/commit/2bc3d0633cbcdf3b98652bc714d6216cf2394400))
+
+## [2.5.1](https://github.com/osztenkurden/cs2parser/compare/v2.5.0...v2.5.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* apply serializer vector length updates ([#59](https://github.com/osztenkurden/cs2parser/issues/59)) ([03a74ac](https://github.com/osztenkurden/cs2parser/commit/03a74acacdb08cc615e24f4321ddb30b9c5e8100))
+
+## [2.5.0](https://github.com/osztenkurden/cs2parser/compare/v2.4.1...v2.5.0) (2026-09-14)
+
+
+### Features
+
+* move to self-hosted event emitter ([4e7b762](https://github.com/osztenkurden/cs2parser/commit/4e7b7620da8a9efcbc6849de78d147d03ead5532))
+
+
+### Bug Fixes
+
+* make off throw on non-functions ([69a0566](https://github.com/osztenkurden/cs2parser/commit/69a0566bb923b3ee51ec96a83c140b7eb543ad8c))
+
+## [2.4.1](https://github.com/osztenkurden/cs2parser/compare/v2.4.0...v2.4.1) (2026-09-13)
+
+
+### Performance Improvements
+
+* accelerate delta and entity decoding ([#56](https://github.com/osztenkurden/cs2parser/issues/56)) ([7053da2](https://github.com/osztenkurden/cs2parser/commit/7053da2943d90fbf489000be26889eee6b3f6f6d))
+
 ## [2.4.0](https://github.com/osztenkurden/cs2parser/compare/v2.3.0...v2.4.0) (2026-09-13)
 
 

@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { constructorFieldHelper, Decoders, type Decoder } from '../../src/parser/entities/constructorFields.js';
 import { getQuantalizedFloat } from '../../src/parser/entities/quantizedFloat.js';
 import { BitBuffer } from '../../src/parser/ubitreader.js';
+import { EntityWasm } from '../../src/parser/entities/entityWasm.js';
+import type { FieldPlan } from '../../src/parser/entities/entityParser.js';
+import type { CSVCMsg_PacketEntities } from '../../src/ts-proto/netmessages.js';
 
 class BitWriter {
 	private bits: number[] = [];
@@ -176,6 +179,53 @@ for (const bitcount of [1, 8, 16, 31, 32]) {
 		w => w.write(0x87654321, bitcount)
 	]);
 }
+
+let packetDecoder: EntityWasm | undefined;
+const packetPlans = (classId: number): FieldPlan[] => [
+	{
+		meta: classId < cases.length ? { name: 'value' } : undefined,
+		decoder:
+			classId < cases.length
+				? cases[classId]![1]
+				: {
+						type: 0,
+						decoder: { ...getQuantalizedFloat(1, 0, 0, 1), bit_count: classId - cases.length }
+					},
+		propId: 0,
+		isResize: false,
+		indexDepth: -1,
+		children: null,
+		element: null,
+		pathError: 'path'
+	}
+];
+
+describe('packet-batched WASM value parity', () => {
+	test.each(cases)('%s matches JS values and cursors at every bit offset', (name, decoder, encode) => {
+		packetDecoder ??= new EntityWasm(packetPlans);
+		const classId = cases.findIndex(item => item[0] === name);
+		packetDecoder.setEntity(1, classId);
+		for (let offset = 0; offset < 32; offset++) {
+			const padding = (offset - 22 + 32) & 31;
+			packetDecoder.setEntity(0, cases.length + padding);
+			// Two update-only entities, each with PlusOne + Finish. The first is an
+			// unnamed quantized value that positions the second at the desired offset.
+			const writer = new BitWriter().write(0, 8).write(2, 3).write(0, padding).write(0, 8).write(2, 3);
+			const start = writer.length;
+			encode(writer);
+			const end = writer.length;
+			const bytes = writer.write(0xa1b2c3d4, 32).buffer();
+			const reference = new BitBuffer(bytes);
+			reference.skipBytesBetter(Math.floor(start / 8));
+			reference.ReadUBits(start & 7);
+			const expected = constructorFieldHelper.decode(reference, decoder);
+			expect(packetDecoder.decode({ entity_data: bytes, updated_entries: 2 } as CSVCMsg_PacketEntities)).toBe(1);
+			expect(packetDecoder.value(0)).toEqual(expected);
+			expect(packetDecoder.consumedBits).toBe(end);
+			expect(reference.RemainingBits).toBe(bytes.length * 8 - end);
+		}
+	});
+});
 
 describe('constructorFieldHelper.skip', () => {
 	test('covers every numeric decoder (CTransform is tested as unsupported)', () => {

@@ -72,7 +72,7 @@ Unsuffixed methods accept paths, `Buffer`, or `Uint8Array`, return metadata or `
 - **Progress:** before `reader.on('progress', fraction => show(fraction))`; after `reader.on('progress', bytes => show(bytes / totalBytes))`. Unread trailers can leave the fraction below 1.
 - **Bytes:** before `bytes.toString('utf8')` on a Buffer; after `new TextDecoder().decode(bytes)` on a `Uint8Array`.
 - **Messages:** before `reader.parseDemo(path, { svc_VoiceData: true })` enabled decoding; after `reader.on('svc_VoiceData', onVoice)` before parsing enables it automatically. Flags remain available for explicit overrides.
-- **Emitter:** before Node's `EventEmitter.defaultMaxListeners = 20`; after `reader.setMaxListeners(20)`. Portable `events` does not support Node's native `instanceof` assumptions, `errorMonitor`, or `captureRejections`; catch async-listener failures explicitly, e.g. `task().catch(onError)`.
+- **Emitter:** the reader uses a bundled emitter with Node-style `on`/`once`/`off`/`prependListener` and `newListener`/`removeListener` meta-events. It has no listener-count limit, so `setMaxListeners`/`getMaxListeners` and `EventEmitter.defaultMaxListeners` are gone. It does not support Node's native `instanceof` assumptions, `errorMonitor`, or `captureRejections`; catch async-listener failures explicitly, e.g. `task().catch(onError)`.
 - **Browser:** before the Node-only `import { DemoReader } from 'cs2parser'`; after browser code uses `import { DemoReader } from 'cs2parser/browser'` and `await DemoReader.parseHeaderAsync(file)`. Server imports stay unchanged; both exports use embedded WASM instead of native addons. See [browser/CSP requirements](README.md#browser).
 
 ## Server Metadata Timings

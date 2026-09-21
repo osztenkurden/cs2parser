@@ -57,6 +57,32 @@ const freeze = (value: unknown): void => {
 };
 
 describe('usercmd delta generated-protobuf differential', () => {
+	test('replacement entries retain protobuf own undefined fields, including empty nested messages', () => {
+		for (const body of [[], fieldBytes(2, [])]) {
+			const payload = bytes(...fieldBytes(2, [...key(1, 7), ...fieldBytes(0, body)]));
+			const expected = CSGOUserCmdPB.decode(bytes(...fieldBytes(2, body))).input_history;
+			expect(applyUserCmdDelta(baseline(), payload)?.input_history).toStrictEqual(expected);
+		}
+	});
+	test('matches protobuf UTF-8 replacement/BOM behavior and full-width boolean values', () => {
+		for (const text of [
+			[239, 187, 191, 97],
+			[255, 128, 97],
+			[97, 239, 187, 191]
+		]) {
+			const payload = bytes(...fieldBytes(1, fieldBytes(22, fieldBytes(1, text))));
+			const previous = baseline();
+			expect(applyUserCmdDelta(previous, payload)).toStrictEqual(
+				overlay(previous, CSGOUserCmdPB.decode(payload)) as unknown as CSGOUserCmdPB
+			);
+		}
+		for (const value of [0n, 1n << 32n, 1n << 63n, (1n << 64n) - 1n]) {
+			const payload = bytes(...key(9, 0), ...new BinaryWriter().uint64(value).finish());
+			expect(applyUserCmdDelta(baseline(), payload)?.left_hand_desired).toBe(
+				CSGOUserCmdPB.decode(payload).left_hand_desired
+			);
+		}
+	});
 	test('covers every schema field, scalar boundary, nested reset, and replacement message', () => {
 		let seed = 0x8196089;
 		const random = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0);

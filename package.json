@@ -1,6 +1,13 @@
 {
-	"version": "2.4.0",
+	"version": "2.5.3",
 	"name": "cs2parser",
+	"description": "A fully typed Counter-Strike 2 demo and live GOTV broadcast parser for Node.js, Bun, and browsers.",
+	"author": {
+		"name": "Hubert Walczak",
+		"email": "hubertwalczak8@gmail.com",
+		"url": "https://hwalczak.com"
+	},
+	"sideEffects": false,
 	"type": "module",
 	"repository": {
 		"type": "git",
@@ -11,10 +18,9 @@
 	},
 	"homepage": "https://github.com/osztenkurden/cs2parser#readme",
 	"dependencies": {
-		"@bufbuild/protobuf": "^2.15.0",
-		"events": "^3.3.0"
+		"@bufbuild/protobuf": "^2.15.0"
 	},
-	"license": "GPL-3.0",
+	"license": "MPL-2.0",
 	"engines": {
 		"node": ">=22.0.0"
 	},
@@ -37,7 +43,7 @@
 		"typecheck": "tsc && tsc -p tsconfig.browser.json",
 		"format": "prettier --write src/",
 		"format:check": "prettier --check src/",
-		"build": "npm run generate:messages:check && npm run generate:delta-schema:check && bun scripts/build-snappy-wasm.ts --check && bun scripts/generate-broadcast-descriptors.ts --check && npm run typecheck && tsdown",
+		"build": "npm run generate:messages:check && npm run generate:delta-schema:check && bun scripts/build-snappy-wasm.ts --check && bun scripts/build-entities-wasm.ts --check && bun scripts/generate-broadcast-descriptors.ts --check && npm run typecheck && tsdown",
 		"test": "bun test --timeout 300000",
 		"test:watch": "bun test --watch --timeout 300000",
 		"test:coverage": "bun test --coverage --timeout 300000",
@@ -54,6 +60,7 @@
 		"generate": "bun scripts/generate-protos.ts && bun scripts/generate-message-registry.ts && bun scripts/generate-usercmd-delta-schema.ts && bun scripts/generate-entity-types.ts --snapshot",
 		"benchmark": "bun scripts/benchmark-compare.mjs",
 		"build:snappy": "bun scripts/build-snappy-wasm.ts",
+		"build:entities": "bun scripts/build-entities-wasm.ts",
 		"build:all": "bun scripts/build-all.ts",
 		"generate:broadcast-descriptors": "bun scripts/generate-broadcast-descriptors.ts",
 		"test:browser": "npm run build && tsc -p tests/browser/tsconfig.json && playwright test"
