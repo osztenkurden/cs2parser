@@ -70,7 +70,18 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 
 			if (
 				this.listenerCount(descriptor.name as keyof _GameEventsArguments) === 0 &&
-				this.listenerCount('gameEvent') === 0
+				this.listenerCount('gameEvent') === 0 &&
+				![
+					'item_pickup',
+					'item_remove',
+					'item_equip',
+					'grenade_thrown',
+					'hegrenade_detonate',
+					'flashbang_detonate',
+					'smokegrenade_detonate',
+					'decoy_started',
+					'molotov_detonate'
+				].includes(descriptor.name)
 			) {
 				return;
 			}
@@ -89,12 +100,18 @@ export class GameEvents extends TypedEventEmitter<GameEventsArguments> {
 		});
 
 		demoReader._onInternal('tickend', () => {
+			for (const event of this.eventQueue) annotateGameEvent(this._demoReader, event.event_name, event);
+			const reconstructed =
+				this._entityMode === EntityMode.ALL ? demoReader._equipment.process(this.eventQueue) : [];
 			for (const event of this.eventQueue) {
-				annotateGameEvent(this._demoReader, event.event_name, event);
 				this.emit(event.event_name as keyof GameEventsArguments, event);
 				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event);
 			}
 			this.eventQueue.length = 0;
+			for (const event of reconstructed) {
+				this.emit(event.event_name as keyof GameEventsArguments, event as any);
+				this.emit('gameEvent', event.event_name as keyof _GameEventsArguments, event as any);
+			}
 
 			if (this._entityMode !== EntityMode.NONE) {
 				this._checkSyntheticRoundEvents();

@@ -15,6 +15,7 @@ import type { Decoder, PropInfo } from './entities/constructorFields.js';
 import { ParseSession, type ParseSessionOptions } from './entities/parseSession.js';
 import { applyPropUpdate } from './entities/entityParser.js';
 import { Player } from '../helpers/player.js';
+import { EquipmentTracker } from '../helpers/equipment.js';
 import { Team } from '../helpers/team.js';
 import { GameRules } from '../helpers/gameRules.js';
 import type { AnyEntity, EntityProperties, KnownClassName, ICCSPlayerController } from '../generated/entityTypes.js';
@@ -66,6 +67,8 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 	private _seekIndexLimits: SeekLimits = {};
 	private _seekFinal: Pick<SeekSession, 'fullPackets' | 'bytesRead' | 'memoryBytes'> | undefined;
 	private readonly _internalEvents = new TypedEventEmitter<any>();
+	/** @internal Tick-coalesced equipment state, exposed to consumers through Player.inventory. */
+	readonly _equipment: EquipmentTracker;
 	/** @internal Suppress application notifications while preserving decoder effects. */
 	_silent = false;
 
@@ -296,6 +299,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 		this.propIdToDecoder = {};
 		this.propIdToInfo = {};
 		this.gameEvents._restoreReplayState({ descriptors: {}, queue: [], startCount: undefined, endCount: undefined });
+		this._equipment.state = EquipmentTracker.emptyState();
 	}
 
 	entities: AnyEntity[];
@@ -558,6 +562,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 			this._listenerEpoch++;
 		});
 		this.entities = [];
+		this._equipment = new EquipmentTracker(this);
 		this.gameEvents.listen(this);
 
 		this._onInternal('tickstart', tick => {
@@ -656,7 +661,8 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 			tickInterval: this.tickInterval,
 			currentTick: this.currentTick,
 			players: this._playerInfoMap.slice(),
-			gameEvents: this.gameEvents._captureReplayState()
+			gameEvents: this.gameEvents._captureReplayState(),
+			equipment: structuredClone(this._equipment.state)
 		};
 	}
 
@@ -667,6 +673,7 @@ export abstract class BaseDemoReader extends TypedEventEmitter<ReaderEvents> {
 		this.currentTick = state.currentTick;
 		this._playerInfoMap = structuredClone(state.players);
 		this.gameEvents._restoreReplayState(state.gameEvents);
+		this._equipment.state = structuredClone(state.equipment);
 	}
 
 	propIdToName: Record<number, string> = {};

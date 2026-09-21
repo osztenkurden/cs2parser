@@ -72,21 +72,35 @@ reader.on('gameeventlist', () => {
 				content += `\tassisterPlayer?: Player | null;\n`;
 			}
 		}
+		if (
+			!descriptor.keys.some(key => key.name === 'userid') &&
+			descriptor.keys.some(key => key.name === 'userid_pawn')
+		)
+			content += '\tplayer?: Player | null;\n';
 
 		interfaceContent += `\t${descriptor.name}: [${eventNameToInterfaceName(descriptor.name)}];\n`;
-		listOfEvents += `export interface ${eventNameToInterfaceName(descriptor.name)} {\n${content.trimEnd()}\n}\n\n`;
+		const extension = ['item_pickup', 'item_remove', 'item_equip'].includes(descriptor.name)
+			? ' extends EquipmentEventData'
+			: descriptor.name === 'grenade_thrown'
+				? ' extends GrenadeEventData'
+				: '';
+		listOfEvents += `export interface ${eventNameToInterfaceName(descriptor.name)}${extension} {\n${content.trimEnd()}\n}\n\n`;
 	}
 });
 
 await reader.parseDemo(demoPath);
 
 const tsEventFile = `import type { Player } from '../../helpers/player.js';
+import type { EquipmentEventData, GrenadeEventData, InventorySnapshotEvent, GrenadeLifecycleEvent } from '../../helpers/equipment.js';
 import type { WinRoundReason } from '../../helpers/gameRules.js';
 
 ${listOfEvents};
 
 export interface _GameEventsArguments {
 ${interfaceContent}
+	inventory_snapshot: [InventorySnapshotEvent];
+	grenade_flight_end: [GrenadeLifecycleEvent];
+	grenade_deleted: [GrenadeLifecycleEvent];
 }
 
 export type EventWithName = {

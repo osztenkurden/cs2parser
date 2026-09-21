@@ -124,7 +124,7 @@ export interface OutputEvents extends OnDemandEvents, DemoFrameEvents {
 	serverinfo: CSVCMsg_ServerInfo;
 	cancel: never;
 	debug: string;
-	entitycreated: [entityId: number, classId: number, entityType: EntityTypeEnum, className: string];
+	entitycreated: [entityId: number, classId: number, entityType: EntityTypeEnum, className: string, serial?: number];
 	entityupdated: {
 		entityId: number;
 		value: any;

@@ -1,4 +1,10 @@
 import type { Player } from '../../helpers/player.js';
+import type {
+	EquipmentEventData,
+	GrenadeEventData,
+	InventorySnapshotEvent,
+	GrenadeLifecycleEvent
+} from '../../helpers/equipment.js';
 import type { WinRoundReason } from '../../helpers/gameRules.js';
 
 export interface IEventServerPreShutdown {
@@ -785,6 +791,7 @@ export interface IEventBombDropped {
 
 export interface IEventBombPickup {
 	userid_pawn: number;
+	player?: Player | null;
 }
 
 export interface IEventDefuserDropped {
@@ -895,7 +902,7 @@ export interface IEventWeaponFireOnEmpty {
 	weapon: string;
 }
 
-export interface IEventGrenadeThrown {
+export interface IEventGrenadeThrown extends GrenadeEventData {
 	userid: number;
 	player?: Player | null;
 	userid_pawn: number;
@@ -939,7 +946,7 @@ export interface IEventPlayerSpawned {
 	inrestart: boolean;
 }
 
-export interface IEventItemPickup {
+export interface IEventItemPickup extends EquipmentEventData {
 	userid: number;
 	player?: Player | null;
 	item: string;
@@ -962,7 +969,7 @@ export interface IEventItemPickupFailed {
 	limit: number;
 }
 
-export interface IEventItemRemove {
+export interface IEventItemRemove extends EquipmentEventData {
 	userid: number;
 	player?: Player | null;
 	item: string;
@@ -976,7 +983,7 @@ export interface IEventAmmoPickup {
 	index: number;
 }
 
-export interface IEventItemEquip {
+export interface IEventItemEquip extends EquipmentEventData {
 	userid: number;
 	player?: Player | null;
 	item: string;
@@ -1801,6 +1808,12 @@ export interface _GameEventsArguments {
 	team_intro_end: [IEventTeamIntroEnd];
 	game_phase_changed: [IEventGamePhaseChanged];
 	clientside_reload_custom_econ: [IEventClientsideReloadCustomEcon];
+}
+
+export interface _GameEventsArguments {
+	inventory_snapshot: [InventorySnapshotEvent];
+	grenade_flight_end: [GrenadeLifecycleEvent];
+	grenade_deleted: [GrenadeLifecycleEvent];
 }
 
 export type EventWithName = {

@@ -4,6 +4,14 @@ export type { MetadataInput } from './parser/metadata.js';
 export { decodeEncryptionKey, extractPublicEncryptionKey } from './encryption/replayKeys.js';
 export type { ParseOutcome, BroadcastOutcome, ParseEnd } from './parser/entities/types.js';
 export { Player } from './helpers/player.js';
+export type {
+	InventoryItem,
+	InventorySnapshot,
+	EquipmentEventData,
+	GrenadeEventData,
+	InventorySnapshotEvent,
+	GrenadeLifecycleEvent
+} from './helpers/equipment.js';
 export { PlayerPawn, type Vector } from './helpers/playerPawn.js';
 export { Team, TeamNumber } from './helpers/team.js';
 export { GameRules, WinRoundReason } from './helpers/gameRules.js';
