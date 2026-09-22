@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.0](https://github.com/osztenkurden/cs2parser/compare/v2.6.0...v2.7.0) (2026-09-22)
+
+
+### Features
+
+* optional decoding of everything ([#65](https://github.com/osztenkurden/cs2parser/issues/65)) ([40e9e71](https://github.com/osztenkurden/cs2parser/commit/40e9e71b35625391c3cac5953ce5270387210c3d))
+
 ## [2.6.0](https://github.com/osztenkurden/cs2parser/compare/v2.5.3...v2.6.0) (2026-09-21)
 
 
