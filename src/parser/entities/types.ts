@@ -12,6 +12,7 @@ import type { NetMessageName, NetMessagePayload } from '../descriptors/generated
 import type { OnDemandMessageName } from '../descriptors/svc.js';
 import type { createStringTable, updateStringTable } from '../stringtables.js';
 import type { EntityTypeEnum } from './entityParser.js';
+import type { KnownClassName } from '../../generated/entityTypes.js';
 
 /** Nonfailure outcomes of parsing a demo. Failures reject the parsing promise. */
 export type ParseOutcome = { status: 'complete' } | { status: 'incomplete' } | { status: 'cancelled' };
@@ -27,6 +28,21 @@ export const EntityMode = {
 } as const;
 
 export type EntityMode = (typeof EntityMode)[keyof typeof EntityMode];
+
+/**
+ * Which entity classes keep their properties under `EntityMode.ALL`.
+ *
+ * - `'gameplay'` (default) stores the players, teams, game rules, C4, weapons, grenades and
+ *   projectiles that the built-in helpers and synthetic events read. Map and world classes such as
+ *   `CEnvSky` or `CPostProcessingVolume` are left out.
+ * - `'all'` stores every class. Planned to become the default in v3.
+ * - An array or predicate stores the gameplay classes plus the classes it selects.
+ *
+ * Classes left out are still decoded, created and deleted, and appear in `parser.entities`,
+ * but their `properties` stay empty and they emit no `entityupdated` events.
+ */
+export type EntityClassFilter =
+	'all' | 'gameplay' | readonly (KnownClassName | (string & {}))[] | ((className: string) => boolean);
 
 /**
  * Every network message that can be listened to by name, mapped to its decoded

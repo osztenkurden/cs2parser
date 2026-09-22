@@ -55,28 +55,6 @@ const generateSerializableField = (
 	return f;
 };
 
-const verifySerializerName = (serializerName: string) => {
-	return (
-		serializerName.includes('Player') ||
-		serializerName.includes('Controller') ||
-		serializerName.includes('Team') ||
-		serializerName.includes('Weapon') ||
-		serializerName.includes('AK') ||
-		serializerName.includes('cell') ||
-		serializerName.includes('vec') ||
-		serializerName.includes('Projectile') ||
-		serializerName.includes('Knife') ||
-		serializerName.includes('CDEagle') ||
-		serializerName.includes('Rules') ||
-		serializerName.includes('C4') ||
-		serializerName.includes('Grenade') ||
-		serializerName.includes('Flash') ||
-		serializerName.includes('Molo') ||
-		serializerName.includes('Inc') ||
-		serializerName.includes('Infer')
-	);
-};
-
 /**
  * Bits used to encode a server-class id on entity creation.
  *
@@ -151,16 +129,14 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 			name: serializerName,
 			fields: fieldsForThisSerializer
 		};
-		if (verifySerializerName(serializerName)) {
-			constructorFieldHelper.traverseFields(
-				fieldsForThisSerializer,
-				serializerName,
-				propIdToName,
-				currentEntityId,
-				propIdToDecoder,
-				propIdToInfo
-			);
-		}
+		constructorFieldHelper.traverseFields(
+			fieldsForThisSerializer,
+			serializerName,
+			propIdToName,
+			currentEntityId,
+			propIdToDecoder,
+			propIdToInfo
+		);
 
 		map[serializerName] = serializerValue;
 	}

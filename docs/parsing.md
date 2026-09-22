@@ -76,6 +76,28 @@ File paths always read on demand; the accepted `stream` option does not select a
 separate parsing mode. File paths, bytes, Blobs and `DemoByteSource` inputs support
 [pause, seek and resume](seeking.md). Streams and broadcasts remain sequential.
 
+### Entity Classes
+
+With `EntityMode.ALL`, the `entityClasses` option picks which entity classes keep their properties. Every class is still decoded, created and deleted, and appears in `parser.entities`; excluded classes just keep an empty `properties` object.
+
+| Value                    | Stored classes                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `'gameplay'` (default)   | Players, pawns, teams, game rules, C4, weapons, grenades and projectiles          |
+| `'all'`                  | Every class, including map and world entities such as `CEnvSky` or `CGradientFog` |
+| `string[]`               | The gameplay classes plus the listed classes                                      |
+| `(className) => boolean` | The gameplay classes plus every class the predicate accepts                       |
+
+```ts
+// Read post-processing, sky and fog settings alongside the usual gameplay state.
+await parser.parseDemo('demo.dem', {
+	entities: EntityMode.ALL,
+	entityClasses: ['CPostProcessingVolume', 'CEnvSky', 'CGradientFog']
+});
+const [volume] = parser.findEntities('CPostProcessingVolume');
+```
+
+Gameplay classes are always stored, so a filter cannot break player, team, round or smoke helpers. `'all'` parses roughly 15-20% slower than the default on a full match. A listed name that does not exist in the demo emits one `debug` message. `'all'` is planned to become the default in v3.
+
 ### Parse Settings
 
 Network messages are decoded when something is listening for them, so most of the
