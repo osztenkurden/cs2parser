@@ -623,5 +623,52 @@
 			"tick": 185922,
 			"entitiesSha256": "af64e49b1be70471cd99c0b3454307b251df99afdd41beffec61a81aa3562896"
 		}
+	},
+	"observerPawnLeakCorrection": {
+		"reason": "Stop storing CCSPlayer_PingServices.m_hPlayerPing on CCSObserverPawn. The old serializer-name allowlist traversed the nested ping-services serializer on its own, so observer pawns kept that one unprefixed key although their class was never traversed. Audited by taking the prior parser output at every checkpoint and the final state, removing only that key from CCSObserverPawn entities (100 removals), and confirming the result is byte-identical to the current canonical output.",
+		"sourceCommit": "c337948ef9070afdf89d8db0b15fbffd2b1b2258",
+		"mode": "ALL",
+		"snapshots": [
+			{
+				"tick": 1,
+				"entitiesSha256": "654ee4ce65652464fe4b3fcf0ff45a782a25ae6d16299882e77afc93899e8bdb"
+			},
+			{
+				"tick": 1024,
+				"entitiesSha256": "987b93357188964f32bc4daa5187450ca12a7f57426b2b924ee2e0eecebf48b4"
+			},
+			{
+				"tick": 16384,
+				"entitiesSha256": "6a591a8cfbf077b3bed89822fd91e3830d19159df6d7a4add185300a69070977"
+			},
+			{
+				"tick": 32768,
+				"entitiesSha256": "d8a84a60d5f847ea462e2245764ca38ca916252fecd9414a6168a831bcc74171"
+			},
+			{
+				"tick": 65536,
+				"entitiesSha256": "8c2451a9e757daa9d4ecbc04fb400a4ff6fa8c30aa96eb598bf9783899b726f9"
+			},
+			{
+				"tick": 98304,
+				"entitiesSha256": "64b5c80928d4ff96a3a173bb04d3343cdacae1c46a347a488895fbe200a9ff01"
+			},
+			{
+				"tick": 131072,
+				"entitiesSha256": "a7a2b83870cf2b91416d1d0aa46f8d75bdc073da94d6de013231463e0e7d87cf"
+			},
+			{
+				"tick": 163840,
+				"entitiesSha256": "438984c7fbd0173bd39d3c067c3b224144c86441583ab5630fff4651511adc51"
+			},
+			{
+				"tick": 180000,
+				"entitiesSha256": "1706b5892313ae12fcf14b7f370a32fcd54c4beb71813178266a0f688e8a8c46"
+			}
+		],
+		"final": {
+			"tick": 185922,
+			"entitiesSha256": "b7c7828416ba5b958f899c6286933ffc33185130864a912a78814339c0b26bdb"
+		}
 	}
 }

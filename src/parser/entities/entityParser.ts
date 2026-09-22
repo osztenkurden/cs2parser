@@ -15,7 +15,7 @@ import { generateEnum, type GetEnumType } from './brandedEnum.js';
 import type { FieldPath } from './fieldPathOps.js';
 import { parsePaths } from './fieldPaths.js';
 import { EntityWasm } from './entityWasm.js';
-import { type emit } from './types.js';
+import { type EntityClassFilter, type emit } from './types.js';
 
 const NSERIALBITS = 17;
 
@@ -114,6 +114,25 @@ const planField = (field: Field, depth: number, indexDepth: number, propInfo: (P
 			plan.meta?.name ?? ''
 		);
 	return plan;
+};
+
+// Classes that store properties under the default `'gameplay'` filter: the players, teams, game
+// rules, C4, weapons, grenades and projectiles that helpers and synthetic events read. This is
+// the v2 name rule kept as-is so the default does not change within v2.
+const GAMEPLAY_NAME =
+	/Player|Controller|Team|Weapon|AK|cell|vec|Projectile|Knife|CDEagle|Rules|C4|Grenade|Flash|Molo|Inc|Infer/;
+
+export const isGameplayClass = (name: string) => GAMEPLAY_NAME.test(name);
+
+// Decode-only plan: values are still read to keep the bitstream in sync, but never stored.
+const stripPlan = (plan: FieldPlan | null) => {
+	if (plan === null) return;
+	plan.meta = undefined;
+	plan.propId = -1;
+	plan.isResize = false;
+	plan.lifecycle = false;
+	stripPlan(plan.element);
+	plan.children?.forEach(stripPlan);
 };
 
 const GROWTH_FALLBACK = 32;
@@ -226,6 +245,12 @@ export class EntityParser {
 	/** Property metadata indexed by prop id for direct entity updates. */
 	public directPropInfoById: (PropInfo | undefined)[] | null = null;
 	public onlyGameRules = false;
+	/**
+	 * Which classes store properties. Set before the first entity packet. The raw parser stores
+	 * everything; ParseSession applies the public `'gameplay'` default.
+	 */
+	public classFilter: EntityClassFilter = 'all';
+	private classNames: ReadonlySet<string> | null = null;
 	/** Width of the class-id field on entity creation. See `classIdBitWidth` in classInfo.ts. */
 	private readonly classIdBits: number;
 	constructor(
@@ -349,12 +374,21 @@ export class EntityParser {
 		this.arrayIndices[idx] = plan.indexDepth === -1 ? -1 : fp_src.path[plan.indexDepth]!;
 	}
 
+	private storesClass(name: string) {
+		const filter = this.classFilter;
+		if (filter === 'all' || isGameplayClass(name)) return true;
+		if (filter === 'gameplay') return false;
+		if (typeof filter === 'function') return filter(name);
+		return (this.classNames ??= new Set(filter)).has(name);
+	}
+
 	private getPlans(serializer: SerializerN) {
 		let roots = this.plans.get(serializer);
 		if (!roots) {
 			roots = serializer.fields.map(field =>
 				field ? planField(field, 0, -1, this.classInfo.propInfoById) : null
 			);
+			if (!this.storesClass(serializer.name)) roots.forEach(stripPlan);
 			this.plans.set(serializer, roots);
 		}
 		return roots;

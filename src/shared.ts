@@ -1,4 +1,5 @@
 export { EntityMode } from './parser/entities/types.js';
+export type { EntityClassFilter } from './parser/entities/types.js';
 export type { DemoInput, ParseOptions } from './parser/base.js';
 export type { MetadataInput } from './parser/metadata.js';
 export { decodeEncryptionKey, extractPublicEncryptionKey } from './encryption/replayKeys.js';

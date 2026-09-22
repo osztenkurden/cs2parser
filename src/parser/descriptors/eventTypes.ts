@@ -315,17 +315,20 @@ export interface IEventBreakBreakable {
 	entindex: number;
 	userid_pawn: number;
 	material: number;
+	player?: Player | null;
 }
 
 export interface IEventBrokenBreakable {
 	entindex: number;
 	userid_pawn: number;
 	material: number;
+	player?: Player | null;
 }
 
 export interface IEventBreakProp {
 	entindex: number;
 	userid_pawn: number;
+	player?: Player | null;
 }
 
 export interface IEventEntityKilled {
@@ -338,6 +341,7 @@ export interface IEventEntityKilled {
 export interface IEventDoorClose {
 	userid_pawn: number;
 	checkpoint: boolean;
+	player?: Player | null;
 }
 
 export interface IEventVoteStarted {
@@ -593,6 +597,7 @@ export interface IEventSurvivalAnnouncePhase {
 
 export interface IEventPlayerDecal {
 	userid_pawn: number;
+	player?: Player | null;
 }
 
 export interface IEventReadGameTitledata {
@@ -662,11 +667,13 @@ export interface IEventAddPlayerSonarIcon {
 export interface IEventDoorOpen {
 	userid_pawn: number;
 	entindex: number;
+	player?: Player | null;
 }
 
 export interface IEventDoorClosed {
 	userid_pawn: number;
 	entindex: number;
+	player?: Player | null;
 }
 
 export interface IEventDoorBreak {
@@ -1126,6 +1133,7 @@ export interface IEventDecoyStarted {
 	x: number;
 	y: number;
 	z: number;
+	player?: Player | null;
 }
 
 export interface IEventTagrenadeDetonate {
@@ -1808,6 +1816,10 @@ export interface _GameEventsArguments {
 	team_intro_end: [IEventTeamIntroEnd];
 	game_phase_changed: [IEventGamePhaseChanged];
 	clientside_reload_custom_econ: [IEventClientsideReloadCustomEcon];
+
+	inventory_snapshot: [InventorySnapshotEvent];
+	grenade_flight_end: [GrenadeLifecycleEvent];
+	grenade_deleted: [GrenadeLifecycleEvent];
 }
 
 export interface _GameEventsArguments {

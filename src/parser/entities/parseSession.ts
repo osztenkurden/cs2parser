@@ -25,7 +25,14 @@ import {
 	updateStringTable,
 	type StringTableObject
 } from '../stringtables.js';
-import { EntityMode, type EmitQueue, type EventQueue, type OnDemandEvents, type emit } from './types.js';
+import {
+	EntityMode,
+	type EntityClassFilter,
+	type EmitQueue,
+	type EventQueue,
+	type OnDemandEvents,
+	type emit
+} from './types.js';
 import { parseClassInfo, type ClassInfo } from './classInfo.js';
 import { UnusableCheckpointError, type DecoderCheckpoint } from '../replayState.js';
 import { EntityParser } from './entityParser.js';
@@ -48,6 +55,8 @@ export type ParseSettings = {
 export type ParseSessionOptions = ParseSettings & {
 	/** Public GOTV key: 16 bytes from extractPublicEncryptionKey(.dem.info bytes). Decrypts key_type 2 only. */
 	decryptionKey?: Uint8Array;
+	/** Which entity classes keep their properties under `EntityMode.ALL`. Defaults to `'gameplay'`. See {@link EntityClassFilter}. */
+	entityClasses?: EntityClassFilter;
 };
 
 /**
@@ -105,7 +114,7 @@ export class ParseSession {
 	private readonly parser: DemoReader;
 	private readonly emitMainQueue: EmitQueue;
 
-	private readonly settings: ParseSettings | undefined;
+	private readonly settings: ParseSessionOptions | undefined;
 	private readonly decryptionKey: Uint8Array | undefined;
 	private encryptedDecoder: EncryptedMessageDecoder | undefined;
 	private decryptMessages = false;
@@ -177,6 +186,7 @@ export class ParseSession {
 			this.classInfo = restored.classInfo;
 			this.entityParser = new EntityParser(restored.classInfo, this.enqueueEvent);
 			this.entityParser.onlyGameRules = entityMode === EntityMode.ONLY_GAME_RULES;
+			this.entityParser.classFilter = settings?.entityClasses ?? 'gameplay';
 			this.entityParser.directEntities = parser.entities;
 			this.entityParser.onLifecycleUpdate = id => parser._equipment.changed(id);
 			this.entityParser.directPropInfoById = restored.classInfo.propInfoById;
@@ -193,6 +203,16 @@ export class ParseSession {
 		}
 	}
 
+	private configureClassFilter(classInfo: ClassInfo) {
+		const filter = this.settings?.entityClasses ?? 'gameplay';
+		this.entityParser!.classFilter = filter;
+		if (!Array.isArray(filter)) return;
+		const known = new Set(classInfo.classes.map(cls => cls?.name));
+		const unknown = filter.filter(name => !known.has(name));
+		if (unknown.length > 0)
+			this.enqueueEvent('debug', `entityClasses: no such class in this demo: ${unknown.join(', ')}`);
+	}
+
 	/** Validate before reserving a parser or opening its input. */
 	static validateOptions(entityMode: EntityMode, settings?: ParseSessionOptions): void {
 		if (settings === null || (settings !== undefined && typeof settings !== 'object')) {
@@ -204,6 +224,16 @@ export class ParseSession {
 			entityMode !== EntityMode.ONLY_GAME_RULES
 		) {
 			throw new RangeError('Invalid entity mode');
+		}
+		const classes = settings?.entityClasses;
+		if (
+			classes !== undefined &&
+			classes !== 'all' &&
+			classes !== 'gameplay' &&
+			typeof classes !== 'function' &&
+			!(Array.isArray(classes) && classes.every(name => typeof name === 'string'))
+		) {
+			throw new TypeError('entityClasses must be "all", "gameplay", an array of class names, or a predicate');
 		}
 		const key = settings?.decryptionKey;
 		if (key !== undefined && (!(key instanceof Uint8Array) || key.length !== 16)) {
@@ -739,6 +769,7 @@ export class ParseSession {
 				this.sendTables = null;
 				this.entityParser = new EntityParser(classInfo, this.enqueueEvent);
 				this.entityParser.onlyGameRules = this.entityMode === EntityMode.ONLY_GAME_RULES;
+				this.configureClassFilter(classInfo);
 				if (this.parser) {
 					this.parser.propIdToName = classInfo.propIdToName;
 					this.parser.propIdToDecoder = classInfo.propIdToDecoder;

@@ -204,6 +204,12 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			correction.entitiesSha256;
 	}
 	expectedRelease.ALL.final.entities.sha256 = golden.serializerVectorCorrections.final.entitiesSha256;
+	// The observer-pawn leak fix removes one unprefixed key; audited as the only entity difference.
+	for (const correction of golden.observerPawnLeakCorrection.snapshots) {
+		expectedRelease.ALL.checkpoints.find(state => state.tick === correction.tick)!.entities.sha256 =
+			correction.entitiesSha256;
+	}
+	expectedRelease.ALL.final.entities.sha256 = golden.observerPawnLeakCorrection.final.entitiesSha256;
 
 	beforeAll(async () => {
 		bytes = readFileSync(demoPath);

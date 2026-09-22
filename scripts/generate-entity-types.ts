@@ -185,6 +185,148 @@ function loadSnapshot(): SnapshotData {
 	return JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf-8')) as SnapshotData;
 }
 
+type FieldMap = Record<string, string>;
+type OwnNode = { name: string; classes: string[]; fields: FieldMap };
+
+/** Nested groups smaller than this stay inline; a shared interface would not pay for itself. */
+const MIN_SHARED_SHAPE = 3;
+
+const sortFields = (fields: FieldMap): FieldMap =>
+	Object.fromEntries(Object.entries(fields).sort((a, b) => a[0].localeCompare(b[0])));
+
+/** Split `prefix.rest` keys by their first segment. Keys without a dot are left out. */
+function splitByPrefix(fields: FieldMap): Map<string, FieldMap> {
+	const byPrefix = new Map<string, FieldMap>();
+	for (const [key, tsType] of Object.entries(fields)) {
+		const dot = key.indexOf('.');
+		if (dot <= 0) continue;
+		const prefix = key.slice(0, dot);
+		let sub = byPrefix.get(prefix);
+		if (!sub) byPrefix.set(prefix, (sub = {}));
+		sub[key.slice(dot + 1)] = tsType;
+	}
+	return byPrefix;
+}
+
+/**
+ * Emit the own-field interfaces and return className → interface name.
+ *
+ * Three automatic passes keep the output small as classes are added:
+ * 1. Classes with identical own-field sets share one interface.
+ * 2. Each set extends its parent: the largest other set it strictly contains, same keys and
+ *    types. On CS2 data this recovers the class hierarchy, e.g. CEnvSky < CBaseModelEntity <
+ *    CBaseEntity. Parents are structural, so a parent's name can differ from the C++ base class
+ *    when that base adds no fields of its own.
+ * 3. Nested groups such as `m_Collision.*` whose exact shape repeats become one interface,
+ *    mounted with `Prefixed<"m_Collision", ...>`.
+ *
+ * Every class still gets exactly the same set of keys and types; only the declarations move.
+ */
+function emitOwnInterfaces(
+	sortedEntities: [string, { ownFields: FieldMap }][],
+	lines: string[]
+): Map<string, string> {
+	// 1. Identical sets share a node, named after the first class in sorted order.
+	const groups = new Map<string, OwnNode>();
+	for (const [className, { ownFields }] of sortedEntities) {
+		if (Object.keys(ownFields).length === 0) continue;
+		const hash = JSON.stringify(sortFields(ownFields));
+		const group = groups.get(hash);
+		if (group) group.classes.push(className);
+		else groups.set(hash, { name: `_${className}Own`, classes: [className], fields: ownFields });
+	}
+	const nodes = [...groups.values()];
+
+	// 2. Parent inference. Strictly smaller sets only, so there are no cycles. Ties keep the
+	// first candidate in sorted order, which makes the output deterministic.
+	const contains = (outer: FieldMap, inner: FieldMap) =>
+		Object.entries(inner).every(([key, tsType]) => Object.hasOwn(outer, key) && outer[key] === tsType);
+	const parentOf = new Map<OwnNode, OwnNode>();
+	for (const node of nodes) {
+		const size = Object.keys(node.fields).length;
+		let best: OwnNode | undefined;
+		let bestSize = 0;
+		for (const other of nodes) {
+			const otherSize = Object.keys(other.fields).length;
+			if (other === node || otherSize >= size || otherSize <= bestSize) continue;
+			if (contains(node.fields, other.fields)) {
+				best = other;
+				bestSize = otherSize;
+			}
+		}
+		if (best) parentOf.set(node, best);
+	}
+	const residualOf = new Map<OwnNode, FieldMap>();
+	for (const node of nodes) {
+		const parent = parentOf.get(node);
+		residualOf.set(
+			node,
+			Object.fromEntries(Object.entries(node.fields).filter(([key]) => !parent || !Object.hasOwn(parent.fields, key)))
+		);
+	}
+
+	// 3. Shared nested shapes, counted across every node's residual fields.
+	const shapes = new Map<string, { fields: FieldMap; prefixUses: Map<string, number>; uses: number }>();
+	for (const node of nodes) {
+		for (const [prefix, sub] of splitByPrefix(residualOf.get(node)!)) {
+			if (Object.keys(sub).length < MIN_SHARED_SHAPE) continue;
+			const key = JSON.stringify(sortFields(sub));
+			let shape = shapes.get(key);
+			if (!shape) shapes.set(key, (shape = { fields: sortFields(sub), prefixUses: new Map(), uses: 0 }));
+			shape.uses++;
+			shape.prefixUses.set(prefix, (shape.prefixUses.get(prefix) ?? 0) + 1);
+		}
+	}
+	const shapeName = new Map<string, string>();
+	const takenNames = new Set<string>();
+	for (const [key, shape] of shapes) {
+		if (shape.uses < 2) continue;
+		// Name after the most used prefix, alphabetical on ties: m_Collision → _CollisionFields.
+		const [prefix] = [...shape.prefixUses].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]!;
+		const stem = prefix.replace(/^m_/, '');
+		let name = `_${stem.charAt(0).toUpperCase()}${stem.slice(1)}Fields`;
+		for (let i = 2; takenNames.has(name); i++) name = `_${stem.charAt(0).toUpperCase()}${stem.slice(1)}Fields${i}`;
+		takenNames.add(name);
+		shapeName.set(key, name);
+		lines.push(`interface ${name} {`);
+		for (const [field, tsType] of Object.entries(shape.fields)) lines.push(`\treadonly "${field}"?: ${tsType};`);
+		lines.push('}');
+		lines.push('');
+	}
+
+	const classToOwnInterface = new Map<string, string>();
+	for (const node of nodes) {
+		for (const className of node.classes) classToOwnInterface.set(className, node.name);
+		const residual = residualOf.get(node)!;
+		const bases: string[] = [];
+		const parent = parentOf.get(node);
+		if (parent) bases.push(parent.name);
+		const mounted = new Set<string>();
+		for (const [prefix, sub] of splitByPrefix(residual)) {
+			const name = shapeName.get(JSON.stringify(sortFields(sub)));
+			if (name === undefined) continue;
+			bases.push(`Prefixed<"${prefix}", ${name}>`);
+			mounted.add(prefix);
+		}
+		const inline = Object.entries(residual)
+			.filter(([key]) => {
+				const dot = key.indexOf('.');
+				return dot <= 0 || !mounted.has(key.slice(0, dot));
+			})
+			.sort((a, b) => a[0].localeCompare(b[0]));
+		const heritage = bases.length > 0 ? ` extends ${bases.join(', ')}` : '';
+		if (inline.length === 0) {
+			lines.push(`interface ${node.name}${heritage} {}`);
+		} else {
+			lines.push(`interface ${node.name}${heritage} {`);
+			for (const [field, tsType] of inline) lines.push(`\treadonly "${field}"?: ${tsType};`);
+			lines.push('}');
+		}
+		lines.push('');
+	}
+	return classToOwnInterface;
+}
+
 function generateTypeScript(data: SnapshotData, demoName: string): string {
 	const lines: string[] = [];
 	lines.push('// AUTO-GENERATED - DO NOT EDIT');
@@ -217,51 +359,8 @@ function generateTypeScript(data: SnapshotData, demoName: string): string {
 	// Sort entities
 	const sortedEntities = Object.entries(data.entities).sort((a, b) => a[0].localeCompare(b[0]));
 
-	// Group entities with identical own-field sets to share interfaces
-	const ownFieldGroups = new Map<string, string[]>(); // hash → [classNames]
-	for (const [className, entityData] of sortedEntities) {
-		const hash = JSON.stringify(entityData.ownFields);
-		if (!ownFieldGroups.has(hash)) ownFieldGroups.set(hash, []);
-		ownFieldGroups.get(hash)!.push(className);
-	}
-
-	// For groups with >1 entity, use the first entity's name as the shared interface name
-	const classToOwnInterface = new Map<string, string>(); // className → interface name
-	const emittedOwnInterfaces = new Set<string>();
-
-	for (const [hash, classNames] of ownFieldGroups) {
-		const ownFields = JSON.parse(hash) as Record<string, string>;
-		if (Object.keys(ownFields).length === 0) continue;
-
-		if (classNames.length > 1) {
-			// Shared own-field interface — name it after first class in group
-			const sharedName = `_${classNames[0]}Own`;
-			for (const cn of classNames) {
-				classToOwnInterface.set(cn, sharedName);
-			}
-			if (!emittedOwnInterfaces.has(sharedName)) {
-				lines.push(`interface ${sharedName} {`);
-				const sortedOwn = Object.entries(ownFields).sort((a, b) => a[0].localeCompare(b[0]));
-				for (const [fieldName, tsType] of sortedOwn) {
-					lines.push(`\treadonly "${fieldName}"?: ${tsType};`);
-				}
-				lines.push('}');
-				lines.push('');
-				emittedOwnInterfaces.add(sharedName);
-			}
-		} else {
-			const cn = classNames[0]!;
-			const ifaceName = `_${cn}Own`;
-			classToOwnInterface.set(cn, ifaceName);
-			lines.push(`interface ${ifaceName} {`);
-			const sortedOwn = Object.entries(ownFields).sort((a, b) => a[0].localeCompare(b[0]));
-			for (const [fieldName, tsType] of sortedOwn) {
-				lines.push(`\treadonly "${fieldName}"?: ${tsType};`);
-			}
-			lines.push('}');
-			lines.push('');
-		}
-	}
+	// Own-field interfaces: shared sets, inferred parents and shared nested shapes.
+	const classToOwnInterface = emitOwnInterfaces(sortedEntities, lines);
 
 	// Entity type aliases — use nested Prefixed for serializers
 	for (const [className, entityData] of sortedEntities) {
