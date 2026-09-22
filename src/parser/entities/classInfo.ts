@@ -103,6 +103,11 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 
 	const currentEntityId = { id: 1000 };
 
+	// Only class roots get property metadata. Nested component and element serializers are
+	// reached through their owning class, so traversing them on their own only adds
+	// unreachable, unprefixed prop names.
+	const classNames = new Set(cDemoClassInfo.classes.map(cls => cls.network_name));
+
 	for (const serializer of serializerMessage.serializers) {
 		const serializerName = serializerMessage.symbols[serializer.serializer_name_sym!]!;
 
@@ -129,14 +134,16 @@ export const parseClassInfo = (sendTables: CDemoSendTables, cDemoClassInfo: CDem
 			name: serializerName,
 			fields: fieldsForThisSerializer
 		};
-		constructorFieldHelper.traverseFields(
-			fieldsForThisSerializer,
-			serializerName,
-			propIdToName,
-			currentEntityId,
-			propIdToDecoder,
-			propIdToInfo
-		);
+		if (classNames.has(serializerName)) {
+			constructorFieldHelper.traverseFields(
+				fieldsForThisSerializer,
+				serializerName,
+				propIdToName,
+				currentEntityId,
+				propIdToDecoder,
+				propIdToInfo
+			);
+		}
 
 		map[serializerName] = serializerValue;
 	}

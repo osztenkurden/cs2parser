@@ -245,8 +245,11 @@ export class EntityParser {
 	/** Property metadata indexed by prop id for direct entity updates. */
 	public directPropInfoById: (PropInfo | undefined)[] | null = null;
 	public onlyGameRules = false;
-	/** Which classes store properties. Set before the first entity packet. */
-	public classFilter: EntityClassFilter = 'gameplay';
+	/**
+	 * Which classes store properties. Set before the first entity packet. The raw parser stores
+	 * everything; ParseSession applies the public `'gameplay'` default.
+	 */
+	public classFilter: EntityClassFilter = 'all';
 	private classNames: ReadonlySet<string> | null = null;
 	/** Width of the class-id field on entity creation. See `classIdBitWidth` in classInfo.ts. */
 	private readonly classIdBits: number;

@@ -456,90 +456,6 @@
     }
   },
   "entities": {
-    "CEconItemAttribute": {
-      "serializers": [],
-      "ownFields": {
-        "m_bSetBonus": "boolean",
-        "m_flInitialValue": "number",
-        "m_iAttributeDefinitionIndex": "number",
-        "m_iRawValue32": "number",
-        "m_nRefundableCurrency": "number"
-      }
-    },
-    "CEntityIdentity": {
-      "serializers": [],
-      "ownFields": {
-        "m_nameStringTableIndex": "number"
-      }
-    },
-    "AnimGraph2SerializedPoseRecipeSlot_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_topology": "Uint8Array"
-      }
-    },
-    "CBodyComponentBaseAnimGraph": {
-      "serializers": [],
-      "ownFields": {
-        "m_animationController.m_flPlaybackRate": "number",
-        "m_animationController.m_flSeqFixedCycle": "number",
-        "m_animationController.m_flSeqStartTime": "number",
-        "m_animationController.m_hGraphDefinitionAG2": "bigint",
-        "m_animationController.m_hSequence": "bigint",
-        "m_animationController.m_nAnimationAlgorithm": "number",
-        "m_animationController.m_nAnimLoopMode": "number",
-        "m_animationController.m_nSecondarySkeletonMasterCount": "number",
-        "m_animationController.m_nSerializePoseRecipeAG2ActiveSlot": "number",
-        "m_animationController.m_nSerializePoseRecipeVersionAG2": "number",
-        "m_animationController.m_nServerGraphInstanceIteration": "number",
-        "m_animationController.m_nServerSerializationContextIteration": "number",
-        "m_animationController.m_primaryGraphId": "bigint",
-        "m_animationController.m_SerializePoseRecipeAG2Dynamic": "Uint8Array",
-        "m_animationController.m_SerializePoseRecipeAG2Slots": "ReadonlyArray<{ readonly \"m_topology\"?: Uint8Array }>",
-        "m_animationController.m_vecExternalClipIds": "BigUint64Array",
-        "m_animationController.m_vecExternalGraphIds": "BigUint64Array",
-        "m_animationController.m_vecSecondarySkeletons": "number[]",
-        "m_animationController.m_vecSecondarySkeletonSlotIDs": "string[]",
-        "m_skeletonInstance.m_angRotation": "[number, number, number]",
-        "m_skeletonInstance.m_bUseParentRenderBounds": "boolean",
-        "m_skeletonInstance.m_flScale": "number",
-        "m_skeletonInstance.m_hierarchyAttachName": "number",
-        "m_skeletonInstance.m_hParent": "number",
-        "m_skeletonInstance.m_materialGroup": "number",
-        "m_skeletonInstance.m_modelState.m_bClientClothCreationSuppressed": "boolean",
-        "m_skeletonInstance.m_modelState.m_flRootBoneOffset_x": "number",
-        "m_skeletonInstance.m_modelState.m_flRootBoneOffset_y": "number",
-        "m_skeletonInstance.m_modelState.m_flRootBoneOffset_z": "number",
-        "m_skeletonInstance.m_modelState.m_hModel": "bigint",
-        "m_skeletonInstance.m_modelState.m_MeshGroupMask": "bigint",
-        "m_skeletonInstance.m_modelState.m_nAnimStateNoInterpSerialNumber": "number",
-        "m_skeletonInstance.m_modelState.m_nBodyGroupChoices": "Int32Array",
-        "m_skeletonInstance.m_modelState.m_nIdealMotionType": "number",
-        "m_skeletonInstance.m_modelState.m_nRootBoneOffsetResetSerialNumber": "number",
-        "m_skeletonInstance.m_name": "number",
-        "m_skeletonInstance.m_nHitboxSet": "number",
-        "m_skeletonInstance.m_vecOrigin.m_cellX": "number",
-        "m_skeletonInstance.m_vecOrigin.m_cellY": "number",
-        "m_skeletonInstance.m_vecOrigin.m_cellZ": "number",
-        "m_skeletonInstance.m_vecOrigin.m_nOutsideWorld": "number",
-        "m_skeletonInstance.m_vecOrigin.m_vecX": "number",
-        "m_skeletonInstance.m_vecOrigin.m_vecY": "number",
-        "m_skeletonInstance.m_vecOrigin.m_vecZ": "number"
-      }
-    },
-    "CDestructiblePartsComponent": {
-      "serializers": [],
-      "ownFields": {
-        "m_hOwner": "number"
-      }
-    },
-    "EntityRenderAttribute_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_ID": "number",
-        "m_Values": "[number, number, number]"
-      }
-    },
     "CAK47": {
       "serializers": [
         "CBodyComponentBaseAnimGraph",
@@ -683,36 +599,6 @@
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>",
         "m_weaponMode": "bigint",
         "m_zoomLevel": "number"
-      }
-    },
-    "CBodyComponentBaseModelEntity": {
-      "serializers": [],
-      "ownFields": {
-        "m_skeletonInstance.m_angRotation": "[number, number, number]",
-        "m_skeletonInstance.m_bUseParentRenderBounds": "boolean",
-        "m_skeletonInstance.m_flScale": "number",
-        "m_skeletonInstance.m_hierarchyAttachName": "number",
-        "m_skeletonInstance.m_hParent": "number",
-        "m_skeletonInstance.m_materialGroup": "number",
-        "m_skeletonInstance.m_modelState.m_bClientClothCreationSuppressed": "boolean",
-        "m_skeletonInstance.m_modelState.m_flRootBoneOffset_x": "number",
-        "m_skeletonInstance.m_modelState.m_flRootBoneOffset_y": "number",
-        "m_skeletonInstance.m_modelState.m_flRootBoneOffset_z": "number",
-        "m_skeletonInstance.m_modelState.m_hModel": "bigint",
-        "m_skeletonInstance.m_modelState.m_MeshGroupMask": "bigint",
-        "m_skeletonInstance.m_modelState.m_nAnimStateNoInterpSerialNumber": "number",
-        "m_skeletonInstance.m_modelState.m_nBodyGroupChoices": "Int32Array",
-        "m_skeletonInstance.m_modelState.m_nIdealMotionType": "number",
-        "m_skeletonInstance.m_modelState.m_nRootBoneOffsetResetSerialNumber": "number",
-        "m_skeletonInstance.m_name": "number",
-        "m_skeletonInstance.m_nHitboxSet": "number",
-        "m_skeletonInstance.m_vecOrigin.m_cellX": "number",
-        "m_skeletonInstance.m_vecOrigin.m_cellY": "number",
-        "m_skeletonInstance.m_vecOrigin.m_cellZ": "number",
-        "m_skeletonInstance.m_vecOrigin.m_nOutsideWorld": "number",
-        "m_skeletonInstance.m_vecOrigin.m_vecX": "number",
-        "m_skeletonInstance.m_vecOrigin.m_vecY": "number",
-        "m_skeletonInstance.m_vecOrigin.m_vecZ": "number"
       }
     },
     "CBarnLight": {
@@ -1274,23 +1160,6 @@
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>"
       }
     },
-    "CBodyComponentPoint": {
-      "serializers": [],
-      "ownFields": {
-        "m_sceneNode.m_angRotation": "[number, number, number]",
-        "m_sceneNode.m_flScale": "number",
-        "m_sceneNode.m_hierarchyAttachName": "number",
-        "m_sceneNode.m_hParent": "number",
-        "m_sceneNode.m_name": "number",
-        "m_sceneNode.m_vecOrigin.m_cellX": "number",
-        "m_sceneNode.m_vecOrigin.m_cellY": "number",
-        "m_sceneNode.m_vecOrigin.m_cellZ": "number",
-        "m_sceneNode.m_vecOrigin.m_nOutsideWorld": "number",
-        "m_sceneNode.m_vecOrigin.m_vecX": "number",
-        "m_sceneNode.m_vecOrigin.m_vecY": "number",
-        "m_sceneNode.m_vecOrigin.m_vecZ": "number"
-      }
-    },
     "CBaseEntity": {
       "serializers": [
         "CBodyComponentPoint",
@@ -1506,32 +1375,6 @@
         "m_vecVelocity.m_vecX": "number",
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number"
-      }
-    },
-    "CPlayer_CameraServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_audio.localBits": "number",
-        "m_audio.localSound": "[number, number, number][]",
-        "m_audio.soundEventHash": "number",
-        "m_audio.soundscapeEntityListIndex": "number",
-        "m_audio.soundscapeIndex": "number",
-        "m_flCsViewPunchAngleTickRatio": "number",
-        "m_hColorCorrectionCtrl": "number",
-        "m_hTonemapController": "number",
-        "m_hViewEntity": "number",
-        "m_nCsViewPunchAngleTick": "number",
-        "m_PlayerFog.m_hCtrl": "number",
-        "m_PostProcessingVolumes": "number[]",
-        "m_vecCsViewPunchAngle": "[number, number, number]"
-      }
-    },
-    "ViewAngleServerChange_t": {
-      "serializers": [],
-      "ownFields": {
-        "nIndex": "number",
-        "nType": "number",
-        "qAngle": "[number, number, number]"
       }
     },
     "CBasePlayerPawn": {
@@ -2636,31 +2479,6 @@
         "m_Weight": "number"
       }
     },
-    "HUDPanelHasClass_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_eClassStatus": "number",
-        "m_nClassNameIndex": "number",
-        "m_nPanelIdIndex": "number"
-      }
-    },
-    "HUDPanelDialogVariableString_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_bIsSet": "boolean",
-        "m_nDialogVariableIndex": "number",
-        "m_nPanelIdIndex": "number",
-        "m_sValue": "string"
-      }
-    },
-    "CCSCustomHudLayoutState": {
-      "serializers": [],
-      "ownFields": {
-        "m_bInputCaptureEnabled": "boolean",
-        "m_vecDialogVariableStrings": "ReadonlyArray<{ readonly \"m_bIsSet\"?: boolean; readonly \"m_nDialogVariableIndex\"?: number; readonly \"m_nPanelIdIndex\"?: number; readonly \"m_sValue\"?: string }>",
-        "m_vecHasClasses": "ReadonlyArray<{ readonly \"m_eClassStatus\"?: number; readonly \"m_nClassNameIndex\"?: number; readonly \"m_nPanelIdIndex\"?: number }>"
-      }
-    },
     "CCSCustomHudLayout": {
       "serializers": [],
       "ownFields": {
@@ -2707,120 +2525,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vecCameraOffset": "[number, number, number]",
         "m_vecFollowOffset": "[number, number, number]"
-      }
-    },
-    "CCSGameModeRules_Deathmatch": {
-      "serializers": [],
-      "ownFields": {
-        "m_flDMBonusStartTime": "number",
-        "m_flDMBonusTimeLength": "number",
-        "m_sDMBonusWeapon": "string"
-      }
-    },
-    "CCSGameRules": {
-      "serializers": [],
-      "ownFields": {
-        "m_arrProhibitedItemIndices": "Uint16Array",
-        "m_arrTournamentActiveCasterAccounts": "Uint32Array",
-        "m_bAnyHostageReached": "boolean",
-        "m_bBombDropped": "boolean",
-        "m_bBombPlanted": "boolean",
-        "m_bCTCantBuy": "boolean",
-        "m_bCTTimeOutActive": "boolean",
-        "m_bFreezePeriod": "boolean",
-        "m_bGamePaused": "boolean",
-        "m_bGameRestart": "boolean",
-        "m_bHasMatchStarted": "boolean",
-        "m_bIsDroppingItems": "boolean",
-        "m_bIsHltvActive": "boolean",
-        "m_bIsQuestEligible": "boolean",
-        "m_bIsQueuedMatchmaking": "boolean",
-        "m_bIsValveDS": "boolean",
-        "m_bLogoMap": "boolean",
-        "m_bMapHasBombTarget": "boolean",
-        "m_bMapHasBuyZone": "boolean",
-        "m_bMapHasRescueZone": "boolean",
-        "m_bMatchWaitingForResume": "boolean",
-        "m_bPlayAllStepSoundsOnServer": "boolean",
-        "m_bRoundEndNoMusic": "boolean",
-        "m_bRoundEndShowTimerDefend": "boolean",
-        "m_bTCantBuy": "boolean",
-        "m_bTeamIntroPeriod": "boolean",
-        "m_bTechnicalTimeOut": "boolean",
-        "m_bTerroristTimeOutActive": "boolean",
-        "m_bWarmupPeriod": "boolean",
-        "m_eRoundEndReason": "number",
-        "m_eRoundWinReason": "number",
-        "m_flCMMItemDropRevealEndTime": "number",
-        "m_flCMMItemDropRevealStartTime": "number",
-        "m_flCTTimeOutRemaining": "number",
-        "m_flGameStartTime": "number",
-        "m_flNextRespawnWave": "number[]",
-        "m_flRestartRoundTime": "number",
-        "m_flTerroristTimeOutRemaining": "number",
-        "m_fMatchStartTime": "number",
-        "m_fRoundStartTime": "number",
-        "m_fWarmupPeriodEnd": "number",
-        "m_fWarmupPeriodStart": "number",
-        "m_gamePhase": "number",
-        "m_iFreezeTime": "number",
-        "m_iHostagesRemaining": "number",
-        "m_iMatchStats_PlayersAlive_CT": "Int32Array",
-        "m_iMatchStats_PlayersAlive_T": "Int32Array",
-        "m_iMatchStats_RoundResults": "Int32Array",
-        "m_iNumConsecutiveCTLoses": "number",
-        "m_iNumConsecutiveTerroristLoses": "number",
-        "m_iRoundEndFunFactData1": "number",
-        "m_iRoundEndFunFactData2": "number",
-        "m_iRoundEndFunFactData3": "number",
-        "m_iRoundEndFunFactPlayerSlot": "number",
-        "m_iRoundEndLegacy": "number",
-        "m_iRoundEndPlayerCount": "number",
-        "m_iRoundEndTimerTime": "number",
-        "m_iRoundEndWinnerTeam": "number",
-        "m_iRoundStartRoundNumber": "number",
-        "m_iRoundTime": "number",
-        "m_iRoundWinStatus": "number",
-        "m_iSpectatorSlotCount": "number",
-        "m_MatchDevice": "number",
-        "m_MinimapVerticalSectionHeights": "Float32Array",
-        "m_nCTTeamIntroVariant": "number",
-        "m_nCTTimeOuts": "number",
-        "m_nEndMatchMapGroupVoteOptions": "Int32Array",
-        "m_nEndMatchMapGroupVoteTypes": "Int32Array",
-        "m_nEndMatchMapVoteWinner": "number",
-        "m_nHalloweenMaskListSeed": "number",
-        "m_nMatchAbortedEarlyReason": "number",
-        "m_nMatchEndCount": "number",
-        "m_nNextMapInMapgroup": "number",
-        "m_nOvertimePlaying": "number",
-        "m_nPauseStartTick": "number",
-        "m_nQueuedMatchmakingMode": "number",
-        "m_nRoundEndCount": "number",
-        "m_nRoundsPlayedThisPhase": "number",
-        "m_nRoundStartCount": "number",
-        "m_nTerroristTimeOuts": "number",
-        "m_nTotalPausedTicks": "number",
-        "m_nTournamentPredictionsPct": "number",
-        "m_nTTeamIntroVariant": "number",
-        "m_numBestOfMaps": "number",
-        "m_RetakeRules.m_bBlockersPresent": "boolean",
-        "m_RetakeRules.m_bRoundInProgress": "boolean",
-        "m_RetakeRules.m_hBombPlanter": "number",
-        "m_RetakeRules.m_iBombSite": "number",
-        "m_RetakeRules.m_iFirstSecondHalfRound": "number",
-        "m_RetakeRules.m_nMatchSeed": "number",
-        "m_sRoundEndFunFactToken": "string",
-        "m_sRoundEndMessage": "string",
-        "m_szMatchStatTxt": "string",
-        "m_szTournamentEventName": "string",
-        "m_szTournamentEventStage": "string",
-        "m_szTournamentPredictionsTxt": "string",
-        "m_TeamRespawnWaveTimes": "Float32Array",
-        "m_timeUntilNextPhaseStarts": "number",
-        "m_totalRoundsPlayed": "number",
-        "m_vMinimapMaxs": "[number, number, number]",
-        "m_vMinimapMins": "[number, number, number]"
       }
     },
     "CCSGameRulesProxy": {
@@ -3291,50 +2995,6 @@
         "m_ubInterpolationFrame": "number"
       }
     },
-    "CCSObserver_ObserverServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_hObserverTarget": "number",
-        "m_iObserverMode": "number"
-      }
-    },
-    "CCSObserver_CameraServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_audio.localBits": "number",
-        "m_audio.localSound": "[number, number, number][]",
-        "m_audio.soundEventHash": "number",
-        "m_audio.soundscapeEntityListIndex": "number",
-        "m_audio.soundscapeIndex": "number",
-        "m_flCsViewPunchAngleTickRatio": "number",
-        "m_flFOVRate": "number",
-        "m_flFOVTime": "number",
-        "m_hColorCorrectionCtrl": "number",
-        "m_hTonemapController": "number",
-        "m_hViewEntity": "number",
-        "m_hZoomOwner": "number",
-        "m_iFOV": "number",
-        "m_iFOVStart": "number",
-        "m_nCsViewPunchAngleTick": "number",
-        "m_PlayerFog.m_hCtrl": "number",
-        "m_PostProcessingVolumes": "number[]",
-        "m_vecCsViewPunchAngle": "[number, number, number]"
-      }
-    },
-    "CCSObserver_MovementServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_arrForceSubtickMoveWhen": "Float32Array",
-        "m_flMaxspeed": "number",
-        "m_nToggleButtonDownMask": "bigint"
-      }
-    },
-    "CCSPlayer_PingServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_hPlayerPing": "number"
-      }
-    },
     "CCSObserverPawn": {
       "serializers": [
         "CBodyComponentBaseAnimGraph",
@@ -3539,107 +3199,6 @@
         "m_vecFollowOffset": "[number, number, number]"
       }
     },
-    "CCSPlayerController_InGameMoneyServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_iAccount": "number",
-        "m_iCashSpentThisRound": "number",
-        "m_iStartAccount": "number",
-        "m_iTotalCashSpent": "number"
-      }
-    },
-    "ServerAuthoritativeWeaponSlot_t": {
-      "serializers": [],
-      "ownFields": {
-        "unClass": "number",
-        "unItemDefIdx": "number",
-        "unSlot": "number"
-      }
-    },
-    "CCSPlayerController_InventoryServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_nPersonaDataPublicCommendsFriendly": "number",
-        "m_nPersonaDataPublicCommendsLeader": "number",
-        "m_nPersonaDataPublicCommendsTeacher": "number",
-        "m_nPersonaDataPublicLevel": "number",
-        "m_nPersonaDataXpTrailLevel": "number",
-        "m_rank": "bigint[]",
-        "m_unMusicID": "number",
-        "m_vecServerAuthoritativeWeaponSlots": "ReadonlyArray<{ readonly \"unClass\"?: number; readonly \"unItemDefIdx\"?: number; readonly \"unSlot\"?: number }>"
-      }
-    },
-    "CSPerRoundStats_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_iAssists": "number",
-        "m_iCashEarned": "number",
-        "m_iDamage": "number",
-        "m_iDeaths": "number",
-        "m_iEnemiesFlashed": "number",
-        "m_iEquipmentValue": "number",
-        "m_iHeadShotKills": "number",
-        "m_iKillReward": "number",
-        "m_iKills": "number",
-        "m_iLiveTime": "number",
-        "m_iMoneySaved": "number",
-        "m_iObjective": "number",
-        "m_iUtilityDamage": "number"
-      }
-    },
-    "CCSPlayerController_ActionTrackingServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_flTotalRoundDamageDealt": "number",
-        "m_iNumRoundKills": "number",
-        "m_iNumRoundKillsHeadshots": "number",
-        "m_matchStats.m_iAssists": "number",
-        "m_matchStats.m_iCashEarned": "number",
-        "m_matchStats.m_iDamage": "number",
-        "m_matchStats.m_iDeaths": "number",
-        "m_matchStats.m_iEnemiesFlashed": "number",
-        "m_matchStats.m_iEnemy3Ks": "number",
-        "m_matchStats.m_iEnemy4Ks": "number",
-        "m_matchStats.m_iEnemy5Ks": "number",
-        "m_matchStats.m_iEnemyKnifeKills": "number",
-        "m_matchStats.m_iEnemyTaserKills": "number",
-        "m_matchStats.m_iEquipmentValue": "number",
-        "m_matchStats.m_iHeadShotKills": "number",
-        "m_matchStats.m_iKillReward": "number",
-        "m_matchStats.m_iKills": "number",
-        "m_matchStats.m_iLiveTime": "number",
-        "m_matchStats.m_iMoneySaved": "number",
-        "m_matchStats.m_iObjective": "number",
-        "m_matchStats.m_iUtilityDamage": "number",
-        "m_perRoundStats": "ReadonlyArray<{ readonly \"m_iAssists\"?: number; readonly \"m_iCashEarned\"?: number; readonly \"m_iDamage\"?: number; readonly \"m_iDeaths\"?: number; readonly \"m_iEnemiesFlashed\"?: number; readonly \"m_iEquipmentValue\"?: number; readonly \"m_iHeadShotKills\"?: number; readonly \"m_iKillReward\"?: number; readonly \"m_iKills\"?: number; readonly \"m_iLiveTime\"?: number; readonly \"m_iMoneySaved\"?: number; readonly \"m_iObjective\"?: number; readonly \"m_iUtilityDamage\"?: number }>"
-      }
-    },
-    "CDamageRecord": {
-      "serializers": [],
-      "ownFields": {
-        "m_bIsOtherEnemy": "boolean",
-        "m_DamagerXuid": "bigint",
-        "m_flActualHealthRemoved": "number",
-        "m_flDamage": "number",
-        "m_hPlayerControllerDamager": "number",
-        "m_hPlayerControllerRecipient": "number",
-        "m_iLastBulletUpdate": "number",
-        "m_iNumHits": "number",
-        "m_killType": "number",
-        "m_PlayerDamager": "number",
-        "m_PlayerRecipient": "number",
-        "m_RecipientXuid": "bigint",
-        "m_szPlayerDamagerName": "string",
-        "m_szPlayerRecipientName": "string"
-      }
-    },
-    "CCSPlayerController_DamageServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_DamageList": "ReadonlyArray<{ readonly \"m_bIsOtherEnemy\"?: boolean; readonly \"m_DamagerXuid\"?: bigint; readonly \"m_flActualHealthRemoved\"?: number; readonly \"m_flDamage\"?: number; readonly \"m_hPlayerControllerDamager\"?: number; readonly \"m_hPlayerControllerRecipient\"?: number; readonly \"m_iLastBulletUpdate\"?: number; readonly \"m_iNumHits\"?: number; readonly \"m_killType\"?: number; readonly \"m_PlayerDamager\"?: number; readonly \"m_PlayerRecipient\"?: number; readonly \"m_RecipientXuid\"?: bigint; readonly \"m_szPlayerDamagerName\"?: string; readonly \"m_szPlayerRecipientName\"?: string }>",
-        "m_nSendUpdate": "number"
-      }
-    },
     "CCSPlayerController": {
       "serializers": [
         "CCSPlayerController_ActionTrackingServices",
@@ -3718,140 +3277,6 @@
         "m_vecVelocity.m_vecX": "number",
         "m_vecVelocity.m_vecY": "number",
         "m_vecVelocity.m_vecZ": "number"
-      }
-    },
-    "CCSPlayer_WeaponServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_bBlockInspectUntilNextGraphUpdate": "boolean",
-        "m_flNextAttack": "number",
-        "m_hActiveWeapon": "number",
-        "m_hLastWeapon": "number",
-        "m_hMyWeapons": "number[]",
-        "m_iAmmo": "Uint16Array",
-        "m_networkAnimTiming": "Uint8Array"
-      }
-    },
-    "CCSPlayer_ItemServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_bHasDefuser": "boolean",
-        "m_bHasHelmet": "boolean"
-      }
-    },
-    "CCSPlayer_CameraServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_audio.localBits": "number",
-        "m_audio.localSound": "[number, number, number][]",
-        "m_audio.soundEventHash": "number",
-        "m_audio.soundscapeEntityListIndex": "number",
-        "m_audio.soundscapeIndex": "number",
-        "m_flCsViewPunchAngleTickRatio": "number",
-        "m_flFOVRate": "number",
-        "m_flFOVTime": "number",
-        "m_hColorCorrectionCtrl": "number",
-        "m_hTonemapController": "number",
-        "m_hViewEntity": "number",
-        "m_hZoomOwner": "number",
-        "m_iFOV": "number",
-        "m_iFOVStart": "number",
-        "m_nCsViewPunchAngleTick": "number",
-        "m_PlayerFog.m_hCtrl": "number",
-        "m_PostProcessingVolumes": "number[]",
-        "m_vecCsViewPunchAngle": "[number, number, number]"
-      }
-    },
-    "CCSPlayer_MovementServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_arrForceSubtickMoveWhen": "Float32Array",
-        "m_bDesiresDuck": "boolean",
-        "m_bDucked": "boolean",
-        "m_bDucking": "boolean",
-        "m_bDuckOverride": "boolean",
-        "m_bHasEverProcessedCommand": "boolean",
-        "m_bJumpApexPending": "boolean",
-        "m_bUseFrictionStashedSpeed": "boolean",
-        "m_bUsingGroundTopologyOffset": "boolean",
-        "m_flBombPlantViewOffset": "number",
-        "m_flDuckAmount": "number",
-        "m_flDuckRootOffset": "number",
-        "m_flDuckSpeed": "number",
-        "m_flDuckViewOffset": "number",
-        "m_flFallVelocity": "number",
-        "m_flFrictionStashedSpeed": "number",
-        "m_flLastDuckTime": "number",
-        "m_flLastJumpFrac": "number",
-        "m_flLastJumpVelocityZ": "number",
-        "m_flMaxspeed": "number",
-        "m_flStamina": "number",
-        "m_flUseFrictionStashedSpeedUntilFrac": "number",
-        "m_flUsingGroundTopologyOffsetTransitionSmoothing": "number",
-        "m_fStashGrenadeParameterWhen": "number",
-        "m_LegacyJump.m_bOldJumpPressed": "boolean",
-        "m_ModernJump.m_flLastActualJumpPressFrac": "number",
-        "m_ModernJump.m_flLastLandedFrac": "number",
-        "m_ModernJump.m_flLastLandedVelocityX": "number",
-        "m_ModernJump.m_flLastLandedVelocityY": "number",
-        "m_ModernJump.m_flLastLandedVelocityZ": "number",
-        "m_ModernJump.m_flLastUsableJumpPressFrac": "number",
-        "m_ModernJump.m_nLastActualJumpPressTick": "number",
-        "m_ModernJump.m_nLastLandedTick": "number",
-        "m_ModernJump.m_nLastUsableJumpPressTick": "number",
-        "m_nGameCodeHasMovedPlayerAfterCommand": "number",
-        "m_nLadderSurfacePropIndex": "number",
-        "m_nLastJumpTick": "number",
-        "m_nToggleButtonDownMask": "bigint"
-      }
-    },
-    "CCSPlayer_BulletServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_totalHitsOnServer": "number"
-      }
-    },
-    "CCSPlayer_HostageServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_hCarriedHostage": "number",
-        "m_hCarriedHostageProp": "number"
-      }
-    },
-    "SellbackPurchaseEntry_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_bPrevHelmet": "boolean",
-        "m_hItem": "bigint",
-        "m_nCost": "number",
-        "m_nPrevArmor": "number",
-        "m_unDefIdx": "number"
-      }
-    },
-    "WeaponPurchaseCount_t": {
-      "serializers": [],
-      "ownFields": {
-        "m_nCount": "number",
-        "m_nItemDefIndex": "number"
-      }
-    },
-    "CCSPlayer_ActionTrackingServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_bIsRescuing": "boolean",
-        "m_weaponPurchasesThisMatch.m_weaponPurchases": "ReadonlyArray<{ readonly \"m_nCount\"?: number; readonly \"m_nItemDefIndex\"?: number }>",
-        "m_weaponPurchasesThisRound.m_weaponPurchases": "ReadonlyArray<{ readonly \"m_nCount\"?: number; readonly \"m_nItemDefIndex\"?: number }>"
-      }
-    },
-    "CCSPlayer_AimPunchServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_predictableBaseAngle": "[number, number, number]",
-        "m_predictableBaseAngleVel": "[number, number, number]",
-        "m_predictableBaseTick": "number",
-        "m_predictableBaseTickInterpAmount": "number",
-        "m_unpredictableBaseAngle": "[number, number, number]",
-        "m_unpredictableBaseTick": "number"
       }
     },
     "CCSPlayerPawn": {
@@ -8714,80 +8139,6 @@
         "m_weaponMode": "bigint"
       }
     },
-    "CLightComponent": {
-      "serializers": [],
-      "ownFields": {
-        "m_bAllowSSTGeneration": "boolean",
-        "m_bEnabled": "boolean",
-        "m_bFlicker": "boolean",
-        "m_bMixedShadows": "boolean",
-        "m_bPrecomputedFieldsValid": "boolean",
-        "m_bRenderDiffuse": "boolean",
-        "m_bRenderToCubemaps": "boolean",
-        "m_bRenderTransmissive": "boolean",
-        "m_bUseSecondaryColor": "boolean",
-        "m_bUsesIndexedBakedLighting": "boolean",
-        "m_Color": "number",
-        "m_flAttenuation0": "number",
-        "m_flAttenuation1": "number",
-        "m_flAttenuation2": "number",
-        "m_flBounceScale": "number",
-        "m_flBrightness": "number",
-        "m_flBrightnessMult": "number",
-        "m_flBrightnessScale": "number",
-        "m_flCapsuleLength": "number",
-        "m_flFadeMaxDist": "number",
-        "m_flFadeMinDist": "number",
-        "m_flFalloff": "number",
-        "m_flFogContributionStength": "number",
-        "m_flLightStyleStartTime": "number",
-        "m_flMinRoughness": "number",
-        "m_flNearClipPlane": "number",
-        "m_flOrthoLightHeight": "number",
-        "m_flOrthoLightWidth": "number",
-        "m_flPhi": "number",
-        "m_flPrecomputedMaxRange": "number",
-        "m_flRange": "number",
-        "m_flShadowCascadeCrossFade": "number",
-        "m_flShadowCascadeDistance0": "number",
-        "m_flShadowCascadeDistance1": "number",
-        "m_flShadowCascadeDistance2": "number",
-        "m_flShadowCascadeDistance3": "number",
-        "m_flShadowCascadeDistanceFade": "number",
-        "m_flShadowFadeMaxDist": "number",
-        "m_flShadowFadeMinDist": "number",
-        "m_flSkyIntensity": "number",
-        "m_flTheta": "number",
-        "m_hLightCookie": "bigint",
-        "m_nBakedShadowIndex": "number",
-        "m_nBounceLight": "number",
-        "m_nCascadeRenderStaticObjects": "number",
-        "m_nCascades": "number",
-        "m_nCastShadows": "number",
-        "m_nDirectLight": "number",
-        "m_nFogLightingMode": "number",
-        "m_nLightMapUniqueId": "number",
-        "m_nLightPathUniqueId": "number",
-        "m_nRenderSpecular": "number",
-        "m_nShadowCascadeResolution0": "number",
-        "m_nShadowCascadeResolution1": "number",
-        "m_nShadowCascadeResolution2": "number",
-        "m_nShadowCascadeResolution3": "number",
-        "m_nShadowHeight": "number",
-        "m_nShadowPriority": "number",
-        "m_nShadowWidth": "number",
-        "m_nStyle": "number",
-        "m_Pattern": "string",
-        "m_SecondaryColor": "number",
-        "m_SkyAmbientBounce": "number",
-        "m_SkyColor": "number",
-        "m_vPrecomputedBoundsMaxs": "[number, number, number]",
-        "m_vPrecomputedBoundsMins": "[number, number, number]",
-        "m_vPrecomputedOBBAngles": "[number, number, number]",
-        "m_vPrecomputedOBBExtent": "[number, number, number]",
-        "m_vPrecomputedOBBOrigin": "[number, number, number]"
-      }
-    },
     "CLightDirectionalEntity": {
       "serializers": [
         "CBodyComponentBaseModelEntity",
@@ -12322,16 +11673,6 @@
         "m_ubInterpolationFrame": "number",
         "m_vMaxs": "[number, number, number]",
         "m_vMins": "[number, number, number]"
-      }
-    },
-    "SoundeventPathCornerPairNetworked_t": {
-      "serializers": [],
-      "ownFields": {
-        "flP1Pct": "number",
-        "flP2Pct": "number",
-        "flPathLengthSqr": "number",
-        "vP1": "[number, number, number]",
-        "vP2": "[number, number, number]"
       }
     },
     "CSoundEventPathCornerEntity": {
@@ -18262,18 +17603,6 @@
         "m_nSubclassID": "number",
         "m_ubInterpolationFrame": "number",
         "m_vecRenderAttributes": "ReadonlyArray<{ readonly \"m_ID\"?: number; readonly \"m_Values\"?: [number, number, number] }>"
-      }
-    },
-    "CCSGameModeRules_ArmsRace": {
-      "serializers": [],
-      "ownFields": {
-        "m_WeaponSequence": "string[]"
-      }
-    },
-    "CCSPlayer_BuyServices": {
-      "serializers": [],
-      "ownFields": {
-        "m_vecSellbackPurchaseEntries": "ReadonlyArray<{ readonly \"m_bPrevHelmet\"?: boolean; readonly \"m_hItem\"?: bigint; readonly \"m_nCost\"?: number; readonly \"m_nPrevArmor\"?: number; readonly \"m_unDefIdx\"?: number }>"
       }
     }
   },
