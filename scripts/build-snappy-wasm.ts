@@ -4,11 +4,11 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkClangHeader, clangHeader, pinnedClang } from './wasm-clang.js';
+import { checkClangHeader, clangHeader, pinnedClang, readSourceLf } from './wasm-clang.js';
 
 const source = fileURLToPath(new URL('../wasm/snappy.c', import.meta.url));
 const target = fileURLToPath(new URL('../src/compression/snappyWasmBytes.ts', import.meta.url));
-const hash = createHash('sha256').update(readFileSync(source)).digest('hex');
+const hash = createHash('sha256').update(readSourceLf(source)).digest('hex');
 
 if (process.argv.includes('--check')) {
 	if (!readFileSync(target, 'utf8').includes(`Source SHA-256: ${hash}`)) {

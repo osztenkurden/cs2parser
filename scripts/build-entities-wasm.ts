@@ -4,14 +4,14 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkClangHeader, clangHeader, pinnedClang } from './wasm-clang.js';
+import { checkClangHeader, clangHeader, pinnedClang, readSourceLf } from './wasm-clang.js';
 
 const source = fileURLToPath(new URL('../wasm/entities.c', import.meta.url));
 const target = fileURLToPath(new URL('../src/parser/entities/entityWasmBytes.ts', import.meta.url));
 // Reference wire semantics are part of the check: changes require reviewing the C implementation.
-const hash = createHash('sha256').update(readFileSync(source));
+const hash = createHash('sha256').update(readSourceLf(source));
 for (const path of ['fieldPathOps.ts', 'quantizedFloat.ts', '../ubitreader.ts'])
-	hash.update(readFileSync(fileURLToPath(new URL(`../src/parser/entities/${path}`, import.meta.url))));
+	hash.update(readSourceLf(fileURLToPath(new URL(`../src/parser/entities/${path}`, import.meta.url))));
 const digest = hash.digest('hex');
 if (process.argv.includes('--check')) {
 	if (!readFileSync(target, 'utf8').includes(`Source SHA-256: ${digest}`))

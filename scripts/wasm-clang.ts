@@ -1,4 +1,8 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+/** Source text for the `--check` hash, with CRLF normalized so Windows checkouts hash like CI. */
+export const readSourceLf = (path: string) => readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
 
 /**
  * Exact clang release the embedded WASM is built with. Different clang versions emit different
