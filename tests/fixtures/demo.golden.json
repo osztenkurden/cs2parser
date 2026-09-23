@@ -670,5 +670,22 @@
 			"tick": 185922,
 			"entitiesSha256": "b7c7828416ba5b958f899c6286933ffc33185130864a912a78814339c0b26bdb"
 		}
+	},
+	"qangle3FloatCorrection": {
+		"reason": "Decode 32-bit QAngle fields (Qangle3Decoder: CCSPlayer_AimPunchServices.m_predictableBaseAngle, m_predictableBaseAngleVel, m_unpredictableBaseAngle) as three float32 values instead of their raw uint32 bit patterns. Audited by taking the prior parser output at every checkpoint and the final state, reinterpreting only those fields' uint32 elements as float32 (138 non-zero arrays), and confirming the result is byte-identical to the current canonical output.",
+		"sourceCommit": "658fe93cbcef1925d58f9326f0f07fd5cfc1bede",
+		"mode": "ALL",
+		"snapshots": [
+			{ "tick": 1, "entitiesSha256": "70344d3e00633141bae00f82d5c6e5ea7f8fc7df015766459f221082312493c4" },
+			{ "tick": 1024, "entitiesSha256": "987b93357188964f32bc4daa5187450ca12a7f57426b2b924ee2e0eecebf48b4" },
+			{ "tick": 16384, "entitiesSha256": "815e16c8020bca4fd089391ae19ef97656860bbec1baaa21a99c9915e2d1df24" },
+			{ "tick": 32768, "entitiesSha256": "ebab95334608d1c379d1a88b04fd1730ffac61165c0c0f1479300bbba1fbe093" },
+			{ "tick": 65536, "entitiesSha256": "8c2451a9e757daa9d4ecbc04fb400a4ff6fa8c30aa96eb598bf9783899b726f9" },
+			{ "tick": 98304, "entitiesSha256": "741d7a90caf24dc7a97bc1895c23e5dec515951d4cba1ba66940354067bc52cf" },
+			{ "tick": 131072, "entitiesSha256": "20f91d43f6bc7eae3345e5201348bbf29acdb484398d3ba70f94f880791d3432" },
+			{ "tick": 163840, "entitiesSha256": "5f1d25600ae548e622c58870048de707a848879eae6ead2970fcaed715c9a6b2" },
+			{ "tick": 180000, "entitiesSha256": "570cf5199a7c085ea5cd50baecdd5c730a466db8cfeb0c89e09baa65975cda4f" }
+		],
+		"final": { "entitiesSha256": "24c7eb18b3fb38f8c16c03e18ef3f891b3583a40e1dd3867b4bdffdc27b88eef" }
 	}
 }

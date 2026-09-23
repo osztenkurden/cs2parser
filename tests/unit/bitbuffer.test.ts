@@ -666,3 +666,11 @@ describe('BitBuffer', () => {
 		}
 	});
 });
+
+describe('decodeQangleAll3', () => {
+	test('reads three float32 components, not their raw bit patterns', () => {
+		// Real aim-punch value from a demo: m_unpredictableBaseAngle = [-36, 0, 27].
+		const bytes = new Uint8Array(new Float32Array([-36, 0, 27]).buffer);
+		expect(new BitBuffer(bytes).decodeQangleAll3()).toEqual([-36, 0, 27]);
+	});
+});

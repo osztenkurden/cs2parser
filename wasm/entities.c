@@ -423,11 +423,16 @@ static void value(Node *node, Update *out) {
         out->hi = bits(32);
         return;
     case 15:
-    case 16:
         out->kind = 2;
         out->x = bits(32);
         out->y = bits(32);
         out->z = bits(32);
+        return;
+    case 16:
+        out->kind = 2;
+        out->x = f32();
+        out->y = f32();
+        out->z = f32();
         return;
     case 17: {
         out->kind = 2;

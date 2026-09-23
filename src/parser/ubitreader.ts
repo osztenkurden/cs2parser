@@ -434,7 +434,8 @@ export class BitBuffer {
 		return [this.readFloat32LE(), this.readFloat32LE(), this.readFloat32LE()];
 	}
 	decodeQangleAll3() {
-		return [this.decode_noscale(), this.decode_noscale(), this.decode_noscale()];
+		// A 32-bit QAngle is three raw floats (e.g. aim punch base angles).
+		return [this.readFloat32LE(), this.readFloat32LE(), this.readFloat32LE()];
 	}
 
 	readAngle(n: number) {

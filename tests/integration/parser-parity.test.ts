@@ -210,6 +210,12 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			correction.entitiesSha256;
 	}
 	expectedRelease.ALL.final.entities.sha256 = golden.observerPawnLeakCorrection.final.entitiesSha256;
+	// 32-bit QAngles decode as float32 instead of raw uint32 bits; audited as the only entity difference.
+	for (const correction of golden.qangle3FloatCorrection.snapshots) {
+		expectedRelease.ALL.checkpoints.find(state => state.tick === correction.tick)!.entities.sha256 =
+			correction.entitiesSha256;
+	}
+	expectedRelease.ALL.final.entities.sha256 = golden.qangle3FloatCorrection.final.entitiesSha256;
 
 	beforeAll(async () => {
 		bytes = readFileSync(demoPath);
