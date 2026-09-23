@@ -1,5 +1,14 @@
 import { describe, test, expect } from 'bun:test';
-import { Field, FieldTypeEnum, Decoders, constructorFieldHelper, type PropInfo } from '../../src/parser/entities/constructorFields.js';
+import {
+	Field,
+	FieldTypeEnum,
+	Decoders,
+	constructorFieldHelper,
+	findFieldType,
+	type ConstructorField,
+	type PropInfo
+} from '../../src/parser/entities/constructorFields.js';
+import { BitBuffer } from '../../src/parser/ubitreader.js';
 
 // Minimal structural views of the (unexported) internal field-value shapes, enough to reach the
 // element ValueField that carries prop_id/name.
@@ -103,5 +112,32 @@ describe('traverseFields — per-class naming of shared container fields', () =>
 		expect((ak.value as InnerValue).prop_id).not.toBe((xm.value as InnerValue).prop_id);
 		expect(map[(ak.value as InnerValue).prop_id]).toBe('CAK47.m_iClip1');
 		expect(map[(xm.value as InnerValue).prop_id]).toBe('CWeaponXM1014.m_iClip1');
+	});
+});
+
+describe('findDecoder: QAngle with qangle_precise and 32 bits', () => {
+	// CS2 declares CBodyComponentBaseModelEntity.m_angRotation (conveyor belts on rush_001) as
+	// qangle_precise with a bit count of 32, and the server writes three raw floats. Choosing the
+	// precise decoder read 3 bits instead of 96 and desynced the rest of the entity.
+	const qangleField = (encoder: string, bitcount: number) =>
+		({ varName: 'm_angRotation', encoder, bitcount, fieldType: findFieldType('QAngle') }) as ConstructorField;
+
+	test('qangle_precise with 32 bits resolves to Qangle3Decoder', () => {
+		expect(constructorFieldHelper.findDecoder(qangleField('qangle_precise', 32))).toBe(Decoders.Qangle3Decoder);
+	});
+
+	test('qangle_precise without a bit count still resolves to QanglePresDecoder', () => {
+		expect(constructorFieldHelper.findDecoder(qangleField('qangle_precise', 0))).toBe(Decoders.QanglePresDecoder);
+	});
+
+	test('consumes all 96 bits and leaves the next byte in place', () => {
+		// A zero angle is the case that desynced: the precise decoder reads just its 3 presence bits.
+		const bytes = new Uint8Array(20);
+		bytes[12] = 0xaa;
+		const reader = new BitBuffer(bytes);
+
+		const decoder = constructorFieldHelper.findDecoder(qangleField('qangle_precise', 32));
+		constructorFieldHelper.decode(reader, decoder);
+		expect(reader.ReadUBits(8)).toBe(0xaa);
 	});
 });
