@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.7.1](https://github.com/osztenkurden/cs2parser/compare/v2.7.0...v2.7.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* decode 32 bit qangle_precise fields ([1cfd219](https://github.com/osztenkurden/cs2parser/commit/1cfd219a0fe35d35558645f37ae54704cf5d6ba0))
+* decoding 32 bit qangle fields to float32 ([edb8226](https://github.com/osztenkurden/cs2parser/commit/edb8226075644d73564db5c218a77fe44d30da8c))
+* normalize line endings ([c450f9d](https://github.com/osztenkurden/cs2parser/commit/c450f9d9a88b79b977c31b1f1b2f361cc36e1ef5))
+
 ## [2.7.0](https://github.com/osztenkurden/cs2parser/compare/v2.6.0...v2.7.0) (2026-09-22)
 
 
