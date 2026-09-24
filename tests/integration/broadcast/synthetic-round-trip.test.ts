@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { createHash } from 'node:crypto';
 import snappy from 'snappy';
 import { describe, test, expect } from 'bun:test';
 import { DemoReader } from '../../../src/index.js';
@@ -7,9 +8,23 @@ import { EntityMode } from '../../../src/parser/entities/types.js';
 import { CDemoPacket, EDemoCommands } from '../../../src/ts-proto/demo.js';
 import { buildFragment, type BroadcastCommand } from '../../unit/broadcast/helpers.js';
 import { MockBroadcastFetcher, type FragmentResponse } from './mock-fetcher.js';
+import { canonicalize } from '../../helpers/parity.js';
 
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
 const demoAvailable = fs.existsSync(demoPath);
+// Replaying a prefix covers signon, FullPackets and several rounds; full-demo parity lives elsewhere.
+const LIMIT_TICK = 40000;
+
+const snapshot = (reader: DemoReader) =>
+	createHash('sha256')
+		.update(
+			canonicalize({
+				tick: reader.currentTick,
+				entities: Object.entries(reader.entities).filter(([, entity]) => entity !== undefined),
+				players: reader.players
+			})
+		)
+		.digest('hex');
 
 interface DemoFrame {
 	cmd: number; // includes compression bit
@@ -86,17 +101,8 @@ function encodeBroadcast(frames: DemoFrame[], opts: { signon: boolean; endMarker
 const ok = (data: Uint8Array): FragmentResponse => ({ ok: true, data });
 
 describe.skipIf(!demoAvailable)('synthetic broadcast round-trip', () => {
-	test('end-to-end: broadcast path produces same final tick + entity count as direct .dem parse', async () => {
-		// Baseline: parse via the regular file path
-		const baseline = new DemoReader();
-		const baselineEvents: string[] = [];
-		baseline.gameEvents.on('round_start', () => baselineEvents.push('round_start'));
-		baseline.gameEvents.on('round_end', () => baselineEvents.push('round_end'));
-		await baseline.parseDemo(demoPath, { entities: EntityMode.ALL });
-		const baselineTick = baseline.currentTick;
-		const baselineEntities = baseline.entities.filter(Boolean).length;
-
-		// Convert .dem into broadcast wire format
+	test('end-to-end: broadcast path reproduces the direct .dem state, players and round events', async () => {
+		// Convert a .dem prefix into broadcast wire format
 		const buf = fs.readFileSync(demoPath);
 		const frames = readDemoFrames(new Uint8Array(buf));
 
@@ -104,7 +110,23 @@ describe.skipIf(!demoAvailable)('synthetic broadcast round-trip', () => {
 		const cmdType = (f: DemoFrame) => f.cmd & ~EDemoCommands.DEM_IsCompressed;
 
 		const signonFrames = frames.filter(f => isSignon(f) && cmdType(f) !== EDemoCommands.DEM_FileHeader);
-		const gameplayFrames = frames.filter(f => !isSignon(f));
+		const gameplayFrames = frames.filter(f => !isSignon(f) && f.tick <= LIMIT_TICK);
+		const lastTick = gameplayFrames.at(-1)!.tick;
+
+		// Baseline: the regular file path, stopped after the last replayed tick
+		const baseline = new DemoReader();
+		const baselineEvents: string[] = [];
+		let baselineState: string | undefined;
+		baseline.gameEvents.on('round_start', () => baselineEvents.push('round_start'));
+		baseline.gameEvents.on('round_end', () => baselineEvents.push('round_end'));
+		baseline.on('tickend', tick => {
+			if (tick < lastTick) return;
+			baselineState = snapshot(baseline);
+			baseline.cancel();
+		});
+		await baseline.parseDemo(demoPath, { entities: EntityMode.ALL });
+		expect(baselineState).toBeDefined();
+		expect(baselineEvents.length).toBeGreaterThan(4);
 
 		const startBytes = encodeBroadcast(signonFrames, { signon: true, endMarker: false });
 		const fullBytes = encodeBroadcast(gameplayFrames, { signon: false, endMarker: true });
@@ -140,10 +162,8 @@ describe.skipIf(!demoAvailable)('synthetic broadcast round-trip', () => {
 		const terminus = await reader.run();
 
 		expect(terminus.status).toBe('complete');
-		expect(broadcastParser.currentTick).toBe(baselineTick);
-		expect(broadcastParser.entities.filter(Boolean).length).toBe(baselineEntities);
+		expect(broadcastParser.currentTick).toBe(lastTick);
+		expect(snapshot(broadcastParser)).toBe(baselineState!);
 		expect(broadcastEvents).toEqual(baselineEvents);
-		expect(broadcastParser.players.length).toBe(baseline.players.length);
-		expect(broadcastParser.gameRules !== null).toBe(baseline.gameRules !== null);
 	}, 120000);
 });

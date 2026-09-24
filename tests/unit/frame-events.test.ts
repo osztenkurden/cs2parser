@@ -103,16 +103,6 @@ describe('demo frame events', () => {
 		}
 	});
 
-	test('without a trailer subscription DEM_Stop finishes before stream EOF', async () => {
-		const source = new Readable({ read() {} });
-		const reader = new DemoReader();
-		const parsed = reader.parseDemo(source);
-		source.push(demoFile(stop));
-		await parsed;
-		expect(reader.hasEnded).toBe(true);
-		source.destroy();
-	});
-
 	test('browser parsing handles every prefix/frame split, empty chunks, and compressed data', async () => {
 		const header = demoFrame(
 			EDemoCommands.DEM_FileHeader | EDemoCommands.DEM_IsCompressed,

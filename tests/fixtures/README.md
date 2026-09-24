@@ -27,9 +27,12 @@ The test hashes the input before selecting the golden. Other recordings receive 
 
 `tests/helpers/parity.ts` captures full entity, game-rule, and userinfo state at nine checkpoints and completion, plus the header, tick count, ordered raw events, and synthetic round payloads. Capture is synchronous before mutable state can change; SHA-256 hashing runs afterward. Tagged canonicalization preserves key/array order rules, sparse holes, undefined, BigInts, negative zero, nonfinite floats, and typed-array identity; Buffer normalizes to Uint8Array. Cyclic helpers and unsupported objects are rejected rather than silently omitted.
 
-Integration parity uses nine full parses: all three entity modes through the server
-path, one browser input per mode (bytes, small chunks, large chunks), and the
-remaining server input forms. One-chunk yielding/cancellation is checked separately.
+Integration parity uses six full parses: all three entity modes through the server
+path and one browser input per mode (bytes, small chunks, large chunks). The server
+`Buffer` and one-chunk `Readable` inputs add two more ALL-mode parses only with
+`CS2_FULL_PARITY=1`, which the release workflow sets before publishing; pull-request CI
+skips them because the default runs cover their parsing paths on this demo. One-chunk
+yielding/cancellation is checked separately.
 Playwright keeps the small browser API checks and one ALL-mode fetch-stream deep
 comparison in each of Chromium, Firefox and WebKit. To run one engine:
 `--project=firefox`.

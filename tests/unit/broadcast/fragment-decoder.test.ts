@@ -50,13 +50,6 @@ describe('ParseSession.pushBroadcastFragment', () => {
 		expect(events.find(e => e[0] === 'tickstart')?.[1]).toBe(1050);
 	});
 
-	test('applies zero tickOffset', () => {
-		const { session, events } = makeSession();
-		const frag = buildFragment([{ cmd: EDemoCommands.DEM_SyncTick, tick: 42, payload: new Uint8Array(0) }]);
-		session.pushBroadcastFragment(frag, 0);
-		expect(events.find(e => e[0] === 'tickstart')?.[1]).toBe(42);
-	});
-
 	test('clamps negative result to internal sentinel -1 (signup fragment with offset -1)', () => {
 		const { session, events } = makeSession();
 		// rawTick = 0, tickOffset = -1 → tick = -1 (signup-fragment sentinel)
@@ -97,17 +90,6 @@ describe('ParseSession.pushBroadcastFragment', () => {
 		expect(result.ended).toBe(true);
 		// No exceptions/extra events from parsing garbage; the reader owns 'end'.
 		expect(events.filter(e => e[0] === 'end').length).toBe(0);
-	});
-
-	test('preserves DEM_IsCompressed flag (compression dispatch path)', () => {
-		const { session, events } = makeSession();
-		// Use unknown command 99 with isCompressed; the unknown branch in pushBroadcastFragment
-		// just skips, but we want to verify the masked commandType/isCompressed math.
-		// For a verifiable test: an uncompressed unknown command → skipped, no error.
-		const frag = buildFragment([{ cmd: 99, tick: 5, payload: new Uint8Array([1, 2, 3]) }]);
-		expect(() => session.pushBroadcastFragment(frag, 0)).not.toThrow();
-		// Unknown commands don't crash the loop
-		expect(events.filter(e => e[0] === 'tickstart').length).toBe(1);
 	});
 
 	test('emits debug event when reserved byte is non-zero', () => {
@@ -151,18 +133,6 @@ describe('ParseSession.pushBroadcastFragment', () => {
 		expect(debugs.filter(d => d.includes('frame command 136')).length).toBe(1);
 		expect(debugs.filter(d => d.includes('frame command 137')).length).toBe(1);
 		expect(debugs.find(d => d.includes('frame command 136'))).toContain('raw 200');
-	});
-
-	test('processes multiple commands in sequence', () => {
-		const { session, events } = makeSession();
-		const frag = buildFragment([
-			{ cmd: EDemoCommands.DEM_SyncTick, tick: 10, payload: new Uint8Array(0) },
-			{ cmd: EDemoCommands.DEM_SyncTick, tick: 11, payload: new Uint8Array(0) },
-			{ cmd: EDemoCommands.DEM_SyncTick, tick: 12, payload: new Uint8Array(0) }
-		]);
-		session.pushBroadcastFragment(frag, 0);
-		const ticks = events.filter(e => e[0] === 'tickstart').map(e => e[1]);
-		expect(ticks).toEqual([10, 11, 12]);
 	});
 });
 

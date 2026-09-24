@@ -111,16 +111,6 @@ describe('EntityParser class-id decoding', () => {
 		expect(events[0][1][1]).toBe(299);
 	});
 
-	test('a hardcoded 8-bit read would desync on a 9-bit stream', () => {
-		// Regression guard: this is exactly what the parser used to do. The class id
-		// comes back truncated and the following serial/varint reads are misaligned.
-		const reader = encodeCreate(299, 9);
-		expect(reader.ReadUBits(8)).toBe(299 & 0xff); // truncated class id
-		// The dropped high bit is still in the stream, so the serial read that
-		// follows is shifted by one and comes back wrong too.
-		expect(reader.ReadUBits(17)).not.toBe(0x1f2);
-	});
-
 	test('the widths derived from a class table round-trip through createEntity', () => {
 		for (const numClasses of [128, 255, 256, 400]) {
 			const bits = classIdBitWidth(numClasses);

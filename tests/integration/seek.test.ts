@@ -21,6 +21,8 @@ const state = (reader: DemoReader) =>
 		})),
 		teams: reader.teams.map(t => ({ team: t.teamNumber, score: t.score }))
 	});
+// Both reference passes stop here: ~10 rounds give every target kind without two full parses.
+const LIMIT_TICK = 60000;
 const eventData = (event: object) =>
 	Object.fromEntries(
 		Object.entries(event).map(([key, value]) => [
@@ -55,8 +57,11 @@ test.skipIf(!existsSync(path))(
 		probe.on('tickend', tick => {
 			last = tick;
 			if (smoke < 0 && probe.smokes.some(s => s.entity)) smoke = tick;
+			if (tick >= LIMIT_TICK) probe.cancel();
 		});
 		await probe.parseDemo(createReadStream(path), { entities: EntityMode.ALL });
+		// Byte offset of the last FullPacket before the limit bounds how much a seek may read.
+		const limitBytes = Math.max(...Object.values(probe.getSeekIndex()));
 		const { reader, parsing } = await pausedParser(source);
 		const far = Math.max(0, last - 20);
 		expect((await reader.seekTo(far)).status).toBe('complete');
@@ -76,6 +81,7 @@ test.skipIf(!existsSync(path))(
 				].filter((tick): tick is number => tick !== undefined && tick >= 0)
 			)
 		];
+		const lastWanted = Math.max(...targets) + 2;
 		const wanted = (tick: number) => targets.some(t => tick >= Math.max(0, t - 1) && tick <= t + 2);
 		const expected = new Map<number, { state: string; events: string }>();
 		const sequential = new DemoReader();
@@ -84,6 +90,7 @@ test.skipIf(!existsSync(path))(
 		sequential.on('tickend', tick => {
 			if (wanted(tick)) expected.set(tick, { state: state(sequential), events: hash(events) });
 			events = [];
+			if (tick >= lastWanted) sequential.cancel();
 		});
 		await sequential.parseDemo(path, { entities: EntityMode.ALL });
 		let actualEvents: unknown[] = [];
@@ -109,7 +116,7 @@ test.skipIf(!existsSync(path))(
 		// Already-discovered long seeks fetch FullPackets plus the local reconstruction interval.
 		const before = reader.seekBytesRead;
 		await reader.seekTo(far);
-		expect(reader.seekBytesRead - before).toBeLessThan(source.size / 3);
+		expect(reader.seekBytesRead - before).toBeLessThan(limitBytes / 3);
 		reader.cancel();
 		await parsing;
 
@@ -117,7 +124,7 @@ test.skipIf(!existsSync(path))(
 		const indexed = await pausedParser(source);
 		indexed.reader.setSeekIndex(JSON.parse(JSON.stringify(probe.getSeekIndex())));
 		expect(await indexed.reader.seekTo(far)).toEqual({ status: 'complete', tick: far });
-		expect(indexed.reader.seekBytesRead).toBeLessThan(source.size / 3);
+		expect(indexed.reader.seekBytesRead).toBeLessThan(limitBytes / 3);
 		const tick = await oneTick(indexed.reader);
 		expect(state(indexed.reader)).toBe(expected.get(tick)!.state);
 		indexed.reader.cancel();

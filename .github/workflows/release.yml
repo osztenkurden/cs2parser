@@ -24,9 +24,46 @@ jobs:
           release-type: node
           token: ${{ secrets.RELEASE_PLEASE_TOKEN}}
 
+  full-test:
+    name: Full test suite
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: bun install --frozen-lockfile
+
+      - name: Cache test fixtures
+        id: fixture-cache
+        uses: actions/cache@v5
+        with:
+          path: tests/fixtures/*.dem
+          key: test-fixtures-v2
+
+      - name: Download test fixtures
+        if: steps.fixture-cache.outputs.cache-hit != 'true'
+        run: |
+          gh release download test-fixtures/v2 -p "*.dem" -D tests/fixtures/ --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - run: test -s tests/fixtures/demo.dem
+      # Includes the input-form parity runs that pull-request CI skips for speed.
+      - run: bun run test
+        env:
+          CS2_FULL_PARITY: '1'
+
   publish:
     name: Publish to npm
-    needs: release-please
+    needs: [release-please, full-test]
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:

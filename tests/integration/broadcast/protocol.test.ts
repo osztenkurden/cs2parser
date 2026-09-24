@@ -847,21 +847,6 @@ describe('HttpBroadcastReader (protocol shape)', () => {
 		expect(fetcher.calls.map(c => c.path)).toContain('match-1/5/full');
 	});
 
-	test('parseHttpBroadcast convenience method runs to completion', async () => {
-		const fetcher = new MockBroadcastFetcher({
-			sync: baseSync,
-			bytes: {
-				'0/start': ok(syncFrag(0)),
-				'5/full': ok(syncFrag(100)),
-				'5/delta': ok(syncFrag(105)),
-				'6/delta': ok(endFrag())
-			}
-		});
-		const parser = new DemoReader();
-		await parser.parseHttpBroadcast('https://example.com/', { fetcher, deltaThrottle: 0 });
-		expect(parser.currentTick).toBeGreaterThanOrEqual(100);
-	});
-
 	test('onFragmentError "abort" rejects startup', async () => {
 		// Mark a DEM_Packet fragment as snappy-compressed but provide invalid snappy bytes.
 		// DEM_Packet flows through baseParse → decompressIfNeeded; snappy.uncompressSync

@@ -183,6 +183,10 @@ describe('portable parity snapshots (no fixture required)', () => {
 });
 
 const demoPath = process.env.CS2_DEMO_PATH ?? 'tests/fixtures/demo.dem';
+// Extra server input forms, run before publishing (CS2_FULL_PARITY=1) rather than on every PR:
+// the default runs already cover their parsing paths on this demo, and unit tests cover the inputs.
+// Buffer windows are views into caller memory; a one-chunk Readable crosses no chunk boundary.
+const fullParity = process.env.CS2_FULL_PARITY === '1';
 
 describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 	let bytes: Buffer;
@@ -260,19 +264,20 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 		}, 300000);
 	}
 
-	for (const [method, source, options] of [
-		['Buffer', () => bytes, {}],
-		['path stream:false', () => demoPath, { stream: false }],
-		['one-chunk Readable', () => Readable.from([bytes]), {}]
+	for (const [method, source] of [
+		['Buffer', () => bytes],
+		['one-chunk Readable', () => Readable.from([bytes])]
 	] as const) {
-		test(`ALL: server ${method} deep parity`, async () => {
-			const reader = new DemoReader();
-			const capture = captureParity(reader, 'ALL');
-			expect(await reader.parseDemo(source(), { entities: EntityMode.ALL, ...options })).toEqual({
-				status: 'complete'
-			});
-			expect(await capture.finish()).toEqual(server.ALL);
-		}, 300000);
+		test.skipIf(!fullParity)(
+			`ALL: server ${method} deep parity`,
+			async () => {
+				const reader = new DemoReader();
+				const capture = captureParity(reader, 'ALL');
+				expect(await reader.parseDemo(source(), { entities: EntityMode.ALL })).toEqual({ status: 'complete' });
+				expect(await capture.finish()).toEqual(server.ALL);
+			},
+			300000
+		);
 	}
 
 	test('skipping unused entities preserves full game-rule state and synthetic payloads', () => {

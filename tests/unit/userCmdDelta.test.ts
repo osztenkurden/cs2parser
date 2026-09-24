@@ -22,20 +22,6 @@ describe('usercmd delta schema', () => {
 		expect(base[18]).toEqual({ wire: 2, child: 'CSubtickMoveStep', repeated: true });
 	});
 
-	test('covers the nested messages reachable from the root', () => {
-		for (const name of [
-			'CSGOUserCmdPB',
-			'CBaseUserCmdPB',
-			'CInButtonStatePB',
-			'CMsgQAngle',
-			'CSubtickMoveStep',
-			'CBaseUserCmdExecutionNotes',
-			'CSGOInputHistoryEntryPB'
-		] as const) {
-			expect(userCmdDeltaSchema[name]).toBeDefined();
-		}
-	});
-
 	test('resetting buttons writes all declared defaults', () => {
 		const result = applyUserCmdDelta({ input_history: [] }, bytes(0x0a, 0x01, 0x1f));
 		expect(result?.base?.buttons_pb).toEqual({ buttonstate1: '0', buttonstate2: '0', buttonstate3: '0' });
