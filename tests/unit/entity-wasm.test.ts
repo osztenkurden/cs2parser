@@ -152,3 +152,31 @@ test('an unavailable WASM instance leaves ordinary JS entity decoding usable', (
 		WebAssembly.Instance = Instance;
 	}
 });
+
+test('WASM-decoded lifecycle fields notify the equipment tracker like the JS path', () => {
+	const fields = [
+		new Field(FieldTypeEnum.Value, { name: 'm_hActiveWeapon', decoder: Decoders.UnsignedDecoder, prop_id: 0 })
+	];
+	const names: Record<number, string> = {},
+		decoders: Record<number, Decoder> = {},
+		info: Record<number, PropInfo> = {};
+	constructorFieldHelper.traverseFields(fields, 'Test', names, { id: 0 }, decoders, info);
+	const schema: ClassInfo = {
+		classes: [{ class_id: 0, name: 'Test', serializer: { name: 'Test', fields } }],
+		classIdBits: 1,
+		propIdToName: names,
+		propIdToDecoder: decoders,
+		propIdToInfo: info,
+		propNameById: Object.values(names),
+		propInfoById: Object.values(info)
+	};
+	const reader = new EntityParser(schema, () => {});
+	reader.directEntities = [];
+	reader.directPropInfoById = schema.propInfoById;
+	reader.createEntity(new BitBuffer(bits([0, 1], [0, 17], [0, 8])), 0, []);
+	const touched: number[] = [];
+	reader.onLifecycleUpdate = id => touched.push(id);
+	reader.parseEntityPacket(packet(bits([0, 8], [2, 3], [5, 8])), []);
+	expect(reader.directEntities![0]!.properties['Test.m_hActiveWeapon']).toBe(5);
+	expect(touched).toEqual([0]);
+});

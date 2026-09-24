@@ -517,6 +517,7 @@ export class EntityParser {
 			const info = wasm.plans[wasm.records[i * 14]!]!;
 			const meta = info.meta;
 			if (!meta) continue;
+			if (info.lifecycle) this.onLifecycleUpdate?.(entityId);
 			const index = wasm.values[i * 7 + 1]!;
 			const result = wasm.value(i);
 			if (meta.containerKey !== undefined && index !== -1 && !info.isResize) {
