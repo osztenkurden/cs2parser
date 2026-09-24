@@ -638,7 +638,11 @@ export const constructorFieldHelper = {
 		}
 	},
 	findDecoder: (field: ConstructorField): Decoder => {
-		if (field.encoder === 'qangle_precise') return Decoders.QanglePresDecoder;
+		// A bit count of 32 means three raw floats and takes precedence over the encoder name:
+		// CS2 declares CBodyComponentBaseModelEntity.m_angRotation (conveyor belts on rush_001)
+		// as qangle_precise with 32 bits, and the server writes full floats. findQAngleDecoder
+		// picks Qangle3Decoder for it.
+		if (field.encoder === 'qangle_precise' && field.bitcount !== 32) return Decoders.QanglePresDecoder;
 		// "m_OwnerOnlyPredNetFloatVariables
 		if (field.varName === 'm_PredFloatVariables' || field.varName === 'm_OwnerOnlyPredNetFloatVariables') {
 			return Decoders.NoscaleDecoder;
