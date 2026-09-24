@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.2](https://github.com/osztenkurden/cs2parser/compare/v2.7.1...v2.7.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* stale inventory snapshot ([4cfa1da](https://github.com/osztenkurden/cs2parser/commit/4cfa1da30add895303ff46923a91a6696b00d48f))
+
 ## [2.7.1](https://github.com/osztenkurden/cs2parser/compare/v2.7.0...v2.7.1) (2026-09-23)
 
 
