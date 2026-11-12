@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.8.0](https://github.com/osztenkurden/cs2parser/compare/v2.7.2...v2.8.0) (2026-11-12)
+
+
+### Features
+
+* update parser to work witch build 10955 / patch 14197 ([c70b100](https://github.com/osztenkurden/cs2parser/commit/c70b10006fbf65a61c61e0baf10b9b01d70e4579))
+
+
+### Bug Fixes
+
+* parity tests ([efe65a8](https://github.com/osztenkurden/cs2parser/commit/efe65a8584beeb6cbdf2ec0bb03721c17996bf37))
+
 ## [2.7.2](https://github.com/osztenkurden/cs2parser/compare/v2.7.1...v2.7.2) (2026-09-24)
 
 
