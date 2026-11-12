@@ -554,7 +554,6 @@ export interface CSVCMsg_CreateStringTable {
   user_data_size_bits?: number | undefined;
   flags?: number | undefined;
   string_data?: Uint8Array | undefined;
-  uncompressed_size?: number | undefined;
   data_compressed?: boolean | undefined;
   using_varint_bitcounts?: boolean | undefined;
 }
@@ -651,11 +650,16 @@ export interface ProtoFlattenedSerializerField_t {
   var_encoder_sym?: number | undefined;
   polymorphic_types: ProtoFlattenedSerializerField_t_polymorphic_field_t[];
   var_serializer_sym?: number | undefined;
+  var_enum_info?: ProtoFlattenedSerializerField_t_proto_enum_info_t | undefined;
 }
 
 export interface ProtoFlattenedSerializerField_t_polymorphic_field_t {
   polymorphic_field_serializer_name_sym?: number | undefined;
   polymorphic_field_serializer_version?: number | undefined;
+}
+
+export interface ProtoFlattenedSerializerField_t_proto_enum_info_t {
+  is_signed_enum?: boolean | undefined;
 }
 
 export interface ProtoFlattenedSerializer_t {
@@ -664,10 +668,20 @@ export interface ProtoFlattenedSerializer_t {
   fields_index: number[];
 }
 
+export interface ProtoCoordSizeParams_t {
+  coord_integer_bits?: number | undefined;
+  coord_fractional_bits?: number | undefined;
+  coord_integer_bits_mp?: number | undefined;
+  coord_fractional_bits_mp?: number | undefined;
+  normal_fractional_bits?: number | undefined;
+  angle_bits?: number | undefined;
+}
+
 export interface CSVCMsg_FlattenedSerializer {
   serializers: ProtoFlattenedSerializer_t[];
   symbols: string[];
   fields: ProtoFlattenedSerializerField_t[];
+  coord_size_params?: ProtoCoordSizeParams_t | undefined;
 }
 
 export interface CSVCMsg_StopSound {
@@ -793,6 +807,7 @@ export interface CMsgServerUserCmd {
   server_tick_executed?: number | undefined;
   client_tick?: number | undefined;
   delta_data?: Uint8Array | undefined;
+  delta_processed?: boolean | undefined;
 }
 
 export interface CSVCMsg_UserCommands {
@@ -3131,7 +3146,6 @@ function createBaseCSVCMsg_CreateStringTable(): CSVCMsg_CreateStringTable {
     user_data_size_bits: undefined,
     flags: undefined,
     string_data: undefined,
-    uncompressed_size: undefined,
     data_compressed: undefined,
     using_varint_bitcounts: undefined,
   };
@@ -3199,14 +3213,6 @@ export const CSVCMsg_CreateStringTable: MessageFns<CSVCMsg_CreateStringTable> = 
           }
 
           message.string_data = reader.bytes();
-          continue;
-        }
-        case 8: {
-          if (tag !== 64) {
-            break;
-          }
-
-          message.uncompressed_size = reader.int32();
           continue;
         }
         case 9: {
@@ -3872,6 +3878,7 @@ function createBaseProtoFlattenedSerializerField_t(): ProtoFlattenedSerializerFi
     var_encoder_sym: undefined,
     polymorphic_types: [],
     var_serializer_sym: undefined,
+    var_enum_info: undefined,
   };
 }
 
@@ -3981,6 +3988,14 @@ export const ProtoFlattenedSerializerField_t: MessageFns<ProtoFlattenedSerialize
           message.var_serializer_sym = reader.int32();
           continue;
         }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
+
+          message.var_enum_info = ProtoFlattenedSerializerField_t_proto_enum_info_t.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -4019,6 +4034,38 @@ export const ProtoFlattenedSerializerField_t_polymorphic_field_t: MessageFns<
           }
 
           message.polymorphic_field_serializer_version = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseProtoFlattenedSerializerField_t_proto_enum_info_t(): ProtoFlattenedSerializerField_t_proto_enum_info_t {
+  return { is_signed_enum: undefined };
+}
+
+export const ProtoFlattenedSerializerField_t_proto_enum_info_t: MessageFns<
+  ProtoFlattenedSerializerField_t_proto_enum_info_t
+> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): ProtoFlattenedSerializerField_t_proto_enum_info_t {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseProtoFlattenedSerializerField_t_proto_enum_info_t();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.is_signed_enum = reader.bool();
           continue;
         }
       }
@@ -4087,8 +4134,85 @@ export const ProtoFlattenedSerializer_t: MessageFns<ProtoFlattenedSerializer_t> 
   },
 };
 
+function createBaseProtoCoordSizeParams_t(): ProtoCoordSizeParams_t {
+  return {
+    coord_integer_bits: undefined,
+    coord_fractional_bits: undefined,
+    coord_integer_bits_mp: undefined,
+    coord_fractional_bits_mp: undefined,
+    normal_fractional_bits: undefined,
+    angle_bits: undefined,
+  };
+}
+
+export const ProtoCoordSizeParams_t: MessageFns<ProtoCoordSizeParams_t> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): ProtoCoordSizeParams_t {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseProtoCoordSizeParams_t();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.coord_integer_bits = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.coord_fractional_bits = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.coord_integer_bits_mp = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.coord_fractional_bits_mp = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.normal_fractional_bits = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.angle_bits = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseCSVCMsg_FlattenedSerializer(): CSVCMsg_FlattenedSerializer {
-  return { serializers: [], symbols: [], fields: [] };
+  return { serializers: [], symbols: [], fields: [], coord_size_params: undefined };
 }
 
 export const CSVCMsg_FlattenedSerializer: MessageFns<CSVCMsg_FlattenedSerializer> = {
@@ -4121,6 +4245,14 @@ export const CSVCMsg_FlattenedSerializer: MessageFns<CSVCMsg_FlattenedSerializer
           }
 
           message.fields.push(ProtoFlattenedSerializerField_t.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.coord_size_params = ProtoCoordSizeParams_t.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -5016,6 +5148,7 @@ function createBaseCMsgServerUserCmd(): CMsgServerUserCmd {
     server_tick_executed: undefined,
     client_tick: undefined,
     delta_data: undefined,
+    delta_processed: undefined,
   };
 }
 
@@ -5073,6 +5206,14 @@ export const CMsgServerUserCmd: MessageFns<CMsgServerUserCmd> = {
           }
 
           message.delta_data = reader.bytes();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.delta_processed = reader.bool();
           continue;
         }
       }

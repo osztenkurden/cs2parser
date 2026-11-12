@@ -143,6 +143,8 @@ export interface CMsgPlayerInfo {
   steamid?: string | undefined;
   fakeplayer?: boolean | undefined;
   ishltv?: boolean | undefined;
+  clan_member?: boolean | undefined;
+  clan_officer?: boolean | undefined;
 }
 
 export interface CEntityMsg {
@@ -267,6 +269,15 @@ export interface CNETMsg_SpawnGroup_LoadCompleted {
   spawngrouphandle?: number | undefined;
 }
 
+export interface QuantizedFloatEncoderAlias_t {
+  name?: string | undefined;
+  bit_count?: number | undefined;
+  encode_flags?: number | undefined;
+  min_value?: number | undefined;
+  max_value?: number | undefined;
+  validate?: boolean | undefined;
+}
+
 export interface CSVCMsg_GameSessionConfiguration {
   is_multiplayer?: boolean | undefined;
   is_loadsavegame?: boolean | undefined;
@@ -287,6 +298,8 @@ export interface CSVCMsg_GameSessionConfiguration {
   is_transition?: boolean | undefined;
   previouslevel?: string | undefined;
   landmarkname?: string | undefined;
+  quantized_float_encoder_aliases: QuantizedFloatEncoderAlias_t[];
+  max_coord?: number | undefined;
 }
 
 export interface CNETMsg_DebugOverlay {
@@ -600,6 +613,8 @@ function createBaseCMsgPlayerInfo(): CMsgPlayerInfo {
     steamid: undefined,
     fakeplayer: undefined,
     ishltv: undefined,
+    clan_member: undefined,
+    clan_officer: undefined,
   };
 }
 
@@ -657,6 +672,22 @@ export const CMsgPlayerInfo: MessageFns<CMsgPlayerInfo> = {
           }
 
           message.ishltv = reader.bool();
+          continue;
+        }
+        case 9: {
+          if (tag !== 72) {
+            break;
+          }
+
+          message.clan_member = reader.bool();
+          continue;
+        }
+        case 10: {
+          if (tag !== 80) {
+            break;
+          }
+
+          message.clan_officer = reader.bool();
           continue;
         }
       }
@@ -1657,6 +1688,83 @@ export const CNETMsg_SpawnGroup_LoadCompleted: MessageFns<CNETMsg_SpawnGroup_Loa
   },
 };
 
+function createBaseQuantizedFloatEncoderAlias_t(): QuantizedFloatEncoderAlias_t {
+  return {
+    name: undefined,
+    bit_count: undefined,
+    encode_flags: undefined,
+    min_value: undefined,
+    max_value: undefined,
+    validate: undefined,
+  };
+}
+
+export const QuantizedFloatEncoderAlias_t: MessageFns<QuantizedFloatEncoderAlias_t> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): QuantizedFloatEncoderAlias_t {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseQuantizedFloatEncoderAlias_t();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.bit_count = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.encode_flags = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 37) {
+            break;
+          }
+
+          message.min_value = reader.float();
+          continue;
+        }
+        case 5: {
+          if (tag !== 45) {
+            break;
+          }
+
+          message.max_value = reader.float();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.validate = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseCSVCMsg_GameSessionConfiguration(): CSVCMsg_GameSessionConfiguration {
   return {
     is_multiplayer: undefined,
@@ -1678,6 +1786,8 @@ function createBaseCSVCMsg_GameSessionConfiguration(): CSVCMsg_GameSessionConfig
     is_transition: undefined,
     previouslevel: undefined,
     landmarkname: undefined,
+    quantized_float_encoder_aliases: [],
+    max_coord: undefined,
   };
 }
 
@@ -1839,6 +1949,22 @@ export const CSVCMsg_GameSessionConfiguration: MessageFns<CSVCMsg_GameSessionCon
           }
 
           message.landmarkname = reader.string();
+          continue;
+        }
+        case 20: {
+          if (tag !== 162) {
+            break;
+          }
+
+          message.quantized_float_encoder_aliases.push(QuantizedFloatEncoderAlias_t.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 21: {
+          if (tag !== 173) {
+            break;
+          }
+
+          message.max_coord = reader.float();
           continue;
         }
       }

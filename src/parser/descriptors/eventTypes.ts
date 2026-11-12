@@ -1822,12 +1822,6 @@ export interface _GameEventsArguments {
 	grenade_deleted: [GrenadeLifecycleEvent];
 }
 
-export interface _GameEventsArguments {
-	inventory_snapshot: [InventorySnapshotEvent];
-	grenade_flight_end: [GrenadeLifecycleEvent];
-	grenade_deleted: [GrenadeLifecycleEvent];
-}
-
 export type EventWithName = {
 	[K in keyof _GameEventsArguments]: _GameEventsArguments[K][0] & { event_name: K };
 };

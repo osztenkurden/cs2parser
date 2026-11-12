@@ -46,7 +46,10 @@ const DECODER_ID_TO_TS: Record<number, string> = {
 	20: '[number, number, number]', // D_QANGLE_PRES
 	21: 'number', // D_GAME_MODE_RULES
 	22: 'Uint8Array', // D_BINARY_BLOCK
-	23: 'unknown' // D_CTRANSFORM — throws at decode; value never populated
+	23: 'unknown', // D_CTRANSFORM — throws at decode; value never populated
+	24: 'number', // D_FIXED8_SIGNED
+	25: 'number', // D_FIXED8_UNSIGNED
+	26: 'bigint' // D_FIXED8_UNSIGNED64
 };
 
 function decoderToTsType(decoder: Decoder): string {
@@ -222,10 +225,7 @@ function splitByPrefix(fields: FieldMap): Map<string, FieldMap> {
  *
  * Every class still gets exactly the same set of keys and types; only the declarations move.
  */
-function emitOwnInterfaces(
-	sortedEntities: [string, { ownFields: FieldMap }][],
-	lines: string[]
-): Map<string, string> {
+function emitOwnInterfaces(sortedEntities: [string, { ownFields: FieldMap }][], lines: string[]): Map<string, string> {
 	// 1. Identical sets share a node, named after the first class in sorted order.
 	const groups = new Map<string, OwnNode>();
 	for (const [className, { ownFields }] of sortedEntities) {
@@ -261,7 +261,9 @@ function emitOwnInterfaces(
 		const parent = parentOf.get(node);
 		residualOf.set(
 			node,
-			Object.fromEntries(Object.entries(node.fields).filter(([key]) => !parent || !Object.hasOwn(parent.fields, key)))
+			Object.fromEntries(
+				Object.entries(node.fields).filter(([key]) => !parent || !Object.hasOwn(parent.fields, key))
+			)
 		);
 	}
 

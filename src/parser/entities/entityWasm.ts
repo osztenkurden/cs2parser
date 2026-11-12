@@ -34,7 +34,10 @@ const kinds = new Map<number, number>([
 	[Decoders.AmmoDecoder, 19],
 	[Decoders.QanglePresDecoder, 20],
 	[Decoders.GameModeRulesDecoder, 21],
-	[Decoders.BinaryBlockDecoder, 22]
+	[Decoders.BinaryBlockDecoder, 22],
+	[Decoders.Fixed8SignedDecoder, 23],
+	[Decoders.Fixed8UnsignedDecoder, 24],
+	[Decoders.Fixed8Unsigned64Decoder, 25]
 ]);
 
 /** Internal acceleration only; the JS parser remains the fallback/error oracle. */

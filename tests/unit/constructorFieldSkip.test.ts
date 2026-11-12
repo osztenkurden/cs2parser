@@ -70,6 +70,10 @@ for (const name of ['BooleanDecoder', 'ComponentDecoder'] as const) {
 }
 cases.push(['NoscaleDecoder', Decoders.NoscaleDecoder, w => w.write(0xc1234567, 32)]);
 cases.push(['GameModeRulesDecoder', Decoders.GameModeRulesDecoder, w => w.write(0x65, 7)]);
+for (const name of ['Fixed8SignedDecoder', 'Fixed8UnsignedDecoder', 'Fixed8Unsigned64Decoder'] as const) {
+	for (const value of [0, 1, 0x7f, 0x80, 0xff])
+		cases.push([`${name} ${value}`, Decoders[name], w => w.write(value, 8)]);
+}
 cases.push(['Fixed64Decoder', Decoders.Fixed64Decoder, w => w.write(0xfedcba98, 32).write(0x76543210, 32)]);
 
 for (const name of ['VectorNoscaleDecoder', 'Qangle3Decoder', 'QanglePitchYawDecoder'] as const) {

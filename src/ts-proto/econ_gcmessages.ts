@@ -15,15 +15,15 @@ export const EGCItemMsg = {
   k_EMsgGCCraft: 1002,
   k_EMsgGCCraftResponse: 1003,
   k_EMsgGCDelete: 1004,
-  k_EMsgGCVerifyCacheSubscription: 1005,
+  k_EMsgGCVerifyCacheSubscription_DEPRECATED: 1005,
   k_EMsgGCNameItem: 1006,
   k_EMsgGCUnlockCrate_DEPRECATED: 1007,
   k_EMsgGCUnlockCrateResponse: 1008,
-  k_EMsgGCPaintItem: 1009,
-  k_EMsgGCPaintItemResponse: 1010,
-  k_EMsgGCGoldenWrenchBroadcast: 1011,
-  k_EMsgGCMOTDRequest: 1012,
-  k_EMsgGCMOTDRequestResponse: 1013,
+  k_EMsgGCPaintItem_DEPRECATED: 1009,
+  k_EMsgGCPaintItemResponse_DEPRECATED: 1010,
+  k_EMsgGCGoldenWrenchBroadcast_DEPRECATED: 1011,
+  k_EMsgGCMOTDRequest_DEPRECATED: 1012,
+  k_EMsgGCMOTDRequestResponse_DEPRECATED: 1013,
   k_EMsgGCAddItemToSocket_DEPRECATED: 1014,
   k_EMsgGCAddItemToSocketResponse_DEPRECATED: 1015,
   k_EMsgGCAddSocketToBaseItem_DEPRECATED: 1016,
@@ -33,59 +33,59 @@ export const EGCItemMsg = {
   k_EMsgGCNameBaseItemResponse: 1020,
   k_EMsgGCRemoveSocketItem_DEPRECATED: 1021,
   k_EMsgGCRemoveSocketItemResponse_DEPRECATED: 1022,
-  k_EMsgGCCustomizeItemTexture: 1023,
-  k_EMsgGCCustomizeItemTextureResponse: 1024,
+  k_EMsgGCCustomizeItemTexture_DEPRECATED: 1023,
+  k_EMsgGCCustomizeItemTextureResponse_DEPRECATED: 1024,
   k_EMsgGCUseItemRequest: 1025,
   k_EMsgGCUseItemResponse: 1026,
   k_EMsgGCGiftedItems_DEPRECATED: 1027,
   k_EMsgGCRemoveItemName: 1030,
-  k_EMsgGCRemoveItemPaint: 1031,
-  k_EMsgGCGiftWrapItem: 1032,
-  k_EMsgGCGiftWrapItemResponse: 1033,
-  k_EMsgGCDeliverGift: 1034,
-  k_EMsgGCDeliverGiftResponseGiver: 1035,
-  k_EMsgGCDeliverGiftResponseReceiver: 1036,
-  k_EMsgGCUnwrapGiftRequest: 1037,
-  k_EMsgGCUnwrapGiftResponse: 1038,
-  k_EMsgGCSetItemStyle: 1039,
-  k_EMsgGCUsedClaimCodeItem: 1040,
+  k_EMsgGCRemoveItemPaint_DEPRECATED: 1031,
+  k_EMsgGCGiftWrapItem_DEPRECATED: 1032,
+  k_EMsgGCGiftWrapItemResponse_DEPRECATED: 1033,
+  k_EMsgGCDeliverGift_DEPRECATED: 1034,
+  k_EMsgGCDeliverGiftResponseGiver_DEPRECATED: 1035,
+  k_EMsgGCDeliverGiftResponseReceiver_DEPRECATED: 1036,
+  k_EMsgGCUnwrapGiftRequest_DEPRECATED: 1037,
+  k_EMsgGCUnwrapGiftResponse_DEPRECATED: 1038,
+  k_EMsgGCSetItemStyle_DEPRECATED: 1039,
+  k_EMsgGCUsedClaimCodeItem_DEPRECATED: 1040,
   k_EMsgGCSortItems: 1041,
   k_EMsgGC_RevolvingLootList_DEPRECATED: 1042,
-  k_EMsgGCLookupAccount: 1043,
-  k_EMsgGCLookupAccountResponse: 1044,
-  k_EMsgGCLookupAccountName: 1045,
-  k_EMsgGCLookupAccountNameResponse: 1046,
+  k_EMsgGCLookupAccount_DEPRECATED: 1043,
+  k_EMsgGCLookupAccountResponse_DEPRECATED: 1044,
+  k_EMsgGCLookupAccountName_DEPRECATED: 1045,
+  k_EMsgGCLookupAccountNameResponse_DEPRECATED: 1046,
   k_EMsgGCUpdateItemSchema: 1049,
-  k_EMsgGCRemoveCustomTexture: 1051,
-  k_EMsgGCRemoveCustomTextureResponse: 1052,
-  k_EMsgGCRemoveMakersMark: 1053,
-  k_EMsgGCRemoveMakersMarkResponse: 1054,
-  k_EMsgGCRemoveUniqueCraftIndex: 1055,
-  k_EMsgGCRemoveUniqueCraftIndexResponse: 1056,
+  k_EMsgGCRemoveCustomTexture_DEPRECATED: 1051,
+  k_EMsgGCRemoveCustomTextureResponse_DEPRECATED: 1052,
+  k_EMsgGCRemoveMakersMark_DEPRECATED: 1053,
+  k_EMsgGCRemoveMakersMarkResponse_DEPRECATED: 1054,
+  k_EMsgGCRemoveUniqueCraftIndex_DEPRECATED: 1055,
+  k_EMsgGCRemoveUniqueCraftIndexResponse_DEPRECATED: 1056,
   k_EMsgGCSaxxyBroadcast: 1057,
   k_EMsgGCBackpackSortFinished: 1058,
-  k_EMsgGCCollectItem: 1061,
+  k_EMsgGCCollectItem_DEPRECATED: 1061,
   k_EMsgGCItemAcknowledged__DEPRECATED: 1062,
   k_EMsgGC_ReportAbuse: 1065,
   k_EMsgGC_ReportAbuseResponse: 1066,
   k_EMsgGCNameItemNotification: 1068,
-  k_EMsgGCApplyConsumableEffects: 1069,
+  k_EMsgGCApplyConsumableEffects_DEPRECATED: 1069,
   k_EMsgGCConsumableExhausted: 1070,
   k_EMsgGCShowItemsPickedUp: 1071,
-  k_EMsgGCClientDisplayNotification: 1072,
-  k_EMsgGCApplyStrangePart: 1073,
+  k_EMsgGCClientDisplayNotification_DEPRECATED: 1072,
+  k_EMsgGCApplyStrangePart_DEPRECATED: 1073,
   k_EMsgGC_IncrementKillCountAttribute: 1074,
   k_EMsgGC_IncrementKillCountResponse: 1075,
-  k_EMsgGCApplyPennantUpgrade: 1076,
+  k_EMsgGCApplyPennantUpgrade_DEPRECATED: 1076,
   k_EMsgGCSetItemPositions: 1077,
-  k_EMsgGCApplyEggEssence: 1078,
-  k_EMsgGCNameEggEssenceResponse: 1079,
-  k_EMsgGCPaintKitItem: 1080,
-  k_EMsgGCPaintKitBaseItem: 1081,
-  k_EMsgGCPaintKitItemResponse: 1082,
+  k_EMsgGCApplyEggEssence_DEPRECATED: 1078,
+  k_EMsgGCNameEggEssenceResponse_DEPRECATED: 1079,
+  k_EMsgGCPaintKitItem_DEPRECATED: 1080,
+  k_EMsgGCPaintKitBaseItem_DEPRECATED: 1081,
+  k_EMsgGCPaintKitItemResponse_DEPRECATED: 1082,
   k_EMsgGCGiftedItems: 1083,
-  k_EMsgGCUnlockItemStyle: 1084,
-  k_EMsgGCUnlockItemStyleResponse: 1085,
+  k_EMsgGCUnlockItemStyle_DEPRECATED: 1084,
+  k_EMsgGCUnlockItemStyleResponse_DEPRECATED: 1085,
   k_EMsgGCApplySticker: 1086,
   k_EMsgGCItemAcknowledged: 1087,
   k_EMsgGCStatTrakSwap: 1088,
@@ -95,19 +95,19 @@ export const EGCItemMsg = {
   k_EMsgGCCasketItemAdd: 1092,
   k_EMsgGCCasketItemExtract: 1093,
   k_EMsgGCCasketItemLoadContents: 1094,
-  k_EMsgGCServerBrowser_FavoriteServer: 1601,
-  k_EMsgGCServerBrowser_BlacklistServer: 1602,
-  k_EMsgGCServerRentalsBase: 1700,
-  k_EMsgGCItemPreviewCheckStatus: 1701,
-  k_EMsgGCItemPreviewStatusResponse: 1702,
-  k_EMsgGCItemPreviewRequest: 1703,
-  k_EMsgGCItemPreviewRequestResponse: 1704,
-  k_EMsgGCItemPreviewExpire: 1705,
-  k_EMsgGCItemPreviewExpireNotification: 1706,
-  k_EMsgGCItemPreviewItemBoughtNotification: 1707,
+  k_EMsgGCServerBrowser_FavoriteServer_DEPRECATED: 1601,
+  k_EMsgGCServerBrowser_BlacklistServer_DEPRECATED: 1602,
+  k_EMsgGCServerRentalsBase_DEPRECATED: 1700,
+  k_EMsgGCItemPreviewCheckStatus_DEPRECATED: 1701,
+  k_EMsgGCItemPreviewStatusResponse_DEPRECATED: 1702,
+  k_EMsgGCItemPreviewRequest_DEPRECATED: 1703,
+  k_EMsgGCItemPreviewRequestResponse_DEPRECATED: 1704,
+  k_EMsgGCItemPreviewExpire_DEPRECATED: 1705,
+  k_EMsgGCItemPreviewExpireNotification_DEPRECATED: 1706,
+  k_EMsgGCItemPreviewItemBoughtNotification_DEPRECATED: 1707,
   k_EMsgGCDev_NewItemRequest: 2001,
   k_EMsgGCDev_NewItemRequestResponse: 2002,
-  k_EMsgGCDev_PaintKitDropItem: 2003,
+  k_EMsgGCDev_PaintKitDropItem_DEPRECATED: 2003,
   k_EMsgGCDev_SchemaReservationRequest: 2004,
   k_EMsgGCStoreGetUserData: 2500,
   k_EMsgGCStoreGetUserDataResponse: 2501,
@@ -117,8 +117,8 @@ export const EGCItemMsg = {
   k_EMsgGCStorePurchaseFinalizeResponse: 2505,
   k_EMsgGCStorePurchaseCancel: 2506,
   k_EMsgGCStorePurchaseCancelResponse: 2507,
-  k_EMsgGCStorePurchaseQueryTxn: 2508,
-  k_EMsgGCStorePurchaseQueryTxnResponse: 2509,
+  k_EMsgGCStorePurchaseQueryTxn_DEPRECATED: 2508,
+  k_EMsgGCStorePurchaseQueryTxnResponse_DEPRECATED: 2509,
   k_EMsgGCStorePurchaseInit: 2510,
   k_EMsgGCStorePurchaseInitResponse: 2511,
   k_EMsgGCBannedWordListRequest: 2512,
@@ -154,15 +154,15 @@ export namespace EGCItemMsg {
   export type k_EMsgGCCraft = typeof EGCItemMsg.k_EMsgGCCraft;
   export type k_EMsgGCCraftResponse = typeof EGCItemMsg.k_EMsgGCCraftResponse;
   export type k_EMsgGCDelete = typeof EGCItemMsg.k_EMsgGCDelete;
-  export type k_EMsgGCVerifyCacheSubscription = typeof EGCItemMsg.k_EMsgGCVerifyCacheSubscription;
+  export type k_EMsgGCVerifyCacheSubscription_DEPRECATED = typeof EGCItemMsg.k_EMsgGCVerifyCacheSubscription_DEPRECATED;
   export type k_EMsgGCNameItem = typeof EGCItemMsg.k_EMsgGCNameItem;
   export type k_EMsgGCUnlockCrate_DEPRECATED = typeof EGCItemMsg.k_EMsgGCUnlockCrate_DEPRECATED;
   export type k_EMsgGCUnlockCrateResponse = typeof EGCItemMsg.k_EMsgGCUnlockCrateResponse;
-  export type k_EMsgGCPaintItem = typeof EGCItemMsg.k_EMsgGCPaintItem;
-  export type k_EMsgGCPaintItemResponse = typeof EGCItemMsg.k_EMsgGCPaintItemResponse;
-  export type k_EMsgGCGoldenWrenchBroadcast = typeof EGCItemMsg.k_EMsgGCGoldenWrenchBroadcast;
-  export type k_EMsgGCMOTDRequest = typeof EGCItemMsg.k_EMsgGCMOTDRequest;
-  export type k_EMsgGCMOTDRequestResponse = typeof EGCItemMsg.k_EMsgGCMOTDRequestResponse;
+  export type k_EMsgGCPaintItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCPaintItem_DEPRECATED;
+  export type k_EMsgGCPaintItemResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCPaintItemResponse_DEPRECATED;
+  export type k_EMsgGCGoldenWrenchBroadcast_DEPRECATED = typeof EGCItemMsg.k_EMsgGCGoldenWrenchBroadcast_DEPRECATED;
+  export type k_EMsgGCMOTDRequest_DEPRECATED = typeof EGCItemMsg.k_EMsgGCMOTDRequest_DEPRECATED;
+  export type k_EMsgGCMOTDRequestResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCMOTDRequestResponse_DEPRECATED;
   export type k_EMsgGCAddItemToSocket_DEPRECATED = typeof EGCItemMsg.k_EMsgGCAddItemToSocket_DEPRECATED;
   export type k_EMsgGCAddItemToSocketResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCAddItemToSocketResponse_DEPRECATED;
   export type k_EMsgGCAddSocketToBaseItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCAddSocketToBaseItem_DEPRECATED;
@@ -173,59 +173,67 @@ export namespace EGCItemMsg {
   export type k_EMsgGCRemoveSocketItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCRemoveSocketItem_DEPRECATED;
   export type k_EMsgGCRemoveSocketItemResponse_DEPRECATED =
     typeof EGCItemMsg.k_EMsgGCRemoveSocketItemResponse_DEPRECATED;
-  export type k_EMsgGCCustomizeItemTexture = typeof EGCItemMsg.k_EMsgGCCustomizeItemTexture;
-  export type k_EMsgGCCustomizeItemTextureResponse = typeof EGCItemMsg.k_EMsgGCCustomizeItemTextureResponse;
+  export type k_EMsgGCCustomizeItemTexture_DEPRECATED = typeof EGCItemMsg.k_EMsgGCCustomizeItemTexture_DEPRECATED;
+  export type k_EMsgGCCustomizeItemTextureResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCCustomizeItemTextureResponse_DEPRECATED;
   export type k_EMsgGCUseItemRequest = typeof EGCItemMsg.k_EMsgGCUseItemRequest;
   export type k_EMsgGCUseItemResponse = typeof EGCItemMsg.k_EMsgGCUseItemResponse;
   export type k_EMsgGCGiftedItems_DEPRECATED = typeof EGCItemMsg.k_EMsgGCGiftedItems_DEPRECATED;
   export type k_EMsgGCRemoveItemName = typeof EGCItemMsg.k_EMsgGCRemoveItemName;
-  export type k_EMsgGCRemoveItemPaint = typeof EGCItemMsg.k_EMsgGCRemoveItemPaint;
-  export type k_EMsgGCGiftWrapItem = typeof EGCItemMsg.k_EMsgGCGiftWrapItem;
-  export type k_EMsgGCGiftWrapItemResponse = typeof EGCItemMsg.k_EMsgGCGiftWrapItemResponse;
-  export type k_EMsgGCDeliverGift = typeof EGCItemMsg.k_EMsgGCDeliverGift;
-  export type k_EMsgGCDeliverGiftResponseGiver = typeof EGCItemMsg.k_EMsgGCDeliverGiftResponseGiver;
-  export type k_EMsgGCDeliverGiftResponseReceiver = typeof EGCItemMsg.k_EMsgGCDeliverGiftResponseReceiver;
-  export type k_EMsgGCUnwrapGiftRequest = typeof EGCItemMsg.k_EMsgGCUnwrapGiftRequest;
-  export type k_EMsgGCUnwrapGiftResponse = typeof EGCItemMsg.k_EMsgGCUnwrapGiftResponse;
-  export type k_EMsgGCSetItemStyle = typeof EGCItemMsg.k_EMsgGCSetItemStyle;
-  export type k_EMsgGCUsedClaimCodeItem = typeof EGCItemMsg.k_EMsgGCUsedClaimCodeItem;
+  export type k_EMsgGCRemoveItemPaint_DEPRECATED = typeof EGCItemMsg.k_EMsgGCRemoveItemPaint_DEPRECATED;
+  export type k_EMsgGCGiftWrapItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCGiftWrapItem_DEPRECATED;
+  export type k_EMsgGCGiftWrapItemResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCGiftWrapItemResponse_DEPRECATED;
+  export type k_EMsgGCDeliverGift_DEPRECATED = typeof EGCItemMsg.k_EMsgGCDeliverGift_DEPRECATED;
+  export type k_EMsgGCDeliverGiftResponseGiver_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCDeliverGiftResponseGiver_DEPRECATED;
+  export type k_EMsgGCDeliverGiftResponseReceiver_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCDeliverGiftResponseReceiver_DEPRECATED;
+  export type k_EMsgGCUnwrapGiftRequest_DEPRECATED = typeof EGCItemMsg.k_EMsgGCUnwrapGiftRequest_DEPRECATED;
+  export type k_EMsgGCUnwrapGiftResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCUnwrapGiftResponse_DEPRECATED;
+  export type k_EMsgGCSetItemStyle_DEPRECATED = typeof EGCItemMsg.k_EMsgGCSetItemStyle_DEPRECATED;
+  export type k_EMsgGCUsedClaimCodeItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCUsedClaimCodeItem_DEPRECATED;
   export type k_EMsgGCSortItems = typeof EGCItemMsg.k_EMsgGCSortItems;
   export type k_EMsgGC_RevolvingLootList_DEPRECATED = typeof EGCItemMsg.k_EMsgGC_RevolvingLootList_DEPRECATED;
-  export type k_EMsgGCLookupAccount = typeof EGCItemMsg.k_EMsgGCLookupAccount;
-  export type k_EMsgGCLookupAccountResponse = typeof EGCItemMsg.k_EMsgGCLookupAccountResponse;
-  export type k_EMsgGCLookupAccountName = typeof EGCItemMsg.k_EMsgGCLookupAccountName;
-  export type k_EMsgGCLookupAccountNameResponse = typeof EGCItemMsg.k_EMsgGCLookupAccountNameResponse;
+  export type k_EMsgGCLookupAccount_DEPRECATED = typeof EGCItemMsg.k_EMsgGCLookupAccount_DEPRECATED;
+  export type k_EMsgGCLookupAccountResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCLookupAccountResponse_DEPRECATED;
+  export type k_EMsgGCLookupAccountName_DEPRECATED = typeof EGCItemMsg.k_EMsgGCLookupAccountName_DEPRECATED;
+  export type k_EMsgGCLookupAccountNameResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCLookupAccountNameResponse_DEPRECATED;
   export type k_EMsgGCUpdateItemSchema = typeof EGCItemMsg.k_EMsgGCUpdateItemSchema;
-  export type k_EMsgGCRemoveCustomTexture = typeof EGCItemMsg.k_EMsgGCRemoveCustomTexture;
-  export type k_EMsgGCRemoveCustomTextureResponse = typeof EGCItemMsg.k_EMsgGCRemoveCustomTextureResponse;
-  export type k_EMsgGCRemoveMakersMark = typeof EGCItemMsg.k_EMsgGCRemoveMakersMark;
-  export type k_EMsgGCRemoveMakersMarkResponse = typeof EGCItemMsg.k_EMsgGCRemoveMakersMarkResponse;
-  export type k_EMsgGCRemoveUniqueCraftIndex = typeof EGCItemMsg.k_EMsgGCRemoveUniqueCraftIndex;
-  export type k_EMsgGCRemoveUniqueCraftIndexResponse = typeof EGCItemMsg.k_EMsgGCRemoveUniqueCraftIndexResponse;
+  export type k_EMsgGCRemoveCustomTexture_DEPRECATED = typeof EGCItemMsg.k_EMsgGCRemoveCustomTexture_DEPRECATED;
+  export type k_EMsgGCRemoveCustomTextureResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCRemoveCustomTextureResponse_DEPRECATED;
+  export type k_EMsgGCRemoveMakersMark_DEPRECATED = typeof EGCItemMsg.k_EMsgGCRemoveMakersMark_DEPRECATED;
+  export type k_EMsgGCRemoveMakersMarkResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCRemoveMakersMarkResponse_DEPRECATED;
+  export type k_EMsgGCRemoveUniqueCraftIndex_DEPRECATED = typeof EGCItemMsg.k_EMsgGCRemoveUniqueCraftIndex_DEPRECATED;
+  export type k_EMsgGCRemoveUniqueCraftIndexResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCRemoveUniqueCraftIndexResponse_DEPRECATED;
   export type k_EMsgGCSaxxyBroadcast = typeof EGCItemMsg.k_EMsgGCSaxxyBroadcast;
   export type k_EMsgGCBackpackSortFinished = typeof EGCItemMsg.k_EMsgGCBackpackSortFinished;
-  export type k_EMsgGCCollectItem = typeof EGCItemMsg.k_EMsgGCCollectItem;
+  export type k_EMsgGCCollectItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCCollectItem_DEPRECATED;
   export type k_EMsgGCItemAcknowledged__DEPRECATED = typeof EGCItemMsg.k_EMsgGCItemAcknowledged__DEPRECATED;
   export type k_EMsgGC_ReportAbuse = typeof EGCItemMsg.k_EMsgGC_ReportAbuse;
   export type k_EMsgGC_ReportAbuseResponse = typeof EGCItemMsg.k_EMsgGC_ReportAbuseResponse;
   export type k_EMsgGCNameItemNotification = typeof EGCItemMsg.k_EMsgGCNameItemNotification;
-  export type k_EMsgGCApplyConsumableEffects = typeof EGCItemMsg.k_EMsgGCApplyConsumableEffects;
+  export type k_EMsgGCApplyConsumableEffects_DEPRECATED = typeof EGCItemMsg.k_EMsgGCApplyConsumableEffects_DEPRECATED;
   export type k_EMsgGCConsumableExhausted = typeof EGCItemMsg.k_EMsgGCConsumableExhausted;
   export type k_EMsgGCShowItemsPickedUp = typeof EGCItemMsg.k_EMsgGCShowItemsPickedUp;
-  export type k_EMsgGCClientDisplayNotification = typeof EGCItemMsg.k_EMsgGCClientDisplayNotification;
-  export type k_EMsgGCApplyStrangePart = typeof EGCItemMsg.k_EMsgGCApplyStrangePart;
+  export type k_EMsgGCClientDisplayNotification_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCClientDisplayNotification_DEPRECATED;
+  export type k_EMsgGCApplyStrangePart_DEPRECATED = typeof EGCItemMsg.k_EMsgGCApplyStrangePart_DEPRECATED;
   export type k_EMsgGC_IncrementKillCountAttribute = typeof EGCItemMsg.k_EMsgGC_IncrementKillCountAttribute;
   export type k_EMsgGC_IncrementKillCountResponse = typeof EGCItemMsg.k_EMsgGC_IncrementKillCountResponse;
-  export type k_EMsgGCApplyPennantUpgrade = typeof EGCItemMsg.k_EMsgGCApplyPennantUpgrade;
+  export type k_EMsgGCApplyPennantUpgrade_DEPRECATED = typeof EGCItemMsg.k_EMsgGCApplyPennantUpgrade_DEPRECATED;
   export type k_EMsgGCSetItemPositions = typeof EGCItemMsg.k_EMsgGCSetItemPositions;
-  export type k_EMsgGCApplyEggEssence = typeof EGCItemMsg.k_EMsgGCApplyEggEssence;
-  export type k_EMsgGCNameEggEssenceResponse = typeof EGCItemMsg.k_EMsgGCNameEggEssenceResponse;
-  export type k_EMsgGCPaintKitItem = typeof EGCItemMsg.k_EMsgGCPaintKitItem;
-  export type k_EMsgGCPaintKitBaseItem = typeof EGCItemMsg.k_EMsgGCPaintKitBaseItem;
-  export type k_EMsgGCPaintKitItemResponse = typeof EGCItemMsg.k_EMsgGCPaintKitItemResponse;
+  export type k_EMsgGCApplyEggEssence_DEPRECATED = typeof EGCItemMsg.k_EMsgGCApplyEggEssence_DEPRECATED;
+  export type k_EMsgGCNameEggEssenceResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCNameEggEssenceResponse_DEPRECATED;
+  export type k_EMsgGCPaintKitItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCPaintKitItem_DEPRECATED;
+  export type k_EMsgGCPaintKitBaseItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCPaintKitBaseItem_DEPRECATED;
+  export type k_EMsgGCPaintKitItemResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCPaintKitItemResponse_DEPRECATED;
   export type k_EMsgGCGiftedItems = typeof EGCItemMsg.k_EMsgGCGiftedItems;
-  export type k_EMsgGCUnlockItemStyle = typeof EGCItemMsg.k_EMsgGCUnlockItemStyle;
-  export type k_EMsgGCUnlockItemStyleResponse = typeof EGCItemMsg.k_EMsgGCUnlockItemStyleResponse;
+  export type k_EMsgGCUnlockItemStyle_DEPRECATED = typeof EGCItemMsg.k_EMsgGCUnlockItemStyle_DEPRECATED;
+  export type k_EMsgGCUnlockItemStyleResponse_DEPRECATED = typeof EGCItemMsg.k_EMsgGCUnlockItemStyleResponse_DEPRECATED;
   export type k_EMsgGCApplySticker = typeof EGCItemMsg.k_EMsgGCApplySticker;
   export type k_EMsgGCItemAcknowledged = typeof EGCItemMsg.k_EMsgGCItemAcknowledged;
   export type k_EMsgGCStatTrakSwap = typeof EGCItemMsg.k_EMsgGCStatTrakSwap;
@@ -235,19 +243,25 @@ export namespace EGCItemMsg {
   export type k_EMsgGCCasketItemAdd = typeof EGCItemMsg.k_EMsgGCCasketItemAdd;
   export type k_EMsgGCCasketItemExtract = typeof EGCItemMsg.k_EMsgGCCasketItemExtract;
   export type k_EMsgGCCasketItemLoadContents = typeof EGCItemMsg.k_EMsgGCCasketItemLoadContents;
-  export type k_EMsgGCServerBrowser_FavoriteServer = typeof EGCItemMsg.k_EMsgGCServerBrowser_FavoriteServer;
-  export type k_EMsgGCServerBrowser_BlacklistServer = typeof EGCItemMsg.k_EMsgGCServerBrowser_BlacklistServer;
-  export type k_EMsgGCServerRentalsBase = typeof EGCItemMsg.k_EMsgGCServerRentalsBase;
-  export type k_EMsgGCItemPreviewCheckStatus = typeof EGCItemMsg.k_EMsgGCItemPreviewCheckStatus;
-  export type k_EMsgGCItemPreviewStatusResponse = typeof EGCItemMsg.k_EMsgGCItemPreviewStatusResponse;
-  export type k_EMsgGCItemPreviewRequest = typeof EGCItemMsg.k_EMsgGCItemPreviewRequest;
-  export type k_EMsgGCItemPreviewRequestResponse = typeof EGCItemMsg.k_EMsgGCItemPreviewRequestResponse;
-  export type k_EMsgGCItemPreviewExpire = typeof EGCItemMsg.k_EMsgGCItemPreviewExpire;
-  export type k_EMsgGCItemPreviewExpireNotification = typeof EGCItemMsg.k_EMsgGCItemPreviewExpireNotification;
-  export type k_EMsgGCItemPreviewItemBoughtNotification = typeof EGCItemMsg.k_EMsgGCItemPreviewItemBoughtNotification;
+  export type k_EMsgGCServerBrowser_FavoriteServer_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCServerBrowser_FavoriteServer_DEPRECATED;
+  export type k_EMsgGCServerBrowser_BlacklistServer_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCServerBrowser_BlacklistServer_DEPRECATED;
+  export type k_EMsgGCServerRentalsBase_DEPRECATED = typeof EGCItemMsg.k_EMsgGCServerRentalsBase_DEPRECATED;
+  export type k_EMsgGCItemPreviewCheckStatus_DEPRECATED = typeof EGCItemMsg.k_EMsgGCItemPreviewCheckStatus_DEPRECATED;
+  export type k_EMsgGCItemPreviewStatusResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCItemPreviewStatusResponse_DEPRECATED;
+  export type k_EMsgGCItemPreviewRequest_DEPRECATED = typeof EGCItemMsg.k_EMsgGCItemPreviewRequest_DEPRECATED;
+  export type k_EMsgGCItemPreviewRequestResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCItemPreviewRequestResponse_DEPRECATED;
+  export type k_EMsgGCItemPreviewExpire_DEPRECATED = typeof EGCItemMsg.k_EMsgGCItemPreviewExpire_DEPRECATED;
+  export type k_EMsgGCItemPreviewExpireNotification_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCItemPreviewExpireNotification_DEPRECATED;
+  export type k_EMsgGCItemPreviewItemBoughtNotification_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCItemPreviewItemBoughtNotification_DEPRECATED;
   export type k_EMsgGCDev_NewItemRequest = typeof EGCItemMsg.k_EMsgGCDev_NewItemRequest;
   export type k_EMsgGCDev_NewItemRequestResponse = typeof EGCItemMsg.k_EMsgGCDev_NewItemRequestResponse;
-  export type k_EMsgGCDev_PaintKitDropItem = typeof EGCItemMsg.k_EMsgGCDev_PaintKitDropItem;
+  export type k_EMsgGCDev_PaintKitDropItem_DEPRECATED = typeof EGCItemMsg.k_EMsgGCDev_PaintKitDropItem_DEPRECATED;
   export type k_EMsgGCDev_SchemaReservationRequest = typeof EGCItemMsg.k_EMsgGCDev_SchemaReservationRequest;
   export type k_EMsgGCStoreGetUserData = typeof EGCItemMsg.k_EMsgGCStoreGetUserData;
   export type k_EMsgGCStoreGetUserDataResponse = typeof EGCItemMsg.k_EMsgGCStoreGetUserDataResponse;
@@ -258,8 +272,9 @@ export namespace EGCItemMsg {
   export type k_EMsgGCStorePurchaseFinalizeResponse = typeof EGCItemMsg.k_EMsgGCStorePurchaseFinalizeResponse;
   export type k_EMsgGCStorePurchaseCancel = typeof EGCItemMsg.k_EMsgGCStorePurchaseCancel;
   export type k_EMsgGCStorePurchaseCancelResponse = typeof EGCItemMsg.k_EMsgGCStorePurchaseCancelResponse;
-  export type k_EMsgGCStorePurchaseQueryTxn = typeof EGCItemMsg.k_EMsgGCStorePurchaseQueryTxn;
-  export type k_EMsgGCStorePurchaseQueryTxnResponse = typeof EGCItemMsg.k_EMsgGCStorePurchaseQueryTxnResponse;
+  export type k_EMsgGCStorePurchaseQueryTxn_DEPRECATED = typeof EGCItemMsg.k_EMsgGCStorePurchaseQueryTxn_DEPRECATED;
+  export type k_EMsgGCStorePurchaseQueryTxnResponse_DEPRECATED =
+    typeof EGCItemMsg.k_EMsgGCStorePurchaseQueryTxnResponse_DEPRECATED;
   export type k_EMsgGCStorePurchaseInit = typeof EGCItemMsg.k_EMsgGCStorePurchaseInit;
   export type k_EMsgGCStorePurchaseInitResponse = typeof EGCItemMsg.k_EMsgGCStorePurchaseInitResponse;
   export type k_EMsgGCBannedWordListRequest = typeof EGCItemMsg.k_EMsgGCBannedWordListRequest;
@@ -317,28 +332,6 @@ export namespace EGCMsgResponse {
   export type k_EGCMsgLimitExceeded = typeof EGCMsgResponse.k_EGCMsgLimitExceeded;
   export type k_EGCMsgCommitUnfinalized = typeof EGCMsgResponse.k_EGCMsgCommitUnfinalized;
   export type UNRECOGNIZED = typeof EGCMsgResponse.UNRECOGNIZED;
-}
-
-export const EUnlockStyle = {
-  k_UnlockStyle_Succeeded: 0,
-  k_UnlockStyle_Failed_PreReq: 1,
-  k_UnlockStyle_Failed_CantAfford: 2,
-  k_UnlockStyle_Failed_CantCommit: 3,
-  k_UnlockStyle_Failed_CantLockCache: 4,
-  k_UnlockStyle_Failed_CantAffordAttrib: 5,
-  UNRECOGNIZED: -1,
-} as const;
-
-export type EUnlockStyle = typeof EUnlockStyle[keyof typeof EUnlockStyle];
-
-export namespace EUnlockStyle {
-  export type k_UnlockStyle_Succeeded = typeof EUnlockStyle.k_UnlockStyle_Succeeded;
-  export type k_UnlockStyle_Failed_PreReq = typeof EUnlockStyle.k_UnlockStyle_Failed_PreReq;
-  export type k_UnlockStyle_Failed_CantAfford = typeof EUnlockStyle.k_UnlockStyle_Failed_CantAfford;
-  export type k_UnlockStyle_Failed_CantCommit = typeof EUnlockStyle.k_UnlockStyle_Failed_CantCommit;
-  export type k_UnlockStyle_Failed_CantLockCache = typeof EUnlockStyle.k_UnlockStyle_Failed_CantLockCache;
-  export type k_UnlockStyle_Failed_CantAffordAttrib = typeof EUnlockStyle.k_UnlockStyle_Failed_CantAffordAttrib;
-  export type UNRECOGNIZED = typeof EUnlockStyle.UNRECOGNIZED;
 }
 
 export const EGCItemCustomizationNotification = {

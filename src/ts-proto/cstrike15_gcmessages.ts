@@ -99,13 +99,9 @@ export const ECsgoGCMsg = {
   k_EMsgGCCStrike15_v2_ClientPerfReport: 9202,
   k_EMsgGCCStrike15_v2_GetEventFavorites_Response: 9203,
   k_EMsgGCCStrike15_v2_ClientRequestSouvenir: 9204,
-  k_EMsgGCCStrike15_v2_GC2ClientRefuseSecureMode: 9206,
-  k_EMsgGCCStrike15_v2_GC2ClientRequestValidation: 9207,
   k_EMsgGCCStrike15_v2_ClientRedeemMissionReward: 9209,
   k_EMsgGCCStrike15_ClientDeepStats: 9210,
   k_EMsgGCCStrike15_StartAgreementSessionInGame: 9211,
-  k_EMsgGCCStrike15_v2_GC2ClientInitSystem: 9212,
-  k_EMsgGCCStrike15_v2_GC2ClientInitSystem_Response: 9213,
   k_EMsgGCCStrike15_v2_PrivateQueues: 9214,
   k_EMsgGCCStrike15_v2_MatchListTournamentOperatorMgmt: 9215,
   k_EMsgGCCStrike15_v2_BetaEnrollment: 9217,
@@ -262,18 +258,11 @@ export namespace ECsgoGCMsg {
   export type k_EMsgGCCStrike15_v2_GetEventFavorites_Response =
     typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_GetEventFavorites_Response;
   export type k_EMsgGCCStrike15_v2_ClientRequestSouvenir = typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_ClientRequestSouvenir;
-  export type k_EMsgGCCStrike15_v2_GC2ClientRefuseSecureMode =
-    typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_GC2ClientRefuseSecureMode;
-  export type k_EMsgGCCStrike15_v2_GC2ClientRequestValidation =
-    typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_GC2ClientRequestValidation;
   export type k_EMsgGCCStrike15_v2_ClientRedeemMissionReward =
     typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_ClientRedeemMissionReward;
   export type k_EMsgGCCStrike15_ClientDeepStats = typeof ECsgoGCMsg.k_EMsgGCCStrike15_ClientDeepStats;
   export type k_EMsgGCCStrike15_StartAgreementSessionInGame =
     typeof ECsgoGCMsg.k_EMsgGCCStrike15_StartAgreementSessionInGame;
-  export type k_EMsgGCCStrike15_v2_GC2ClientInitSystem = typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_GC2ClientInitSystem;
-  export type k_EMsgGCCStrike15_v2_GC2ClientInitSystem_Response =
-    typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_GC2ClientInitSystem_Response;
   export type k_EMsgGCCStrike15_v2_PrivateQueues = typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_PrivateQueues;
   export type k_EMsgGCCStrike15_v2_MatchListTournamentOperatorMgmt =
     typeof ECsgoGCMsg.k_EMsgGCCStrike15_v2_MatchListTournamentOperatorMgmt;
@@ -345,34 +334,6 @@ export namespace EClientReportingVersion {
   export type k_EClientReportingVersion_SupportsTrustedMode =
     typeof EClientReportingVersion.k_EClientReportingVersion_SupportsTrustedMode;
   export type UNRECOGNIZED = typeof EClientReportingVersion.UNRECOGNIZED;
-}
-
-export const EInitSystemResult = {
-  k_EInitSystemResult_Invalid: 0,
-  k_EInitSystemResult_Success: 1,
-  k_EInitSystemResult_None: 2,
-  k_EInitSystemResult_NotFound: 3,
-  k_EInitSystemResult_Existing: 4,
-  k_EInitSystemResult_FailedOpen: 5,
-  k_EInitSystemResult_Mismatch: 6,
-  k_EInitSystemResult_FailedInit: 7,
-  k_EInitSystemResult_Max: 8,
-  UNRECOGNIZED: -1,
-} as const;
-
-export type EInitSystemResult = typeof EInitSystemResult[keyof typeof EInitSystemResult];
-
-export namespace EInitSystemResult {
-  export type k_EInitSystemResult_Invalid = typeof EInitSystemResult.k_EInitSystemResult_Invalid;
-  export type k_EInitSystemResult_Success = typeof EInitSystemResult.k_EInitSystemResult_Success;
-  export type k_EInitSystemResult_None = typeof EInitSystemResult.k_EInitSystemResult_None;
-  export type k_EInitSystemResult_NotFound = typeof EInitSystemResult.k_EInitSystemResult_NotFound;
-  export type k_EInitSystemResult_Existing = typeof EInitSystemResult.k_EInitSystemResult_Existing;
-  export type k_EInitSystemResult_FailedOpen = typeof EInitSystemResult.k_EInitSystemResult_FailedOpen;
-  export type k_EInitSystemResult_Mismatch = typeof EInitSystemResult.k_EInitSystemResult_Mismatch;
-  export type k_EInitSystemResult_FailedInit = typeof EInitSystemResult.k_EInitSystemResult_FailedInit;
-  export type k_EInitSystemResult_Max = typeof EInitSystemResult.k_EInitSystemResult_Max;
-  export type UNRECOGNIZED = typeof EInitSystemResult.UNRECOGNIZED;
 }
 
 export interface GameServerPing {
@@ -784,6 +745,7 @@ export interface CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve {
   socache_control?: number | undefined;
   teammate_colors: number[];
   match_id_additional?: number | undefined;
+  clan_tags: string[];
 }
 
 export interface CMsgGCCStrike15_v2_MatchmakingServerReservationResponse {
@@ -1159,7 +1121,7 @@ export interface CEconItemPreviewDataBlock {
   paintseed?: number | undefined;
   killeaterscoretype?: number | undefined;
   killeatervalue?: number | undefined;
-  customname?: string | undefined;
+  customnames: string[];
   stickers: CEconItemPreviewDataBlock_Sticker[];
   inventory?: number | undefined;
   origin?: number | undefined;
@@ -1172,6 +1134,8 @@ export interface CEconItemPreviewDataBlock {
   style?: number | undefined;
   variations: CEconItemPreviewDataBlock_Sticker[];
   upgrade_level?: number | undefined;
+  pet_food_expiration_date?: number | undefined;
+  blobdata?: Uint8Array | undefined;
 }
 
 export interface CEconItemPreviewDataBlock_Sticker {
@@ -1481,6 +1445,7 @@ export interface CSOPersonaDataPublic {
   xp_trail_timestamp_refresh?: number | undefined;
   xp_trail_level?: number | undefined;
   clan_id?: number | undefined;
+  clan_tag?: string | undefined;
 }
 
 export interface CSOAccountRecurringMission {
@@ -1726,48 +1691,6 @@ export interface CVDiagnostic {
   extended?: number | undefined;
   value?: string | undefined;
   string_value?: string | undefined;
-}
-
-export interface CMsgGCCStrike15_v2_GC2ClientRefuseSecureMode {
-  file_report?: string | undefined;
-  offer_insecure_mode?: boolean | undefined;
-  offer_secure_mode?: boolean | undefined;
-  show_unsigned_ui?: boolean | undefined;
-  kick_user?: boolean | undefined;
-  show_trusted_ui?: boolean | undefined;
-  show_warning_not_trusted?: boolean | undefined;
-  show_warning_not_trusted_2?: boolean | undefined;
-  files_prevented_trusted?: string | undefined;
-}
-
-export interface CMsgGCCStrike15_v2_GC2ClientRequestValidation {
-  full_report?: boolean | undefined;
-  module?: string | undefined;
-}
-
-export interface CMsgGCCStrike15_v2_GC2ClientInitSystem {
-  load?: boolean | undefined;
-  name?: string | undefined;
-  outputname?: string | undefined;
-  key_data?: Uint8Array | undefined;
-  sha_hash?: Uint8Array | undefined;
-  cookie?: number | undefined;
-  manifest?: string | undefined;
-  system_package?: Uint8Array | undefined;
-  load_system?: boolean | undefined;
-}
-
-export interface CMsgGCCStrike15_v2_GC2ClientInitSystem_Response {
-  success?: boolean | undefined;
-  diagnostic?: string | undefined;
-  sha_hash?: Uint8Array | undefined;
-  response?: number | undefined;
-  error_code1?: number | undefined;
-  error_code2?: number | undefined;
-  handle?: string | undefined;
-  einit_result?: EInitSystemResult | undefined;
-  aux_system1?: number | undefined;
-  aux_system2?: number | undefined;
 }
 
 export interface CMsgGCCStrike15_v2_SetPlayerLeaderboardSafeName {
@@ -5278,6 +5201,7 @@ function createBaseCMsgGCCStrike15_v2_MatchmakingGC2ServerReserve(): CMsgGCCStri
     socache_control: undefined,
     teammate_colors: [],
     match_id_additional: undefined,
+    clan_tags: [],
   };
 }
 
@@ -5497,6 +5421,14 @@ export const CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve: MessageFns<
           }
 
           message.match_id_additional = reader.uint32();
+          continue;
+        }
+        case 23: {
+          if (tag !== 186) {
+            break;
+          }
+
+          message.clan_tags.push(reader.string());
           continue;
         }
       }
@@ -8813,7 +8745,7 @@ function createBaseCEconItemPreviewDataBlock(): CEconItemPreviewDataBlock {
     paintseed: undefined,
     killeaterscoretype: undefined,
     killeatervalue: undefined,
-    customname: undefined,
+    customnames: [],
     stickers: [],
     inventory: undefined,
     origin: undefined,
@@ -8826,6 +8758,8 @@ function createBaseCEconItemPreviewDataBlock(): CEconItemPreviewDataBlock {
     style: undefined,
     variations: [],
     upgrade_level: undefined,
+    pet_food_expiration_date: undefined,
+    blobdata: undefined,
   };
 }
 
@@ -8922,7 +8856,7 @@ export const CEconItemPreviewDataBlock: MessageFns<CEconItemPreviewDataBlock> = 
             break;
           }
 
-          message.customname = reader.string();
+          message.customnames.push(reader.string());
           continue;
         }
         case 12: {
@@ -9019,6 +8953,22 @@ export const CEconItemPreviewDataBlock: MessageFns<CEconItemPreviewDataBlock> = 
           }
 
           message.upgrade_level = reader.uint32();
+          continue;
+        }
+        case 24: {
+          if (tag !== 192) {
+            break;
+          }
+
+          message.pet_food_expiration_date = reader.uint32();
+          continue;
+        }
+        case 25: {
+          if (tag !== 202) {
+            break;
+          }
+
+          message.blobdata = reader.bytes();
           continue;
         }
       }
@@ -11565,6 +11515,7 @@ function createBaseCSOPersonaDataPublic(): CSOPersonaDataPublic {
     xp_trail_timestamp_refresh: undefined,
     xp_trail_level: undefined,
     clan_id: undefined,
+    clan_tag: undefined,
   };
 }
 
@@ -11622,6 +11573,14 @@ export const CSOPersonaDataPublic: MessageFns<CSOPersonaDataPublic> = {
           }
 
           message.clan_id = reader.uint32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.clan_tag = reader.string();
           continue;
         }
       }
@@ -13616,368 +13575,6 @@ export const CVDiagnostic: MessageFns<CVDiagnostic> = {
           }
 
           message.string_value = reader.string();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgGCCStrike15_v2_GC2ClientRefuseSecureMode(): CMsgGCCStrike15_v2_GC2ClientRefuseSecureMode {
-  return {
-    file_report: undefined,
-    offer_insecure_mode: undefined,
-    offer_secure_mode: undefined,
-    show_unsigned_ui: undefined,
-    kick_user: undefined,
-    show_trusted_ui: undefined,
-    show_warning_not_trusted: undefined,
-    show_warning_not_trusted_2: undefined,
-    files_prevented_trusted: undefined,
-  };
-}
-
-export const CMsgGCCStrike15_v2_GC2ClientRefuseSecureMode: MessageFns<CMsgGCCStrike15_v2_GC2ClientRefuseSecureMode> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCCStrike15_v2_GC2ClientRefuseSecureMode {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgGCCStrike15_v2_GC2ClientRefuseSecureMode();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.file_report = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.offer_insecure_mode = reader.bool();
-          continue;
-        }
-        case 3: {
-          if (tag !== 24) {
-            break;
-          }
-
-          message.offer_secure_mode = reader.bool();
-          continue;
-        }
-        case 4: {
-          if (tag !== 32) {
-            break;
-          }
-
-          message.show_unsigned_ui = reader.bool();
-          continue;
-        }
-        case 5: {
-          if (tag !== 40) {
-            break;
-          }
-
-          message.kick_user = reader.bool();
-          continue;
-        }
-        case 6: {
-          if (tag !== 48) {
-            break;
-          }
-
-          message.show_trusted_ui = reader.bool();
-          continue;
-        }
-        case 7: {
-          if (tag !== 56) {
-            break;
-          }
-
-          message.show_warning_not_trusted = reader.bool();
-          continue;
-        }
-        case 8: {
-          if (tag !== 64) {
-            break;
-          }
-
-          message.show_warning_not_trusted_2 = reader.bool();
-          continue;
-        }
-        case 9: {
-          if (tag !== 74) {
-            break;
-          }
-
-          message.files_prevented_trusted = reader.string();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgGCCStrike15_v2_GC2ClientRequestValidation(): CMsgGCCStrike15_v2_GC2ClientRequestValidation {
-  return { full_report: undefined, module: undefined };
-}
-
-export const CMsgGCCStrike15_v2_GC2ClientRequestValidation: MessageFns<CMsgGCCStrike15_v2_GC2ClientRequestValidation> =
-  {
-    decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCCStrike15_v2_GC2ClientRequestValidation {
-      const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseCMsgGCCStrike15_v2_GC2ClientRequestValidation();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 8) {
-              break;
-            }
-
-            message.full_report = reader.bool();
-            continue;
-          }
-          case 2: {
-            if (tag !== 18) {
-              break;
-            }
-
-            message.module = reader.string();
-            continue;
-          }
-        }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
-        }
-        reader.skip(tag & 7);
-      }
-      return message;
-    },
-  };
-
-function createBaseCMsgGCCStrike15_v2_GC2ClientInitSystem(): CMsgGCCStrike15_v2_GC2ClientInitSystem {
-  return {
-    load: undefined,
-    name: undefined,
-    outputname: undefined,
-    key_data: undefined,
-    sha_hash: undefined,
-    cookie: undefined,
-    manifest: undefined,
-    system_package: undefined,
-    load_system: undefined,
-  };
-}
-
-export const CMsgGCCStrike15_v2_GC2ClientInitSystem: MessageFns<CMsgGCCStrike15_v2_GC2ClientInitSystem> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCCStrike15_v2_GC2ClientInitSystem {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgGCCStrike15_v2_GC2ClientInitSystem();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.load = reader.bool();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.name = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.outputname = reader.string();
-          continue;
-        }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.key_data = reader.bytes();
-          continue;
-        }
-        case 5: {
-          if (tag !== 42) {
-            break;
-          }
-
-          message.sha_hash = reader.bytes();
-          continue;
-        }
-        case 6: {
-          if (tag !== 48) {
-            break;
-          }
-
-          message.cookie = reader.int32();
-          continue;
-        }
-        case 7: {
-          if (tag !== 58) {
-            break;
-          }
-
-          message.manifest = reader.string();
-          continue;
-        }
-        case 8: {
-          if (tag !== 66) {
-            break;
-          }
-
-          message.system_package = reader.bytes();
-          continue;
-        }
-        case 9: {
-          if (tag !== 72) {
-            break;
-          }
-
-          message.load_system = reader.bool();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgGCCStrike15_v2_GC2ClientInitSystem_Response(): CMsgGCCStrike15_v2_GC2ClientInitSystem_Response {
-  return {
-    success: undefined,
-    diagnostic: undefined,
-    sha_hash: undefined,
-    response: undefined,
-    error_code1: undefined,
-    error_code2: undefined,
-    handle: undefined,
-    einit_result: undefined,
-    aux_system1: undefined,
-    aux_system2: undefined,
-  };
-}
-
-export const CMsgGCCStrike15_v2_GC2ClientInitSystem_Response: MessageFns<
-  CMsgGCCStrike15_v2_GC2ClientInitSystem_Response
-> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCCStrike15_v2_GC2ClientInitSystem_Response {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgGCCStrike15_v2_GC2ClientInitSystem_Response();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.success = reader.bool();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.diagnostic = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.sha_hash = reader.bytes();
-          continue;
-        }
-        case 4: {
-          if (tag !== 32) {
-            break;
-          }
-
-          message.response = reader.int32();
-          continue;
-        }
-        case 5: {
-          if (tag !== 40) {
-            break;
-          }
-
-          message.error_code1 = reader.int32();
-          continue;
-        }
-        case 6: {
-          if (tag !== 48) {
-            break;
-          }
-
-          message.error_code2 = reader.int32();
-          continue;
-        }
-        case 7: {
-          if (tag !== 56) {
-            break;
-          }
-
-          message.handle = reader.int64().toString();
-          continue;
-        }
-        case 8: {
-          if (tag !== 64) {
-            break;
-          }
-
-          message.einit_result = reader.int32() as any;
-          continue;
-        }
-        case 9: {
-          if (tag !== 72) {
-            break;
-          }
-
-          message.aux_system1 = reader.int32();
-          continue;
-        }
-        case 10: {
-          if (tag !== 80) {
-            break;
-          }
-
-          message.aux_system2 = reader.int32();
           continue;
         }
       }

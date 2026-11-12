@@ -132,6 +132,11 @@ const D_QANGLE_PRES = 20;
 const D_GAME_MODE_RULES = 21;
 const D_BINARY_BLOCK = 22;
 const D_CTRANSFORM = 23;
+// `fixed8` fields are one raw byte. The three variants keep the value type the field's varint
+// decoder produced before CS2 switched 8-bit integers and enums to this encoder.
+const D_FIXED8_SIGNED = 24;
+const D_FIXED8_UNSIGNED = 25;
+const D_FIXED8_UNSIGNED64 = 26;
 
 export type QuantalizedFloatDecoder = {
 	type: typeof D_QUANTALIZED_FLOAT;
@@ -163,7 +168,22 @@ export const Decoders = {
 	QanglePresDecoder: D_QANGLE_PRES,
 	GameModeRulesDecoder: D_GAME_MODE_RULES,
 	BinaryBlockDecoder: D_BINARY_BLOCK,
-	CTransformDecoder: D_CTRANSFORM
+	CTransformDecoder: D_CTRANSFORM,
+	Fixed8SignedDecoder: D_FIXED8_SIGNED,
+	Fixed8UnsignedDecoder: D_FIXED8_UNSIGNED,
+	Fixed8Unsigned64Decoder: D_FIXED8_UNSIGNED64
+};
+
+/**
+ * Raw-byte decoder for a `fixed8` field, chosen from the decoder its base type would otherwise
+ * get so that int8 stays signed and 8-bit enums decoded as bigint stay bigint.
+ */
+const fixed8Decoder = (decoder: Decoder): Decoder => {
+	if (decoder === D_SIGNED) return D_FIXED8_SIGNED;
+	if (decoder === D_UNSIGNED64) return D_FIXED8_UNSIGNED64;
+	// Every other base type seen with `fixed8` is unsigned. An unexpected one still reads exactly
+	// 8 bits, which keeps the rest of the entity update aligned.
+	return D_FIXED8_UNSIGNED;
 };
 
 const decoderMap: { [K in string]?: Decoder } = {
@@ -541,6 +561,12 @@ export const constructorFieldHelper = {
 				return reader.decodeQangleVariantPres();
 			case D_GAME_MODE_RULES:
 				return reader.ReadUBits(7);
+			case D_FIXED8_SIGNED:
+				return (reader.ReadUBits(8) << 24) >> 24;
+			case D_FIXED8_UNSIGNED:
+				return reader.ReadUBits(8);
+			case D_FIXED8_UNSIGNED64:
+				return BigInt(reader.ReadUBits(8));
 			case D_BINARY_BLOCK: {
 				const length = reader.ReadUVarInt32();
 				if (length > reader.RemainingBytes) throw new RangeError('Truncated binary block');
@@ -591,6 +617,11 @@ export const constructorFieldHelper = {
 			case D_FIXED64:
 				reader.skipBytesBetter(8);
 				return;
+			case D_FIXED8_SIGNED:
+			case D_FIXED8_UNSIGNED:
+			case D_FIXED8_UNSIGNED64:
+				reader.consumePeeked(8);
+				return;
 			case D_VECTOR_NORMAL: {
 				const hasX = reader.readBoolean();
 				const hasY = reader.readBoolean();
@@ -638,6 +669,14 @@ export const constructorFieldHelper = {
 		}
 	},
 	findDecoder: (field: ConstructorField): Decoder => {
+		const decoder = constructorFieldHelper.findBaseDecoder(field);
+		// Since the 2026-11-11 CS2 update, every 8-bit integer and 8-bit enum (uint8 vector elements
+		// such as m_VoxelFrameData included) is sent with the `fixed8` encoder as one raw byte
+		// instead of a varint. Vector lengths are unaffected.
+		return field.encoder === 'fixed8' ? fixed8Decoder(decoder) : decoder;
+	},
+	/** Decoder for the field's type and name, before encoder-only wire changes such as `fixed8`. */
+	findBaseDecoder: (field: ConstructorField): Decoder => {
 		// A bit count of 32 means three raw floats and takes precedence over the encoder name:
 		// CS2 declares CBodyComponentBaseModelEntity.m_angRotation (conveyor belts on rush_001)
 		// as qangle_precise with 32 bits, and the server writes full floats. findQAngleDecoder

@@ -477,6 +477,18 @@ static void value(Node *node, Update *out) {
             blob[blob_used++] = bits(8);
         return;
     }
+    /* fixed8: int8, uint8, and 8-bit enums exposed as bigint. */
+    case 23:
+        out->x = (signed char)bits(8);
+        return;
+    case 24:
+        out->x = bits(8);
+        return;
+    case 25:
+        out->kind = 3;
+        out->lo = bits(8);
+        out->hi = 0;
+        return;
     default:
         bad = 4;
         return;

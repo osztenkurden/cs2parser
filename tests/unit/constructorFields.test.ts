@@ -19,7 +19,11 @@ const innerOf = (f: Field): InnerValue => (f.value as Container).field_enum.valu
 /** A Vector<int32> field named like a weapon's `m_pReserveAmmo` (the field that regressed). */
 const makeReserveVector = (): Field =>
 	new Field(FieldTypeEnum.Vector, {
-		field_enum: new Field(FieldTypeEnum.Value, { decoder: Decoders.UnsignedDecoder, name: 'm_pReserveAmmo', prop_id: 0 }),
+		field_enum: new Field(FieldTypeEnum.Value, {
+			decoder: Decoders.UnsignedDecoder,
+			name: 'm_pReserveAmmo',
+			prop_id: 0
+		}),
 		decoder: Decoders.UnsignedDecoder,
 		varName: 'm_pReserveAmmo',
 		elementBaseType: 'int32'
@@ -28,7 +32,11 @@ const makeReserveVector = (): Field =>
 /** A fixed int32[2] array field (same container class of bug as Vector). */
 const makeReserveArray = (): Field =>
 	new Field(FieldTypeEnum.Array, {
-		field_enum: new Field(FieldTypeEnum.Value, { decoder: Decoders.UnsignedDecoder, name: 'm_someArray', prop_id: 0 }),
+		field_enum: new Field(FieldTypeEnum.Value, {
+			decoder: Decoders.UnsignedDecoder,
+			name: 'm_someArray',
+			prop_id: 0
+		}),
 		length: 2,
 		varName: 'm_someArray',
 		elementBaseType: 'int32'
@@ -102,7 +110,11 @@ describe('traverseFields — per-class naming of shared container fields', () =>
 	// Control: plain top-level Value fields were always cloned by value, so they never collided —
 	// which is why m_iClip1 worked while m_pReserveAmmo didn't. Guards against a regression there.
 	test('plain Value fields also stay per-class (control)', () => {
-		const source = new Field(FieldTypeEnum.Value, { decoder: Decoders.UnsignedDecoder, name: 'm_iClip1', prop_id: 0 });
+		const source = new Field(FieldTypeEnum.Value, {
+			decoder: Decoders.UnsignedDecoder,
+			name: 'm_iClip1',
+			prop_id: 0
+		});
 		const ak = source.clone();
 		const xm = source.clone();
 		const map: Record<number, string> = {};
@@ -139,5 +151,45 @@ describe('findDecoder: QAngle with qangle_precise and 32 bits', () => {
 		const decoder = constructorFieldHelper.findDecoder(qangleField('qangle_precise', 32));
 		constructorFieldHelper.decode(reader, decoder);
 		expect(reader.ReadUBits(8)).toBe(0xaa);
+	});
+});
+
+describe('findDecoder: fixed8 encoder', () => {
+	// The 2026-11-11 CS2 update sends every 8-bit integer and 8-bit enum as one raw byte with the
+	// `fixed8` encoder. Reading those as varints desynced the first entity creation.
+	const field = (varType: string, encoder = 'fixed8') =>
+		({ varName: 'm_field', encoder, bitcount: 0, fieldType: findFieldType(varType) }) as ConstructorField;
+	const decodeByte = (varType: string, byte: number) => {
+		const reader = new BitBuffer(new Uint8Array([byte, 0xaa]));
+		const value = constructorFieldHelper.decode(reader, constructorFieldHelper.findDecoder(field(varType)));
+		expect(reader.ReadUBits(8)).toBe(0xaa);
+		return value;
+	};
+
+	test.each([
+		['int8', Decoders.Fixed8SignedDecoder],
+		['uint8', Decoders.Fixed8UnsignedDecoder],
+		// Enums the parser has always exposed as bigint keep that type.
+		['MoveType_t', Decoders.Fixed8Unsigned64Decoder],
+		['AttachmentHandle_t', Decoders.Fixed8Unsigned64Decoder],
+		// Enums without a decoderMap entry fall back to unsigned numbers, as before.
+		['ShardSolid_t', Decoders.Fixed8UnsignedDecoder],
+		// Vector elements: the m_VoxelFrameData smoke journal and pose-recipe bytes.
+		['CNetworkUtlVectorBase< uint8 >', Decoders.Fixed8UnsignedDecoder]
+	])('%s resolves to its raw-byte decoder', (varType, decoder) => {
+		expect(constructorFieldHelper.findDecoder(field(varType))).toBe(decoder);
+	});
+
+	test('reads exactly one byte with the value type of the base decoder', () => {
+		expect(decodeByte('int8', 0xff)).toBe(-1);
+		expect(decodeByte('int8', 0x7f)).toBe(127);
+		expect(decodeByte('uint8', 0xff)).toBe(255);
+		expect(decodeByte('MoveType_t', 0x08)).toBe(8n);
+	});
+
+	test('8-bit fields from older demos keep their varint decoders', () => {
+		expect(constructorFieldHelper.findDecoder(field('uint8', ''))).toBe(Decoders.UnsignedDecoder);
+		expect(constructorFieldHelper.findDecoder(field('int8', ''))).toBe(Decoders.SignedDecoder);
+		expect(constructorFieldHelper.findDecoder(field('MoveType_t', ''))).toBe(Decoders.Unsigned64Decoder);
 	});
 });

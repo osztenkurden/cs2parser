@@ -63,6 +63,9 @@ export interface CMsgSource2SystemSpecs {
   cpu_brand?: string | undefined;
   cpu_model?: number | undefined;
   cpu_num_physical?: number | undefined;
+  cpu_num_logical?: number | undefined;
+  cpu_num_performance?: number | undefined;
+  cpu_num_efficiency?: number | undefined;
   ram_physical_total_mb?: number | undefined;
   gpu_rendersystem_dll_name?: string | undefined;
   gpu_vendor_id?: number | undefined;
@@ -73,6 +76,7 @@ export interface CMsgSource2SystemSpecs {
   gpu_texture_memory_size_mb?: number | undefined;
   backbuffer_width?: number | undefined;
   backbuffer_height?: number | undefined;
+  thread_pool_workers?: number | undefined;
 }
 
 export interface CMsgSource2VProfLiteReportItem {
@@ -118,6 +122,14 @@ export interface CMsgSource2NetworkFlowQuality {
   netframes_size_exceeds_mtu?: number | undefined;
   netframes_size_p95?: number | undefined;
   netframes_size_p99?: number | undefined;
+  netframes_size_uncompressed_p50?: number | undefined;
+  netframes_size_uncompressed_p95?: number | undefined;
+  netframes_size_uncompressed_p99?: number | undefined;
+  netframes_size_uncompressed_max?: number | undefined;
+  netframes_msgs_p50?: number | undefined;
+  netframes_msgs_p95?: number | undefined;
+  netframes_msgs_p99?: number | undefined;
+  netframes_msgs_max?: number | undefined;
   ticks_total?: number | undefined;
   ticks_good?: number | undefined;
   ticks_good_almost_late?: number | undefined;
@@ -147,6 +159,18 @@ export interface CMsgSource2NetworkFlowQuality {
   net_ping_p5?: number | undefined;
   net_ping_p50?: number | undefined;
   net_ping_p95?: number | undefined;
+  msgproc_usec_p50?: number | undefined;
+  msgproc_usec_p95?: number | undefined;
+  msgproc_usec_p99?: number | undefined;
+  msgproc_usec_max?: number | undefined;
+  msgproc_usec_avg_p50?: number | undefined;
+  msgproc_usec_avg_p95?: number | undefined;
+  msgproc_usec_avg_p99?: number | undefined;
+  msgproc_usec_avg_max?: number | undefined;
+  queuedmsgs_p50?: number | undefined;
+  queuedmsgs_p95?: number | undefined;
+  queuedmsgs_p99?: number | undefined;
+  queuedmsgs_max?: number | undefined;
 }
 
 export interface CMsgSource2PerfIntervalSample {
@@ -255,6 +279,9 @@ function createBaseCMsgSource2SystemSpecs(): CMsgSource2SystemSpecs {
     cpu_brand: undefined,
     cpu_model: undefined,
     cpu_num_physical: undefined,
+    cpu_num_logical: undefined,
+    cpu_num_performance: undefined,
+    cpu_num_efficiency: undefined,
     ram_physical_total_mb: undefined,
     gpu_rendersystem_dll_name: undefined,
     gpu_vendor_id: undefined,
@@ -265,6 +292,7 @@ function createBaseCMsgSource2SystemSpecs(): CMsgSource2SystemSpecs {
     gpu_texture_memory_size_mb: undefined,
     backbuffer_width: undefined,
     backbuffer_height: undefined,
+    thread_pool_workers: undefined,
   };
 }
 
@@ -306,6 +334,30 @@ export const CMsgSource2SystemSpecs: MessageFns<CMsgSource2SystemSpecs> = {
           }
 
           message.cpu_num_physical = reader.uint32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.cpu_num_logical = reader.uint32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.cpu_num_performance = reader.uint32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.cpu_num_efficiency = reader.uint32();
           continue;
         }
         case 21: {
@@ -386,6 +438,14 @@ export const CMsgSource2SystemSpecs: MessageFns<CMsgSource2SystemSpecs> = {
           }
 
           message.backbuffer_height = reader.uint32();
+          continue;
+        }
+        case 61: {
+          if (tag !== 488) {
+            break;
+          }
+
+          message.thread_pool_workers = reader.uint32();
           continue;
         }
       }
@@ -646,6 +706,14 @@ function createBaseCMsgSource2NetworkFlowQuality(): CMsgSource2NetworkFlowQualit
     netframes_size_exceeds_mtu: undefined,
     netframes_size_p95: undefined,
     netframes_size_p99: undefined,
+    netframes_size_uncompressed_p50: undefined,
+    netframes_size_uncompressed_p95: undefined,
+    netframes_size_uncompressed_p99: undefined,
+    netframes_size_uncompressed_max: undefined,
+    netframes_msgs_p50: undefined,
+    netframes_msgs_p95: undefined,
+    netframes_msgs_p99: undefined,
+    netframes_msgs_max: undefined,
     ticks_total: undefined,
     ticks_good: undefined,
     ticks_good_almost_late: undefined,
@@ -675,6 +743,18 @@ function createBaseCMsgSource2NetworkFlowQuality(): CMsgSource2NetworkFlowQualit
     net_ping_p5: undefined,
     net_ping_p50: undefined,
     net_ping_p95: undefined,
+    msgproc_usec_p50: undefined,
+    msgproc_usec_p95: undefined,
+    msgproc_usec_p99: undefined,
+    msgproc_usec_max: undefined,
+    msgproc_usec_avg_p50: undefined,
+    msgproc_usec_avg_p95: undefined,
+    msgproc_usec_avg_p99: undefined,
+    msgproc_usec_avg_max: undefined,
+    queuedmsgs_p50: undefined,
+    queuedmsgs_p95: undefined,
+    queuedmsgs_p99: undefined,
+    queuedmsgs_max: undefined,
   };
 }
 
@@ -804,6 +884,70 @@ export const CMsgSource2NetworkFlowQuality: MessageFns<CMsgSource2NetworkFlowQua
           }
 
           message.netframes_size_p99 = reader.uint32();
+          continue;
+        }
+        case 12: {
+          if (tag !== 96) {
+            break;
+          }
+
+          message.netframes_size_uncompressed_p50 = reader.uint32();
+          continue;
+        }
+        case 13: {
+          if (tag !== 104) {
+            break;
+          }
+
+          message.netframes_size_uncompressed_p95 = reader.uint32();
+          continue;
+        }
+        case 14: {
+          if (tag !== 112) {
+            break;
+          }
+
+          message.netframes_size_uncompressed_p99 = reader.uint32();
+          continue;
+        }
+        case 15: {
+          if (tag !== 120) {
+            break;
+          }
+
+          message.netframes_size_uncompressed_max = reader.uint32();
+          continue;
+        }
+        case 16: {
+          if (tag !== 128) {
+            break;
+          }
+
+          message.netframes_msgs_p50 = reader.uint32();
+          continue;
+        }
+        case 17: {
+          if (tag !== 136) {
+            break;
+          }
+
+          message.netframes_msgs_p95 = reader.uint32();
+          continue;
+        }
+        case 18: {
+          if (tag !== 144) {
+            break;
+          }
+
+          message.netframes_msgs_p99 = reader.uint32();
+          continue;
+        }
+        case 19: {
+          if (tag !== 152) {
+            break;
+          }
+
+          message.netframes_msgs_max = reader.uint32();
           continue;
         }
         case 40: {
@@ -1036,6 +1180,102 @@ export const CMsgSource2NetworkFlowQuality: MessageFns<CMsgSource2NetworkFlowQua
           }
 
           message.net_ping_p95 = reader.uint32();
+          continue;
+        }
+        case 90: {
+          if (tag !== 720) {
+            break;
+          }
+
+          message.msgproc_usec_p50 = reader.uint32();
+          continue;
+        }
+        case 91: {
+          if (tag !== 728) {
+            break;
+          }
+
+          message.msgproc_usec_p95 = reader.uint32();
+          continue;
+        }
+        case 92: {
+          if (tag !== 736) {
+            break;
+          }
+
+          message.msgproc_usec_p99 = reader.uint32();
+          continue;
+        }
+        case 93: {
+          if (tag !== 744) {
+            break;
+          }
+
+          message.msgproc_usec_max = reader.uint32();
+          continue;
+        }
+        case 94: {
+          if (tag !== 752) {
+            break;
+          }
+
+          message.msgproc_usec_avg_p50 = reader.uint32();
+          continue;
+        }
+        case 95: {
+          if (tag !== 760) {
+            break;
+          }
+
+          message.msgproc_usec_avg_p95 = reader.uint32();
+          continue;
+        }
+        case 96: {
+          if (tag !== 768) {
+            break;
+          }
+
+          message.msgproc_usec_avg_p99 = reader.uint32();
+          continue;
+        }
+        case 97: {
+          if (tag !== 776) {
+            break;
+          }
+
+          message.msgproc_usec_avg_max = reader.uint32();
+          continue;
+        }
+        case 100: {
+          if (tag !== 800) {
+            break;
+          }
+
+          message.queuedmsgs_p50 = reader.uint32();
+          continue;
+        }
+        case 101: {
+          if (tag !== 808) {
+            break;
+          }
+
+          message.queuedmsgs_p95 = reader.uint32();
+          continue;
+        }
+        case 102: {
+          if (tag !== 816) {
+            break;
+          }
+
+          message.queuedmsgs_p99 = reader.uint32();
+          continue;
+        }
+        case 103: {
+          if (tag !== 824) {
+            break;
+          }
+
+          message.queuedmsgs_max = reader.uint32();
           continue;
         }
       }

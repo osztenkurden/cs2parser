@@ -356,7 +356,6 @@ export interface CCSUsrMsg_WeaponSound {
   sound?: string | undefined;
   game_timestamp?: number | undefined;
   source_soundscapeid?: number | undefined;
-  stealth?: boolean | undefined;
 }
 
 export interface CCSUsrMsg_WeaponMagDrop {
@@ -1907,7 +1906,6 @@ function createBaseCCSUsrMsg_WeaponSound(): CCSUsrMsg_WeaponSound {
     sound: undefined,
     game_timestamp: undefined,
     source_soundscapeid: undefined,
-    stealth: undefined,
   };
 }
 
@@ -1973,14 +1971,6 @@ export const CCSUsrMsg_WeaponSound: MessageFns<CCSUsrMsg_WeaponSound> = {
           }
 
           message.source_soundscapeid = reader.fixed32();
-          continue;
-        }
-        case 8: {
-          if (tag !== 64) {
-            break;
-          }
-
-          message.stealth = reader.bool();
           continue;
         }
       }

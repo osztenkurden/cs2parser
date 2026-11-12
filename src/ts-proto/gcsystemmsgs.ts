@@ -32,7 +32,7 @@ export const EGCSystemMsg = {
   k_EGCMsgLookupAccountFromInput: 66,
   k_EGCMsgSendHTTPRequest: 67,
   k_EGCMsgSendHTTPRequestResponse: 68,
-  k_EGCMsgPreTestSetup: 69,
+  k_EGCMsgPreTestSetup_DEPRECATED: 69,
   k_EGCMsgRecordSupportAction: 70,
   k_EGCMsgGetAccountDetails_DEPRECATED: 71,
   k_EGCMsgReceiveInterAppMessage: 73,
@@ -102,6 +102,13 @@ export const EGCSystemMsg = {
   k_EGCMsgRecurringSubscriptionStatusChange: 530,
   k_EGCMsgDirectServiceMethod: 531,
   k_EGCMsgDirectServiceMethodResponse: 532,
+  k_EGCMsgAppCheersReceived: 533,
+  k_EGCMsgAppCheersGetAllowedTypes: 534,
+  k_EGCMsgAppCheersGetAllowedTypesResponse: 535,
+  k_EGCMsgReportMetrics: 536,
+  k_EGCMsgReportMetricsResponse: 537,
+  k_EGCMsgGetClanDetails: 538,
+  k_EGCMsgGetClanDetailsResponse: 539,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -130,7 +137,7 @@ export namespace EGCSystemMsg {
   export type k_EGCMsgLookupAccountFromInput = typeof EGCSystemMsg.k_EGCMsgLookupAccountFromInput;
   export type k_EGCMsgSendHTTPRequest = typeof EGCSystemMsg.k_EGCMsgSendHTTPRequest;
   export type k_EGCMsgSendHTTPRequestResponse = typeof EGCSystemMsg.k_EGCMsgSendHTTPRequestResponse;
-  export type k_EGCMsgPreTestSetup = typeof EGCSystemMsg.k_EGCMsgPreTestSetup;
+  export type k_EGCMsgPreTestSetup_DEPRECATED = typeof EGCSystemMsg.k_EGCMsgPreTestSetup_DEPRECATED;
   export type k_EGCMsgRecordSupportAction = typeof EGCSystemMsg.k_EGCMsgRecordSupportAction;
   export type k_EGCMsgGetAccountDetails_DEPRECATED = typeof EGCSystemMsg.k_EGCMsgGetAccountDetails_DEPRECATED;
   export type k_EGCMsgReceiveInterAppMessage = typeof EGCSystemMsg.k_EGCMsgReceiveInterAppMessage;
@@ -205,6 +212,13 @@ export namespace EGCSystemMsg {
   export type k_EGCMsgRecurringSubscriptionStatusChange = typeof EGCSystemMsg.k_EGCMsgRecurringSubscriptionStatusChange;
   export type k_EGCMsgDirectServiceMethod = typeof EGCSystemMsg.k_EGCMsgDirectServiceMethod;
   export type k_EGCMsgDirectServiceMethodResponse = typeof EGCSystemMsg.k_EGCMsgDirectServiceMethodResponse;
+  export type k_EGCMsgAppCheersReceived = typeof EGCSystemMsg.k_EGCMsgAppCheersReceived;
+  export type k_EGCMsgAppCheersGetAllowedTypes = typeof EGCSystemMsg.k_EGCMsgAppCheersGetAllowedTypes;
+  export type k_EGCMsgAppCheersGetAllowedTypesResponse = typeof EGCSystemMsg.k_EGCMsgAppCheersGetAllowedTypesResponse;
+  export type k_EGCMsgReportMetrics = typeof EGCSystemMsg.k_EGCMsgReportMetrics;
+  export type k_EGCMsgReportMetricsResponse = typeof EGCSystemMsg.k_EGCMsgReportMetricsResponse;
+  export type k_EGCMsgGetClanDetails = typeof EGCSystemMsg.k_EGCMsgGetClanDetails;
+  export type k_EGCMsgGetClanDetailsResponse = typeof EGCSystemMsg.k_EGCMsgGetClanDetailsResponse;
   export type UNRECOGNIZED = typeof EGCSystemMsg.UNRECOGNIZED;
 }
 

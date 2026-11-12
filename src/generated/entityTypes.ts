@@ -1,5 +1,5 @@
 // AUTO-GENERATED - DO NOT EDIT
-// Generated from demo: 21_09_2026.dem on 2026-09-22 (build: 10896, patch: 14181)
+// Generated from demo: fut-vs-mouz-m3-nuke.dem on 2026-11-12 (build: 10955, patch: 14197)
 
 /** Prefixes all keys of T with "P." */
 type Prefixed<P extends string, T> = {
@@ -161,6 +161,7 @@ interface _CCSGameRules {
 	readonly "m_iSpectatorSlotCount"?: number;
 	readonly "m_MatchDevice"?: number;
 	readonly "m_MinimapVerticalSectionHeights"?: Float32Array;
+	readonly "m_nActiveMutators"?: number;
 	readonly "m_nCTTeamIntroVariant"?: number;
 	readonly "m_nCTTimeOuts"?: number;
 	readonly "m_nEndMatchMapGroupVoteOptions"?: Int32Array;
@@ -234,6 +235,7 @@ interface _CCSObserver_ObserverServices {
 
 interface _CCSPlayer_ActionTrackingServices {
 	readonly "m_bIsRescuing"?: boolean;
+	readonly "m_weaponCarryOverIntoThisRound.m_weaponPurchases"?: ReadonlyArray<{ readonly "m_nCount"?: number; readonly "m_nItemDefIndex"?: number }>;
 	readonly "m_weaponPurchasesThisMatch.m_weaponPurchases"?: ReadonlyArray<{ readonly "m_nCount"?: number; readonly "m_nItemDefIndex"?: number }>;
 	readonly "m_weaponPurchasesThisRound.m_weaponPurchases"?: ReadonlyArray<{ readonly "m_nCount"?: number; readonly "m_nItemDefIndex"?: number }>;
 }
@@ -553,23 +555,6 @@ interface _AgentItemFields {
 	readonly "m_szCustomName"?: string;
 }
 
-interface _EnvWindSharedFields {
-	readonly "m_flGustDuration"?: number;
-	readonly "m_flInitialWindSpeed"?: number;
-	readonly "m_flMaxGustDelay"?: number;
-	readonly "m_flMinGustDelay"?: number;
-	readonly "m_flStartTime"?: number;
-	readonly "m_iGustDirChange"?: number;
-	readonly "m_iInitialWindDir"?: number;
-	readonly "m_iMaxGust"?: number;
-	readonly "m_iMaxWind"?: number;
-	readonly "m_iMinGust"?: number;
-	readonly "m_iMinWind"?: number;
-	readonly "m_iWindSeed"?: number;
-	readonly "m_location"?: [number, number, number];
-	readonly "m_windRadius"?: number;
-}
-
 interface _RampTimerFields {
 	readonly "m_duration"?: number;
 	readonly "m_nWorldGroupId"?: number;
@@ -667,9 +652,10 @@ interface _CBaseAnimGraphOwn extends _CBaseModelEntityOwn {
 	readonly "m_bInitiallyPopulateInterpHistory"?: boolean;
 	readonly "m_bRagdollClientSide"?: boolean;
 	readonly "m_bRagdollEnabled"?: boolean;
+	readonly "m_bShouldUpdateTransformations"?: boolean;
 	readonly "m_nForceBone"?: number;
 	readonly "m_RagdollPose.m_hOwner"?: number;
-	readonly "m_RagdollPose.m_Transforms"?: unknown[];
+	readonly "m_RagdollPose.m_RelativeTransforms"?: unknown[];
 	readonly "m_vecForce"?: [number, number, number];
 }
 
@@ -727,6 +713,7 @@ interface _CBaseGrenadeOwn extends _CBaseAnimGraphOwn, Prefixed<"m_vecVelocity",
 }
 
 interface _CBaseModelEntityOwn extends _CBaseEntityOwn {
+	readonly "m_bExpandRenderBoundsToIncludeCloth"?: boolean;
 	readonly "m_bNoInterpolate"?: boolean;
 	readonly "m_bRenderToCubemaps"?: boolean;
 	readonly "m_bvDisabledHitGroups"?: Uint32Array;
@@ -869,7 +856,9 @@ interface _CC4Own extends _CCSWeaponBaseShotgunOwn {
 }
 
 interface _CChickenOwn extends _CDynamicPropOwn, Prefixed<"m_AttributeManager", _AttributeManagerFields> {
+	readonly "m_bSpawnDyingParticles"?: boolean;
 	readonly "m_leader"?: number;
+	readonly "m_owner"?: number;
 }
 
 interface _CCitadelSoundOpvarSetOBBOwn extends _CBaseEntityOwn {
@@ -927,12 +916,22 @@ interface _CCSCustomPlayerCameraOwn extends _CBaseEntityOwn {
 	readonly "m_vecFollowOffset"?: [number, number, number];
 }
 
-interface _CCSGO_TeamIntroCounterTerroristPositionOwn extends _CBaseEntityOwn, Prefixed<"m_agentItem", _AgentItemFields>, Prefixed<"m_glovesItem", _AgentItemFields>, Prefixed<"m_weaponItem", _AgentItemFields> {
+interface _CCSGO_RushIntroCounterTerroristPositionOwn extends _CBaseEntityOwn, Prefixed<"m_agentItem", _AgentItemFields>, Prefixed<"m_glovesItem", _AgentItemFields>, Prefixed<"m_petItem", _AgentItemFields>, Prefixed<"m_weaponItem", _AgentItemFields> {
 	readonly "m_nOrdinal"?: number;
 	readonly "m_nRandom"?: number;
 	readonly "m_nVariant"?: number;
 	readonly "m_sWeaponName"?: string;
 	readonly "m_xuid"?: bigint;
+}
+
+interface _CCSMinimapVolumeOwn extends _CBaseTriggerOwn {
+	readonly "m_strMinimapName"?: string;
+}
+
+interface _CCSObservableElementOwn extends _CBaseEntityOwn {
+	readonly "m_hObservableModelEntity"?: number;
+	readonly "m_hObservableModelEntity2"?: number;
+	readonly "m_nTeamFilter"?: number;
 }
 
 interface _CCSObserverPawnOwn extends _CBasePlayerPawnOwn {
@@ -994,6 +993,7 @@ interface _CCSPlayerControllerOwn extends _CBasePlayerControllerOwn {
 	readonly "m_szCrosshairCodes"?: string;
 	readonly "m_uiCommunicationMuteFlags"?: number;
 	readonly "m_unActiveQuestId"?: number;
+	readonly "m_unClanId32bit"?: number;
 	readonly "m_unPlayerTvControlFlags"?: number;
 }
 
@@ -1021,6 +1021,7 @@ interface _CCSPlayerPawnOwn extends _CCSObserverPawnOwn, Prefixed<"m_EconGloves"
 	readonly "m_entitySpottedState.m_bSpotted"?: boolean;
 	readonly "m_entitySpottedState.m_bSpottedByMask"?: Uint32Array;
 	readonly "m_fImmuneToGunGameDamageTime"?: number;
+	readonly "m_flBigHeadScale"?: number;
 	readonly "m_flEmitSoundTime"?: number;
 	readonly "m_flFlinchStack"?: number;
 	readonly "m_flHealthShotBoostExpirationTime"?: number;
@@ -1067,6 +1068,12 @@ interface _CCSPlayerResourceOwn {
 	readonly "m_isHostageFollowingSomeone"?: boolean[];
 }
 
+interface _CCSRadarElementOwn extends _CBaseEntityOwn {
+	readonly "m_nElementColor"?: number;
+	readonly "m_nElementType"?: number;
+	readonly "m_nTeamFilter"?: number;
+}
+
 interface _CCSTeamOwn extends _CTeamOwn {
 	readonly "m_bSurrendered"?: boolean;
 	readonly "m_iClanID"?: number;
@@ -1088,15 +1095,19 @@ interface _CCSWeaponBaseShotgunOwn extends _CBasePlayerWeaponOwn {
 	readonly "m_bInspectPending"?: boolean;
 	readonly "m_bInspectShouldLoop"?: boolean;
 	readonly "m_bIsHauledBack"?: boolean;
+	readonly "m_bIsInStealthReload"?: boolean;
+	readonly "m_bReloadHeldSinceStart"?: boolean;
 	readonly "m_bSilencerOn"?: boolean;
 	readonly "m_bWasActiveWeaponWhenDropped"?: boolean;
 	readonly "m_fAccuracyPenalty"?: number;
 	readonly "m_fLastShotTime"?: number;
+	readonly "m_flAttackHoldStartTime"?: number;
 	readonly "m_flDroppedAtTime"?: number;
 	readonly "m_flInspectCancelCompleteTime"?: number;
 	readonly "m_flLastShakeTime"?: number;
 	readonly "m_flPostponeFireReadyFrac"?: number;
 	readonly "m_flRecoilIndex"?: number;
+	readonly "m_flStealthReloadHoldStartTime"?: number;
 	readonly "m_flTimeSilencerSwitchComplete"?: number;
 	readonly "m_flWatTickOffset"?: number;
 	readonly "m_flWeaponActionPlaybackRate"?: number;
@@ -1259,10 +1270,8 @@ interface _CEnvLightProbeVolumeOwn extends _CBaseEntityOwn {
 	readonly "m_Entity_hLightProbeDirectLightShadowsTexture"?: bigint;
 	readonly "m_Entity_hLightProbeTexture_AmbientCube"?: bigint;
 	readonly "m_Entity_hLightProbeTexture_SDF"?: bigint;
-	readonly "m_Entity_hLightProbeTexture_SH2_B"?: bigint;
 	readonly "m_Entity_hLightProbeTexture_SH2_DC"?: bigint;
-	readonly "m_Entity_hLightProbeTexture_SH2_G"?: bigint;
-	readonly "m_Entity_hLightProbeTexture_SH2_R"?: bigint;
+	readonly "m_Entity_hLightProbeTexture_SH2_L1"?: bigint;
 	readonly "m_Entity_nHandshake"?: number;
 	readonly "m_Entity_nLightProbeAtlasX"?: number;
 	readonly "m_Entity_nLightProbeAtlasY"?: number;
@@ -1357,30 +1366,21 @@ interface _CEnvVolumetricFogVolumeOwn extends _CBaseEntityOwn {
 	readonly "m_vBoxMins"?: [number, number, number];
 }
 
-interface _CEnvWindOwn extends Prefixed<"m_EnvWindShared", _EnvWindSharedFields> {}
-
-interface _CEnvWindControllerOwn extends _CBaseEntityOwn, Prefixed<"m_EnvWindShared", _EnvWindSharedFields> {
-	readonly "m_bIsMaster"?: boolean;
-	readonly "m_fDirectionVariation"?: number;
-	readonly "m_fSpeedVariation"?: number;
-	readonly "m_fTurbulence"?: number;
-	readonly "m_fVolumeHalfExtentXY"?: number;
-	readonly "m_fVolumeHalfExtentZ"?: number;
-	readonly "m_nClipmapLevels"?: number;
-	readonly "m_nVolumeResolutionXY"?: number;
-	readonly "m_nVolumeResolutionZ"?: number;
-}
-
-interface _CEnvWindVolumeOwn extends _CBaseEntityOwn {
-	readonly "m_bActive"?: boolean;
-	readonly "m_bStartDisabled"?: boolean;
-	readonly "m_fWindDirectionVariationMultiplier"?: number;
-	readonly "m_fWindSpeedMultiplier"?: number;
-	readonly "m_fWindSpeedVariationMultiplier"?: number;
-	readonly "m_fWindTurbulenceMultiplier"?: number;
-	readonly "m_nShape"?: number;
-	readonly "m_vBoxMaxs"?: [number, number, number];
-	readonly "m_vBoxMins"?: [number, number, number];
+interface _CEnvWindOwn {
+	readonly "m_EnvWindShared.m_flGustDuration"?: number;
+	readonly "m_EnvWindShared.m_flInitialWindSpeed"?: number;
+	readonly "m_EnvWindShared.m_flMaxGustDelay"?: number;
+	readonly "m_EnvWindShared.m_flMinGustDelay"?: number;
+	readonly "m_EnvWindShared.m_flStartTime"?: number;
+	readonly "m_EnvWindShared.m_iGustDirChange"?: number;
+	readonly "m_EnvWindShared.m_iInitialWindDir"?: number;
+	readonly "m_EnvWindShared.m_iMaxGust"?: number;
+	readonly "m_EnvWindShared.m_iMaxWind"?: number;
+	readonly "m_EnvWindShared.m_iMinGust"?: number;
+	readonly "m_EnvWindShared.m_iMinWind"?: number;
+	readonly "m_EnvWindShared.m_iWindSeed"?: number;
+	readonly "m_EnvWindShared.m_location"?: [number, number, number];
+	readonly "m_EnvWindShared.m_windRadius"?: number;
 }
 
 interface _CFireCrackerBlastOwn extends _CBaseModelEntityOwn {
@@ -1438,6 +1438,7 @@ interface _CFootstepControlOwn extends _CBaseTriggerOwn {
 
 interface _CFuncConveyorOwn extends _CBaseModelEntityOwn {
 	readonly "m_fFlags"?: number;
+	readonly "m_flFrictionScale"?: number;
 	readonly "m_flTargetSpeed"?: number;
 	readonly "m_flTransitionStartSpeed"?: number;
 	readonly "m_hConveyorModels"?: number[];
@@ -1524,6 +1525,7 @@ interface _CInfoFanOwn extends _CBaseEntityOwn {
 
 interface _CInfoOffscreenPanoramaTextureOwn extends _CBaseEntityOwn {
 	readonly "m_bDisabled"?: boolean;
+	readonly "m_bEnableMipGen"?: boolean;
 	readonly "m_nResolutionX"?: number;
 	readonly "m_nResolutionY"?: number;
 	readonly "m_nTargetChangeCount"?: number;
@@ -1751,6 +1753,7 @@ interface _CPointClientUIWorldPanelOwn extends _CBaseModelEntityOwn {
 	readonly "m_flHeight"?: number;
 	readonly "m_flInteractDistance"?: number;
 	readonly "m_flWidth"?: number;
+	readonly "m_flWindowUIScale"?: number;
 	readonly "m_nExplicitImageLayout"?: number;
 	readonly "m_PanelClassName"?: string;
 	readonly "m_PanelID"?: string;
@@ -1918,10 +1921,28 @@ interface _CSkyCameraOwn extends _CBaseEntityOwn, Prefixed<"m_skyboxData", _Skyb
 	readonly "m_skyboxSlotToken"?: number;
 }
 
+interface _CSkyCameraVolumeOwn extends _CBaseEntityOwn {
+	readonly "m_bIsEnabled"?: boolean;
+	readonly "m_bSkyboxBlurEffect"?: boolean;
+	readonly "m_bSkyboxReceivesWorldCsm"?: boolean;
+	readonly "m_bWorldReceivesSkyboxCsm"?: boolean;
+	readonly "m_hTarget"?: number;
+	readonly "m_nPriority"?: number;
+	readonly "m_vBlurOrigin"?: [number, number, number];
+	readonly "m_vBoxMaxs"?: [number, number, number];
+	readonly "m_vBoxMins"?: [number, number, number];
+}
+
+interface _CSkyCameraVolumeTargetOwn extends _CBaseEntityOwn {
+	readonly "m_hSkyMaterial"?: bigint;
+	readonly "m_nSkyboxScale"?: number;
+}
+
 interface _CSmokeGrenadeProjectileOwn extends _CBaseCSGrenadeProjectileOwn {
 	readonly "m_bDidSmokeEffect"?: boolean;
 	readonly "m_nRandomSeed"?: number;
 	readonly "m_nSmokeEffectTickBegin"?: number;
+	readonly "m_nSmokeLightProbeRegen"?: number;
 	readonly "m_nVoxelFrameDataSize"?: number;
 	readonly "m_nVoxelUpdate"?: number;
 	readonly "m_VoxelFrameData"?: Uint8Array;
@@ -1946,6 +1967,10 @@ interface _CSoundAreaEntitySphereOwn extends _CSoundEventSphereEntityOwn {
 interface _CSoundEventAABBEntityOwn extends _CBaseEntityOwn {
 	readonly "m_vMaxs"?: [number, number, number];
 	readonly "m_vMins"?: [number, number, number];
+}
+
+interface _CSoundEventBoxEntityOwn extends _CBaseEntityOwn {
+	readonly "m_vecBoxHelpersNetworked"?: ReadonlyArray<{ readonly "qAngles"?: [number, number, number]; readonly "vMaxs"?: [number, number, number]; readonly "vMins"?: [number, number, number]; readonly "vOrigin"?: [number, number, number] }>;
 }
 
 interface _CSoundEventPathCornerEntityOwn extends _CBaseEntityOwn {
@@ -2032,6 +2057,7 @@ interface _CTriggerPhysicsOwn extends _CBaseTriggerOwn {
 	readonly "m_angularLimit"?: number;
 	readonly "m_bCollapseToForcePoint"?: boolean;
 	readonly "m_bConvertToDebrisWhenPossible"?: boolean;
+	readonly "m_bForceDirectionIsInLocalSpace"?: boolean;
 	readonly "m_flDampingRatio"?: number;
 	readonly "m_flFrequency"?: number;
 	readonly "m_gravityScale"?: number;
@@ -2188,6 +2214,13 @@ export type ICBreakableProp = Prefixed<"CBreakableProp",
 	_CBaseAnimGraphOwn
 >;
 
+export type ICBrokenGlassTrap = Prefixed<"CBrokenGlassTrap",
+	Prefixed<"CBodyComponentBaseModelEntity", _CBodyComponentBaseModelEntity> &
+	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CBaseModelEntityOwn
+>;
+
 export type ICC4 = Prefixed<"CC4",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
@@ -2249,46 +2282,71 @@ export type ICCSGO_EndOfMatchLineupStart = Prefixed<"CCSGO_EndOfMatchLineupStart
 	_CBaseEntityOwn
 >;
 
+export type ICCSGO_RushIntroCounterTerroristPosition = Prefixed<"CCSGO_RushIntroCounterTerroristPosition",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CCSGO_RushIntroCounterTerroristPositionOwn
+>;
+
+export type ICCSGO_RushIntroTerroristPosition = Prefixed<"CCSGO_RushIntroTerroristPosition",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CCSGO_RushIntroCounterTerroristPositionOwn
+>;
+
 export type ICCSGO_TeamIntroCounterTerroristPosition = Prefixed<"CCSGO_TeamIntroCounterTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSGO_TeamIntroCounterTerroristPositionOwn
+	_CCSGO_RushIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_TeamIntroTerroristPosition = Prefixed<"CCSGO_TeamIntroTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSGO_TeamIntroCounterTerroristPositionOwn
+	_CCSGO_RushIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_TeamSelectCounterTerroristPosition = Prefixed<"CCSGO_TeamSelectCounterTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSGO_TeamIntroCounterTerroristPositionOwn
+	_CCSGO_RushIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_TeamSelectTerroristPosition = Prefixed<"CCSGO_TeamSelectTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSGO_TeamIntroCounterTerroristPositionOwn
+	_CCSGO_RushIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_WingmanIntroCounterTerroristPosition = Prefixed<"CCSGO_WingmanIntroCounterTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSGO_TeamIntroCounterTerroristPositionOwn
+	_CCSGO_RushIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSGO_WingmanIntroTerroristPosition = Prefixed<"CCSGO_WingmanIntroTerroristPosition",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSGO_TeamIntroCounterTerroristPositionOwn
+	_CCSGO_RushIntroCounterTerroristPositionOwn
 >;
 
 export type ICCSMinimapBoundary = Prefixed<"CCSMinimapBoundary",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CBaseEntityOwn
+>;
+
+export type ICCSMinimapVolume = Prefixed<"CCSMinimapVolume",
+	Prefixed<"CBodyComponentBaseModelEntity", _CBodyComponentBaseModelEntity> &
+	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CCSMinimapVolumeOwn
+>;
+
+export type ICCSObservableElement = Prefixed<"CCSObservableElement",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CCSObservableElementOwn
 >;
 
 export type ICCSObserverPawn = Prefixed<"CCSObserverPawn",
@@ -2306,12 +2364,6 @@ export type ICCSPetPlacement = Prefixed<"CCSPetPlacement",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CBaseEntityOwn
->;
-
-export type ICCSPlayerCamera = Prefixed<"CCSPlayerCamera",
-	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CCSCustomPlayerCameraOwn
 >;
 
 export type ICCSPlayerController = Prefixed<"CCSPlayerController",
@@ -2350,6 +2402,12 @@ export type ICCSPlayerPawnBase = Prefixed<"CCSPlayerPawnBase",
 >;
 
 export type ICCSPlayerResource = Prefixed<"CCSPlayerResource", _CCSPlayerResourceOwn>;
+
+export type ICCSRadarElement = Prefixed<"CCSRadarElement",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CCSRadarElementOwn
+>;
 
 export type ICCSTeam = Prefixed<"CCSTeam", _CCSTeamOwn>;
 
@@ -2494,18 +2552,6 @@ export type ICEnvVolumetricFogVolume = Prefixed<"CEnvVolumetricFogVolume",
 >;
 
 export type ICEnvWind = Prefixed<"CEnvWind", _CEnvWindOwn>;
-
-export type ICEnvWindController = Prefixed<"CEnvWindController",
-	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CEnvWindControllerOwn
->;
-
-export type ICEnvWindVolume = Prefixed<"CEnvWindVolume",
-	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
-	Prefixed<"CEntityIdentity", _CEntityIdentity> &
-	_CEnvWindVolumeOwn
->;
 
 export type ICFireCrackerBlast = Prefixed<"CFireCrackerBlast",
 	Prefixed<"CBodyComponentBaseModelEntity", _CBodyComponentBaseModelEntity> &
@@ -3032,6 +3078,18 @@ export type ICSkyCamera = Prefixed<"CSkyCamera",
 	_CSkyCameraOwn
 >;
 
+export type ICSkyCameraVolume = Prefixed<"CSkyCameraVolume",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CSkyCameraVolumeOwn
+>;
+
+export type ICSkyCameraVolumeTarget = Prefixed<"CSkyCameraVolumeTarget",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CSkyCameraVolumeTargetOwn
+>;
+
 export type ICSmokeGrenade = Prefixed<"CSmokeGrenade",
 	Prefixed<"CBodyComponentBaseAnimGraph", _CBodyComponentBaseAnimGraph> &
 	Prefixed<"CDestructiblePartsComponent", _CDestructiblePartsComponent> &
@@ -3059,6 +3117,18 @@ export type ICSoundAreaEntitySphere = Prefixed<"CSoundAreaEntitySphere",
 >;
 
 export type ICSoundEventAABBEntity = Prefixed<"CSoundEventAABBEntity",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CSoundEventAABBEntityOwn
+>;
+
+export type ICSoundEventBoxEntity = Prefixed<"CSoundEventBoxEntity",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CSoundEventBoxEntityOwn
+>;
+
+export type ICSoundEventBoxHelper = Prefixed<"CSoundEventBoxHelper",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CSoundEventAABBEntityOwn
@@ -3101,6 +3171,12 @@ export type ICSoundOpvarSetAABBEntity = Prefixed<"CSoundOpvarSetAABBEntity",
 >;
 
 export type ICSoundOpvarSetAutoRoomEntity = Prefixed<"CSoundOpvarSetAutoRoomEntity",
+	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
+	Prefixed<"CEntityIdentity", _CEntityIdentity> &
+	_CSoundOpvarSetAABBEntityOwn
+>;
+
+export type ICSoundOpvarSetDomeEntity = Prefixed<"CSoundOpvarSetDomeEntity",
 	Prefixed<"CBodyComponentPoint", _CBodyComponentPoint> &
 	Prefixed<"CEntityIdentity", _CEntityIdentity> &
 	_CSoundOpvarSetAABBEntityOwn
@@ -3472,6 +3548,7 @@ export interface EntityTypeMap {
 	CBombTarget: ICBombTarget;
 	CBreakable: ICBreakable;
 	CBreakableProp: ICBreakableProp;
+	CBrokenGlassTrap: ICBrokenGlassTrap;
 	CC4: ICC4;
 	CCashStack: ICCashStack;
 	CChicken: ICChicken;
@@ -3483,6 +3560,8 @@ export interface EntityTypeMap {
 	CCSGameRulesProxy: ICCSGameRulesProxy;
 	CCSGO_EndOfMatchLineupEnd: ICCSGO_EndOfMatchLineupEnd;
 	CCSGO_EndOfMatchLineupStart: ICCSGO_EndOfMatchLineupStart;
+	CCSGO_RushIntroCounterTerroristPosition: ICCSGO_RushIntroCounterTerroristPosition;
+	CCSGO_RushIntroTerroristPosition: ICCSGO_RushIntroTerroristPosition;
 	CCSGO_TeamIntroCounterTerroristPosition: ICCSGO_TeamIntroCounterTerroristPosition;
 	CCSGO_TeamIntroTerroristPosition: ICCSGO_TeamIntroTerroristPosition;
 	CCSGO_TeamSelectCounterTerroristPosition: ICCSGO_TeamSelectCounterTerroristPosition;
@@ -3490,13 +3569,15 @@ export interface EntityTypeMap {
 	CCSGO_WingmanIntroCounterTerroristPosition: ICCSGO_WingmanIntroCounterTerroristPosition;
 	CCSGO_WingmanIntroTerroristPosition: ICCSGO_WingmanIntroTerroristPosition;
 	CCSMinimapBoundary: ICCSMinimapBoundary;
+	CCSMinimapVolume: ICCSMinimapVolume;
+	CCSObservableElement: ICCSObservableElement;
 	CCSObserverPawn: ICCSObserverPawn;
 	CCSPetPlacement: ICCSPetPlacement;
-	CCSPlayerCamera: ICCSPlayerCamera;
 	CCSPlayerController: ICCSPlayerController;
 	CCSPlayerPawn: ICCSPlayerPawn;
 	CCSPlayerPawnBase: ICCSPlayerPawnBase;
 	CCSPlayerResource: ICCSPlayerResource;
+	CCSRadarElement: ICCSRadarElement;
 	CCSTeam: ICCSTeam;
 	CCSWeaponBaseGun: ICCSWeaponBaseGun;
 	CCSWeaponBaseShotgun: ICCSWeaponBaseShotgun;
@@ -3521,8 +3602,6 @@ export interface EntityTypeMap {
 	CEnvVolumetricFogController: ICEnvVolumetricFogController;
 	CEnvVolumetricFogVolume: ICEnvVolumetricFogVolume;
 	CEnvWind: ICEnvWind;
-	CEnvWindController: ICEnvWindController;
-	CEnvWindVolume: ICEnvWindVolume;
 	CFireCrackerBlast: ICFireCrackerBlast;
 	CFish: ICFish;
 	CFlashbang: ICFlashbang;
@@ -3603,11 +3682,15 @@ export interface EntityTypeMap {
 	CSceneEntity: ICSceneEntity;
 	CShatterGlassShardPhysics: ICShatterGlassShardPhysics;
 	CSkyCamera: ICSkyCamera;
+	CSkyCameraVolume: ICSkyCameraVolume;
+	CSkyCameraVolumeTarget: ICSkyCameraVolumeTarget;
 	CSmokeGrenade: ICSmokeGrenade;
 	CSmokeGrenadeProjectile: ICSmokeGrenadeProjectile;
 	CSoundAreaEntityOrientedBox: ICSoundAreaEntityOrientedBox;
 	CSoundAreaEntitySphere: ICSoundAreaEntitySphere;
 	CSoundEventAABBEntity: ICSoundEventAABBEntity;
+	CSoundEventBoxEntity: ICSoundEventBoxEntity;
+	CSoundEventBoxHelper: ICSoundEventBoxHelper;
 	CSoundEventConeEntity: ICSoundEventConeEntity;
 	CSoundEventEntity: ICSoundEventEntity;
 	CSoundEventOBBEntity: ICSoundEventOBBEntity;
@@ -3615,6 +3698,7 @@ export interface EntityTypeMap {
 	CSoundEventSphereEntity: ICSoundEventSphereEntity;
 	CSoundOpvarSetAABBEntity: ICSoundOpvarSetAABBEntity;
 	CSoundOpvarSetAutoRoomEntity: ICSoundOpvarSetAutoRoomEntity;
+	CSoundOpvarSetDomeEntity: ICSoundOpvarSetDomeEntity;
 	CSoundOpvarSetOBBEntity: ICSoundOpvarSetOBBEntity;
 	CSoundOpvarSetOBBWindEntity: ICSoundOpvarSetOBBWindEntity;
 	CSoundOpvarSetPathCornerEntity: ICSoundOpvarSetPathCornerEntity;

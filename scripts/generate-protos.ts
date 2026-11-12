@@ -7,6 +7,7 @@
  */
 import { execFileSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -92,10 +93,50 @@ async function downloadProtos() {
 	}
 }
 
+// Valve's fork of descriptor.proto adds FileOptions.additional_includes (50) and FieldOptions.boxed_type
+// (20) / synthetic_default (21); upstream publishes it as Protobufs/google/protobuf/descriptor.proto.
+// Google later gave those numbers to `features` / `edition_defaults`, so current protoc cannot use
+// Valve's descriptor either ("could not be correctly parsed"). The options only steer Valve's C++
+// codegen (include lists, wrapper types such as CPlayerSlot, their defaults); the wire format is unchanged.
+const VALVE_FIELD_OPTION = /(^|,)\s*(?:boxed_type|synthetic_default)\s*=\s*"[^"]*"\s*(?=,|$)/g;
+
+/** Drop Valve-only built-in options so stock protoc accepts the upstream files unchanged otherwise. */
+function stripValveOptions(source: string): string {
+	return source
+		.replace(/^[ \t]*option\s+additional_includes\s*=\s*"[^"]*"\s*;[ \t]*\r?\n/gm, '')
+		.replace(/\s*\[([^\]]*)\]/g, (whole, inner: string) => {
+			if (!/\b(?:boxed_type|synthetic_default)\s*=/.test(inner)) return whole;
+			const kept = inner
+				.replace(VALVE_FIELD_OPTION, '')
+				.replace(/^\s*,\s*/, '')
+				.trim();
+			return kept ? ` [${kept}]` : '';
+		});
+}
+
+/** Copy of the proto tree that stock protoc can compile; src/proto stays byte-identical to upstream. */
+function compilableProtoDir(): string {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cs2parser-protos-'));
+	fs.cpSync(PROTO_DIR, dir, { recursive: true });
+	for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.proto'))) {
+		const target = path.join(dir, file);
+		fs.writeFileSync(target, stripValveOptions(fs.readFileSync(target, 'utf8')));
+	}
+	return dir;
+}
+
 function generateTsProto() {
 	fs.mkdirSync(TS_PROTO_DIR, { recursive: true });
+	const protoDir = compilableProtoDir();
+	try {
+		compileTsProto(protoDir);
+	} finally {
+		fs.rmSync(protoDir, { recursive: true, force: true });
+	}
+}
 
-	const protoFiles = fs.readdirSync(PROTO_DIR).filter(f => f.endsWith('.proto'));
+function compileTsProto(protoDir: string) {
+	const protoFiles = fs.readdirSync(protoDir).filter(f => f.endsWith('.proto'));
 	console.log(`Generating TypeScript for ${protoFiles.length} proto files...`);
 	if (protoFiles.length === 0) throw new Error('No local protobuf definitions found');
 
@@ -134,7 +175,7 @@ function generateTsProto() {
 					`--ts_proto_out=${TS_PROTO_DIR}`,
 					`./${file}`
 				],
-				{ cwd: PROTO_DIR, stdio: 'pipe' }
+				{ cwd: protoDir, stdio: 'pipe' }
 			);
 			succeeded++;
 		} catch (e: any) {

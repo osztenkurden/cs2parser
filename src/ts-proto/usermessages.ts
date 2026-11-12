@@ -61,6 +61,8 @@ export const EBaseUserMessages = {
   UM_PlayResponseConditional: 166,
   UM_UserSentBugBug: 167,
   UM_UsageReport: 168,
+  UM_RemoteServerCommand: 169,
+  UM_RemoteServerResponse: 170,
   UM_MAX_BASE: 200,
   UNRECOGNIZED: -1,
 } as const;
@@ -118,6 +120,8 @@ export namespace EBaseUserMessages {
   export type UM_PlayResponseConditional = typeof EBaseUserMessages.UM_PlayResponseConditional;
   export type UM_UserSentBugBug = typeof EBaseUserMessages.UM_UserSentBugBug;
   export type UM_UsageReport = typeof EBaseUserMessages.UM_UsageReport;
+  export type UM_RemoteServerCommand = typeof EBaseUserMessages.UM_RemoteServerCommand;
+  export type UM_RemoteServerResponse = typeof EBaseUserMessages.UM_RemoteServerResponse;
   export type UM_MAX_BASE = typeof EBaseUserMessages.UM_MAX_BASE;
   export type UNRECOGNIZED = typeof EBaseUserMessages.UNRECOGNIZED;
 }
@@ -1029,6 +1033,52 @@ export interface CUserMessage_PlayResponseConditional {
 
 export interface CUserMessage_UsageReport {
   usage?: string | undefined;
+}
+
+export interface CUserMessage_RemoteServerCommand {
+  command?: CUserMessage_RemoteServerCommand_ECommand | undefined;
+  convar?: string | undefined;
+  value?: string | undefined;
+}
+
+export const CUserMessage_RemoteServerCommand_ECommand = { ECommandChangeConVar: 1, UNRECOGNIZED: -1 } as const;
+
+export type CUserMessage_RemoteServerCommand_ECommand =
+  typeof CUserMessage_RemoteServerCommand_ECommand[keyof typeof CUserMessage_RemoteServerCommand_ECommand];
+
+export namespace CUserMessage_RemoteServerCommand_ECommand {
+  export type ECommandChangeConVar = typeof CUserMessage_RemoteServerCommand_ECommand.ECommandChangeConVar;
+  export type UNRECOGNIZED = typeof CUserMessage_RemoteServerCommand_ECommand.UNRECOGNIZED;
+}
+
+export interface CUserMessageRemoteServerResponse {
+  command_result?: CUserMessageRemoteServerResponse_ECommandResult | undefined;
+  convar?: string | undefined;
+  results?: string | undefined;
+}
+
+export const CUserMessageRemoteServerResponse_ECommandResult = {
+  EResultSuccess: 1,
+  EResultServerDoesntAllow: 2,
+  EResultClientNotAuthenticated: 3,
+  EResultClientNotAllowed: 4,
+  EResultCommandNotAllowed: 5,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type CUserMessageRemoteServerResponse_ECommandResult =
+  typeof CUserMessageRemoteServerResponse_ECommandResult[keyof typeof CUserMessageRemoteServerResponse_ECommandResult];
+
+export namespace CUserMessageRemoteServerResponse_ECommandResult {
+  export type EResultSuccess = typeof CUserMessageRemoteServerResponse_ECommandResult.EResultSuccess;
+  export type EResultServerDoesntAllow =
+    typeof CUserMessageRemoteServerResponse_ECommandResult.EResultServerDoesntAllow;
+  export type EResultClientNotAuthenticated =
+    typeof CUserMessageRemoteServerResponse_ECommandResult.EResultClientNotAuthenticated;
+  export type EResultClientNotAllowed = typeof CUserMessageRemoteServerResponse_ECommandResult.EResultClientNotAllowed;
+  export type EResultCommandNotAllowed =
+    typeof CUserMessageRemoteServerResponse_ECommandResult.EResultCommandNotAllowed;
+  export type UNRECOGNIZED = typeof CUserMessageRemoteServerResponse_ECommandResult.UNRECOGNIZED;
 }
 
 function createBaseCUserMessageAchievementEvent(): CUserMessageAchievementEvent {
@@ -7162,6 +7212,98 @@ export const CUserMessage_UsageReport: MessageFns<CUserMessage_UsageReport> = {
           }
 
           message.usage = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCUserMessage_RemoteServerCommand(): CUserMessage_RemoteServerCommand {
+  return { command: undefined, convar: undefined, value: undefined };
+}
+
+export const CUserMessage_RemoteServerCommand: MessageFns<CUserMessage_RemoteServerCommand> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CUserMessage_RemoteServerCommand {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCUserMessage_RemoteServerCommand();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.command = reader.int32() as any;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.convar = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCUserMessageRemoteServerResponse(): CUserMessageRemoteServerResponse {
+  return { command_result: undefined, convar: undefined, results: undefined };
+}
+
+export const CUserMessageRemoteServerResponse: MessageFns<CUserMessageRemoteServerResponse> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CUserMessageRemoteServerResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCUserMessageRemoteServerResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.command_result = reader.int32() as any;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.convar = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.results = reader.string();
           continue;
         }
       }

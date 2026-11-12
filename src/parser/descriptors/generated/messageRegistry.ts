@@ -89,6 +89,7 @@ import {
 	CUserMessageHudText,
 	CUserMessageItemPickup,
 	CUserMessageLagCompensationError,
+	CUserMessageRemoteServerResponse,
 	CUserMessageRequestDiagnostic,
 	CUserMessageRequestDllStatus,
 	CUserMessageRequestInventory,
@@ -115,6 +116,7 @@ import {
 	CUserMessage_Inventory_Response,
 	CUserMessage_NotifyResponseFound,
 	CUserMessage_PlayResponseConditional,
+	CUserMessage_RemoteServerCommand,
 	CUserMessage_UsageReport,
 	CUserMessage_UtilMsg_Response,
 	CUserMsg_CustomGameEvent,
@@ -351,6 +353,8 @@ export const messageRegistry = {
 	UM_NotifyResponseFound: { id: EBaseUserMessages.UM_NotifyResponseFound, class: CUserMessage_NotifyResponseFound },
 	UM_PlayResponseConditional: { id: EBaseUserMessages.UM_PlayResponseConditional, class: CUserMessage_PlayResponseConditional },
 	UM_UsageReport: { id: EBaseUserMessages.UM_UsageReport, class: CUserMessage_UsageReport },
+	UM_RemoteServerCommand: { id: EBaseUserMessages.UM_RemoteServerCommand, class: CUserMessage_RemoteServerCommand },
+	UM_RemoteServerResponse: { id: EBaseUserMessages.UM_RemoteServerResponse, class: CUserMessageRemoteServerResponse },
 
 	// EBaseEntityMessages — per-entity messages
 	EM_PlayJingle: { id: EBaseEntityMessages.EM_PlayJingle, class: CEntityMessagePlayJingle },

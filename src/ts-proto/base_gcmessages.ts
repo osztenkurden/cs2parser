@@ -239,21 +239,6 @@ export interface CMsgApplyStatTrakSwap {
   item_2_item_id?: string | undefined;
 }
 
-export interface CMsgApplyStrangePart {
-  strange_part_item_id?: string | undefined;
-  item_item_id?: string | undefined;
-}
-
-export interface CMsgApplyPennantUpgrade {
-  upgrade_item_id?: string | undefined;
-  pennant_item_id?: string | undefined;
-}
-
-export interface CMsgApplyEggEssence {
-  essence_item_id?: string | undefined;
-  egg_item_id?: string | undefined;
-}
-
 export interface CSOEconItemAttribute {
   def_index?: number | undefined;
   value?: number | undefined;
@@ -288,6 +273,22 @@ export interface CSOEconItem {
 
 export interface CMsgSortItems {
   sort_type?: number | undefined;
+}
+
+export interface CMsgDeleteItem {
+  item_id?: string | undefined;
+}
+
+export interface CMsgModifyItemStringAttr {
+  tool_item_id?: string | undefined;
+  subject_item_id?: string | undefined;
+  attr_def?: number | undefined;
+  attr_value?: string | undefined;
+}
+
+export interface CMsgCraftItemsRequest {
+  recipe_def?: number | undefined;
+  craft_items: string[];
 }
 
 export interface CSOEconClaimCode {
@@ -327,7 +328,6 @@ export interface CMsgUseItem {
   item_id?: string | undefined;
   target_steam_id?: string | undefined;
   gift__potential_targets: number[];
-  duel__class_lock?: number | undefined;
   initiator_steam_id?: string | undefined;
 }
 
@@ -383,13 +383,6 @@ export interface CMsgGCNameItemNotification {
   item_name_custom?: string | undefined;
 }
 
-export interface CMsgGCClientDisplayNotification {
-  notification_title_localization_key?: string | undefined;
-  notification_body_localization_key?: string | undefined;
-  body_substring_keys: string[];
-  body_substring_values: string[];
-}
-
 export interface CMsgGCShowItemsPickedUp {
   player_steamid?: string | undefined;
 }
@@ -421,10 +414,6 @@ export interface CSOEconItemEventTicket {
   account_id?: number | undefined;
   event_id?: number | undefined;
   item_id?: string | undefined;
-}
-
-export interface CMsgGCItemPreviewItemBoughtNotification {
-  item_def_index?: number | undefined;
 }
 
 export interface CMsgGCStorePurchaseCancel {
@@ -486,11 +475,6 @@ export interface CMsgGCToGCDirtySDOCache {
 export interface CMsgGCToGCDirtyMultipleSDOCache {
   sdo_type?: number | undefined;
   key_uint64: string[];
-}
-
-export interface CMsgGCCollectItem {
-  collection_item_id?: string | undefined;
-  subject_item_id?: string | undefined;
 }
 
 export interface CMsgSDONoMemcached {
@@ -1936,120 +1920,6 @@ export const CMsgApplyStatTrakSwap: MessageFns<CMsgApplyStatTrakSwap> = {
   },
 };
 
-function createBaseCMsgApplyStrangePart(): CMsgApplyStrangePart {
-  return { strange_part_item_id: undefined, item_item_id: undefined };
-}
-
-export const CMsgApplyStrangePart: MessageFns<CMsgApplyStrangePart> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgApplyStrangePart {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgApplyStrangePart();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.strange_part_item_id = reader.uint64().toString();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.item_item_id = reader.uint64().toString();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgApplyPennantUpgrade(): CMsgApplyPennantUpgrade {
-  return { upgrade_item_id: undefined, pennant_item_id: undefined };
-}
-
-export const CMsgApplyPennantUpgrade: MessageFns<CMsgApplyPennantUpgrade> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgApplyPennantUpgrade {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgApplyPennantUpgrade();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.upgrade_item_id = reader.uint64().toString();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.pennant_item_id = reader.uint64().toString();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgApplyEggEssence(): CMsgApplyEggEssence {
-  return { essence_item_id: undefined, egg_item_id: undefined };
-}
-
-export const CMsgApplyEggEssence: MessageFns<CMsgApplyEggEssence> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgApplyEggEssence {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgApplyEggEssence();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.essence_item_id = reader.uint64().toString();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.egg_item_id = reader.uint64().toString();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
 function createBaseCSOEconItemAttribute(): CSOEconItemAttribute {
   return { def_index: undefined, value: undefined, value_bytes: undefined };
 }
@@ -2349,6 +2219,138 @@ export const CMsgSortItems: MessageFns<CMsgSortItems> = {
   },
 };
 
+function createBaseCMsgDeleteItem(): CMsgDeleteItem {
+  return { item_id: undefined };
+}
+
+export const CMsgDeleteItem: MessageFns<CMsgDeleteItem> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CMsgDeleteItem {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCMsgDeleteItem();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.item_id = reader.uint64().toString();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCMsgModifyItemStringAttr(): CMsgModifyItemStringAttr {
+  return { tool_item_id: undefined, subject_item_id: undefined, attr_def: undefined, attr_value: undefined };
+}
+
+export const CMsgModifyItemStringAttr: MessageFns<CMsgModifyItemStringAttr> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CMsgModifyItemStringAttr {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCMsgModifyItemStringAttr();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.tool_item_id = reader.uint64().toString();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.subject_item_id = reader.uint64().toString();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.attr_def = reader.uint32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.attr_value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCMsgCraftItemsRequest(): CMsgCraftItemsRequest {
+  return { recipe_def: undefined, craft_items: [] };
+}
+
+export const CMsgCraftItemsRequest: MessageFns<CMsgCraftItemsRequest> = {
+  decode(input: BinaryReader | Uint8Array, length?: number): CMsgCraftItemsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCMsgCraftItemsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.recipe_def = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag === 16) {
+            message.craft_items.push(reader.uint64().toString());
+
+            continue;
+          }
+
+          if (tag === 18) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.craft_items.push(reader.uint64().toString());
+            }
+
+            continue;
+          }
+
+          break;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseCSOEconClaimCode(): CSOEconClaimCode {
   return { account_id: undefined, code_type: undefined, time_acquired: undefined, code: undefined };
 }
@@ -2608,13 +2610,7 @@ export const CMsgRequestInventoryRefresh: MessageFns<CMsgRequestInventoryRefresh
 };
 
 function createBaseCMsgUseItem(): CMsgUseItem {
-  return {
-    item_id: undefined,
-    target_steam_id: undefined,
-    gift__potential_targets: [],
-    duel__class_lock: undefined,
-    initiator_steam_id: undefined,
-  };
+  return { item_id: undefined, target_steam_id: undefined, gift__potential_targets: [], initiator_steam_id: undefined };
 }
 
 export const CMsgUseItem: MessageFns<CMsgUseItem> = {
@@ -2658,14 +2654,6 @@ export const CMsgUseItem: MessageFns<CMsgUseItem> = {
           }
 
           break;
-        }
-        case 4: {
-          if (tag !== 32) {
-            break;
-          }
-
-          message.duel__class_lock = reader.uint32();
-          continue;
         }
         case 5: {
           if (tag !== 41) {
@@ -3101,65 +3089,6 @@ export const CMsgGCNameItemNotification: MessageFns<CMsgGCNameItemNotification> 
   },
 };
 
-function createBaseCMsgGCClientDisplayNotification(): CMsgGCClientDisplayNotification {
-  return {
-    notification_title_localization_key: undefined,
-    notification_body_localization_key: undefined,
-    body_substring_keys: [],
-    body_substring_values: [],
-  };
-}
-
-export const CMsgGCClientDisplayNotification: MessageFns<CMsgGCClientDisplayNotification> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCClientDisplayNotification {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgGCClientDisplayNotification();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.notification_title_localization_key = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.notification_body_localization_key = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.body_substring_keys.push(reader.string());
-          continue;
-        }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.body_substring_values.push(reader.string());
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
 function createBaseCMsgGCShowItemsPickedUp(): CMsgGCShowItemsPickedUp {
   return { player_steamid: undefined };
 }
@@ -3409,36 +3338,6 @@ export const CSOEconItemEventTicket: MessageFns<CSOEconItemEventTicket> = {
           }
 
           message.item_id = reader.uint64().toString();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgGCItemPreviewItemBoughtNotification(): CMsgGCItemPreviewItemBoughtNotification {
-  return { item_def_index: undefined };
-}
-
-export const CMsgGCItemPreviewItemBoughtNotification: MessageFns<CMsgGCItemPreviewItemBoughtNotification> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCItemPreviewItemBoughtNotification {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgGCItemPreviewItemBoughtNotification();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.item_def_index = reader.uint32();
           continue;
         }
       }
@@ -3922,44 +3821,6 @@ export const CMsgGCToGCDirtyMultipleSDOCache: MessageFns<CMsgGCToGCDirtyMultiple
           }
 
           break;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseCMsgGCCollectItem(): CMsgGCCollectItem {
-  return { collection_item_id: undefined, subject_item_id: undefined };
-}
-
-export const CMsgGCCollectItem: MessageFns<CMsgGCCollectItem> = {
-  decode(input: BinaryReader | Uint8Array, length?: number): CMsgGCCollectItem {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCMsgGCCollectItem();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.collection_item_id = reader.uint64().toString();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.subject_item_id = reader.uint64().toString();
-          continue;
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
