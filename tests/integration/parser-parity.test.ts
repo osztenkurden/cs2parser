@@ -220,6 +220,14 @@ describe.skipIf(!existsSync(demoPath))('real demo deep parser parity', () => {
 			correction.entitiesSha256;
 	}
 	expectedRelease.ALL.final.entities.sha256 = golden.qangle3FloatCorrection.final.entitiesSha256;
+	// CMsgPlayerInfo gained clan_member/clan_officer (regenerated protos); audited as the only player difference.
+	for (const mode of golden.playerInfoClanFieldsCorrection.modes as ParityMode[]) {
+		for (const correction of golden.playerInfoClanFieldsCorrection.snapshots) {
+			expectedRelease[mode].checkpoints.find(state => state.tick === correction.tick)!.players.sha256 =
+				correction.playersSha256;
+		}
+		expectedRelease[mode].final.players.sha256 = golden.playerInfoClanFieldsCorrection.final.playersSha256;
+	}
 
 	beforeAll(async () => {
 		bytes = readFileSync(demoPath);

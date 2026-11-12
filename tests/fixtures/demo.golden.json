@@ -687,5 +687,22 @@
 			{ "tick": 180000, "entitiesSha256": "570cf5199a7c085ea5cd50baecdd5c730a466db8cfeb0c89e09baa65975cda4f" }
 		],
 		"final": { "entitiesSha256": "24c7eb18b3fb38f8c16c03e18ef3f891b3583a40e1dd3867b4bdffdc27b88eef" }
+	},
+	"playerInfoClanFieldsCorrection": {
+		"reason": "CMsgPlayerInfo gained clan_member (9) and clan_officer (10) when the protos were regenerated from GameTracking-CS2. The generated decoder creates both keys, so every player entry carries them; on this fixture all 105 userinfo entries omit fields 9 and 10 on the wire (checked with an independent @bufbuild/protobuf reader) and the values are undefined. Audited by removing only those two keys from parser.players in the current output: the result reproduces the golden players hashes at all nine checkpoints and the final state in NONE, ONLY_GAME_RULES and ALL. Players do not depend on the entity mode, so the same hashes apply to every mode.",
+		"sourceCommit": "c70b10006fbf65a61c61e0baf10b9b01d70e4579",
+		"modes": ["NONE", "ONLY_GAME_RULES", "ALL"],
+		"snapshots": [
+			{ "tick": 1, "playersSha256": "d62324428239dea8fee13f608e9be81c9621089b5f128e5a98e19530273ea4ab" },
+			{ "tick": 1024, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 16384, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 32768, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 65536, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 98304, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 131072, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 163840, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" },
+			{ "tick": 180000, "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" }
+		],
+		"final": { "playersSha256": "a897d1c4a309fcbe8865bf4409f64bf8e187bb954571b935941a9414ab42490b" }
 	}
 }
